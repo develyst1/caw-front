@@ -1,0 +1,6 @@
+.nav { display: flex; gap: 4px; max-width: 1600px; margin: 0 auto; padding: 0 24px; }
+.link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-bottom: 3px solid transparent; color: var(--caw-ink2); font-size: 15px; font-weight: 600; text-decoration: none; }
+.link:hover { color: var(--caw-ink); }
+.link[aria-current="page"] { border-bottom-color: var(--caw-blue); color: var(--caw-blue); }
+.link:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: -3px; border-radius: 6px; }
+@media (max-width: 640px) { .nav { padding: 0 8px; } }

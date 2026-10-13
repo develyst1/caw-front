@@ -1,0 +1,65 @@
+/* CAW team + chain (TASK-B-042) — the board's direction (TASK-B-039 § 1); colours from the --caw-* variables (theme/tokens.ts). */
+
+.page { max-width: 1280px; margin: 0 auto; padding: 20px 24px 48px; display: grid; gap: 20px; }
+.panel { display: grid; gap: 16px; padding: 20px; border-radius: var(--caw-r-panel); background: var(--caw-paper); border: 1px solid var(--caw-line); box-shadow: var(--caw-shadow-rest); min-width: 0; }
+.h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.hint, .muted { margin: 0; font-size: 14px; color: var(--caw-ink2); }
+.refused { margin: 0; padding: 8px 12px; border-radius: var(--caw-r-tag); background: var(--caw-stuckSoft); color: var(--caw-stuck); font-size: 14px; font-weight: 600; }
+
+/* the chain: the picture, and beside it its hand-offs and the add-edge form */
+.chainGrid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.pictureBox { display: grid; gap: 8px; min-width: 0; }
+.picture { width: 100%; height: auto; border-radius: var(--caw-r-column); background: var(--caw-canvas); }
+.edge { fill: none; stroke: var(--caw-lineStrong); stroke-width: 2; }
+.arrowHead { fill: var(--caw-lineStrong); }
+.node { cursor: pointer; outline: none; }
+.node rect { fill: var(--caw-paper); stroke: var(--caw-line); stroke-width: 1.5; transition: stroke 0.15s ease, fill 0.15s ease; }
+.node:hover rect { stroke: var(--caw-blue); }
+.node:focus-visible rect { stroke: var(--caw-blue); stroke-width: 3; }
+.nodeName { font-size: 16px; font-weight: 700; fill: var(--caw-ink); }
+.nodeRole { font-size: 14px; fill: var(--caw-ink2); }
+.nodeEntry rect { fill: var(--caw-blueSoft); stroke: var(--caw-blue); stroke-width: 2; }
+.nodeEntry .nodeRole { fill: var(--caw-blue); font-weight: 600; }
+.nodePicked rect { fill: var(--caw-blue); stroke: var(--caw-blue); }
+.nodePicked .nodeName, .nodePicked .nodeRole { fill: var(--caw-paper); }
+
+.side { display: grid; gap: 16px; min-width: 0; }
+.edges { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.edgeRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 4px; border-bottom: 1px solid var(--caw-line); }
+.edgeForm, .form { display: grid; gap: 12px; align-content: start; }
+.field { display: grid; gap: 6px; }
+.label { font-size: 14px; font-weight: 600; color: var(--caw-ink2); }
+.select { min-width: 180px; }
+
+/* members */
+.members { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.member { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 0; border-top: 1px solid var(--caw-line); }
+.memberName { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; min-width: 140px; }
+.avatar { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--caw-canvas); color: var(--caw-ink); font-size: 14px; font-weight: 700; flex: none; }
+.entryTag:global(.ant-tag) { margin: 0; font-size: 14px; border-radius: var(--caw-r-tag); background: var(--caw-blueSoft); color: var(--caw-blue); border-color: transparent; font-weight: 600; }
+.reassign { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border-radius: var(--caw-r-card); background: var(--caw-stuckSoft); }
+.reassignAsk { flex-basis: 100%; margin: 0; color: var(--caw-stuck); font-weight: 600; }
+
+/* every worker */
+.workers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.worker { display: grid; gap: 10px; align-content: start; padding: 14px; border: 1px solid var(--caw-line); border-radius: var(--caw-r-card); }
+.workerHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.facts { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 4px 20px; margin: 0; }
+.facts dt { font-size: 14px; color: var(--caw-ink2); }
+.facts dd { margin: 0; font-weight: 600; }
+.skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.skill:global(.ant-tag) { margin: 0; font-size: 14px; border-radius: var(--caw-r-tag); }
+.forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; padding-top: 16px; border-top: 1px solid var(--caw-line); }
+
+@media (max-width: 900px) {
+  .chainGrid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .page { padding: 12px 16px 32px; }
+  .panel { padding: 16px; }
+  .facts { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node rect { transition: none; }
+}

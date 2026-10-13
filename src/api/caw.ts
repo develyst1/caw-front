@@ -125,11 +125,11 @@ export interface ChatMessage { id: string; at: string; from: "operator" | "worke
 
 export interface CawApi {
   projects(): Promise<ProjectSummary[]>;                                        // GET /v1/projects
-  project(id: string): Promise<ProjectSummary | null>;                          // GET /v1/projects/{id}
+  project(id: string): Promise<Project | null>;                                 // GET /v1/projects/{id} (a `Project`: the counts come with the list)
   /** PATCH /v1/projects/{id}/mode — never touches `hopsUsed`, cards or hops (REQ-011 AC-6). */
-  setMode(id: string, mode: Mode, hopBudget?: number): Promise<ProjectSummary | null>;
+  setMode(id: string, mode: Mode, hopBudget?: number): Promise<Project | null>;
   /** PATCH /v1/projects/{id}/workspace — 0–20 absolute paths, no `..` segment, ≤ 500 chars each; else a 400. */
-  setWorkspace(id: string, roots: string[]): Promise<ProjectSummary | null>;
+  setWorkspace(id: string, roots: string[]): Promise<Project | null>;
   cards(projectId: string, query?: { assigneeId?: string; status?: CardStatus; workable?: boolean }): Promise<Card[]>; // GET …/cards
   card(cardId: string): Promise<Card | null>;                                   // GET /v1/cards/{cardId}
   cardContext(cardId: string): Promise<CardContext | null>;                     // GET /v1/cards/{cardId}/context
@@ -139,6 +139,37 @@ export interface CawApi {
   runs(projectId: string, limit?: number): Promise<Run[]>;                      // GET …/runs (newest first)
   /** POST /v1/projects/{id}/runs — one open run per project: a second is refused with `CawError(409, "run_open")`. */
   startRun(projectId: string, hopBudget: number): Promise<Run>;
+
+  // ---- the operator's other writes (SPEC-A-008 § API v1; every one carries `X-CAW-Actor: operator` in the http implementation) ----
+  /** POST /v1/projects — 201, or 409 `already_exists` (`details.id` = the existing project), 404 `blueprint_project_not_found`, 409 `version_not_confirmed`, 502 `blueprint_unreachable`. */
+  createProject(input: { blueprintProjectId: string; version: number }): Promise<Project>;
+  /** POST /v1/cards/{id}/comments */
+  comment(cardId: string, text: string): Promise<Note>;
+  /** PATCH /v1/cards/{id}/status — 409 `waiting_on_question` (to `doing` while a dependency is open). */
+  setStatus(cardId: string, status: CardStatus): Promise<Card>;
+  /** PATCH /v1/cards/{id}/assignee — the operator's authority ignores the chain; 400 `not_a_member`. */
+  assign(cardId: string, workerId: string): Promise<Card>;
+  /** POST /v1/cards/{id}/handoff — must follow a chain edge: else 409 `chain_broken` with `details { from, allowed }`. */
+  handoff(cardId: string, toWorkerId: string, text: string): Promise<Card>;
+  /** POST /v1/cards/{id}/answer — 400 `not_a_question`, 409 `already_answered`; the card becomes `done` and frees its dependants. */
+  answer(cardId: string, answer: string): Promise<Card>;
+  /** POST /v1/cards/{id}/spec-change/clear */
+  clearSpecChange(cardId: string): Promise<Card>;
+  /** POST /v1/workers — 409 `name_taken`. `model` / `effort` default by role. */
+  createWorker(input: { name: string; role: WorkerRole; skills: string[]; model?: ModelName; effort?: Effort }): Promise<Worker>;
+  /** POST /v1/workers/combine — skills = union, model = the stronger, effort = the higher, role `other`, `combinedFrom` = both; the two stay. */
+  combineWorkers(name: string, workerIds: [string, string]): Promise<Worker>;
+  /** POST /v1/projects/{id}/chain/members — 409 `already_member`. */
+  addMember(projectId: string, workerId: string): Promise<Chain>;
+  /** DELETE /v1/projects/{id}/chain/members/{workerId} — 409 `has_open_cards` (no `reassignTo`), 409 `is_entry`. */
+  removeMember(projectId: string, workerId: string, reassignTo?: string): Promise<Chain>;
+  /** POST /v1/projects/{id}/chain/edges — 400 (not members / self), 409 `edge_exists`. */
+  addEdge(projectId: string, from: string, to: string): Promise<Chain>;
+  /** DELETE /v1/projects/{id}/chain/edges — 404 when the edge is not there. */
+  removeEdge(projectId: string, from: string, to: string): Promise<Chain>;
+  /** PUT /v1/projects/{id}/chain/entry — 400 when the worker is not a member. */
+  setEntry(projectId: string, workerId: string): Promise<Chain>;
+
   chat(projectId: string): Promise<ChatMessage[]>;
   sendChat(projectId: string, text: string): Promise<ChatMessage[]>;
 }

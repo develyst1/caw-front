@@ -1,0 +1,50 @@
+// เริ่มโปรเจกต์ (REQ-011 R1): the page Blueprint's "ส่งไปสร้างที่ CAW" opens with `?project=<Blueprint project id>&version=<n>`. It asks the
+// back end to make the project and goes to its board; if one already exists for that version (409 already_exists) it goes to that one.
+// Anything else is said in words with the way back. The POST is idempotent, so a reload or a prefetch does no harm.
+import { redirect } from "next/navigation";
+import { api } from "@/api";
+import { CawError } from "@/api/caw";
+import s from "@/components/projects.module.css";
+import { CawRoot } from "@/theme/CawRoot";
+import { section, startRefused } from "@/words";
+
+export const dynamic = "force-dynamic";
+
+type Refusal = keyof typeof startRefused;
+const refusalOf = (e: unknown): Refusal => {
+  if (!(e instanceof CawError)) throw e; // a bug, not a refusal: let Next show it
+  if (e.code === "unreachable" || e.status >= 500) return "unreachable";
+  return e.code === "blueprint_project_not_found" || e.code === "version_not_confirmed" ? e.code : "other";
+};
+
+export default async function Start({ searchParams }: { searchParams: Promise<{ project?: string; version?: string }> }) {
+  const { project, version } = await searchParams;
+  const n = Number(version);
+  let target: string | null = null;
+  let refused: Refusal | null = null;
+  if (!project || !Number.isInteger(n) || n < 1) refused = "incomplete";
+  else {
+    try { target = (await api.createProject({ blueprintProjectId: project, version: n })).id; }
+    catch (e) {
+      if (e instanceof CawError && e.code === "already_exists" && typeof (e.details as { id?: unknown } | undefined)?.id === "string") target = (e.details as { id: string }).id;
+      else refused = refusalOf(e);
+    }
+  }
+  if (target) redirect(`/p/${target}`); // outside the try: redirect() works by throwing
+  return (
+    <CawRoot>
+      <header className={s.header}>
+        <div className={s.headerIn}>
+          <span className={s.mark}>CAW</span>
+          <h1 className={s.title}>{section.projects}</h1>
+        </div>
+      </header>
+      <main className={s.main}>
+        <div className={`${s.panel} ${s.panelAlert}`} role="alert">
+          <p className={s.panelText}>{startRefused[refused ?? "other"]}</p>
+          <a className={s.link} href="/">{section.projects}</a>
+        </div>
+      </main>
+    </CawRoot>
+  );
+}

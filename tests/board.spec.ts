@@ -1,6 +1,6 @@
 // The board comp (TASK-B-039 DoD 3, REQ-011 AC-3 on the mock): every card in its place, the question card first, the filter
 // narrows; plus the 390 sideways columns and the keyboard path.
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
 import { column } from "../src/words";
 

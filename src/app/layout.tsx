@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "CAW" };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="th">
-      <body>
+      <body style={{ margin: 0 }}>
         {/* Ant Design's server-side style extraction; it only emits styles for the Ant components a route renders. */}
         <AntdRegistry>{children}</AntdRegistry>
       </body>

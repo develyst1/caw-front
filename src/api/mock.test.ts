@@ -1,8 +1,10 @@
 // The mock honours SPEC-A-008's shapes (REQ-010 contract v1.0 + v1.1) — the screens are built against it until caw-back's OpenAPI lands.
 import { describe, expect, test } from "bun:test";
-import { CawError } from "./caw";
+import { CawError, type CawApi } from "./caw";
 import { createMockApi, MOCK_PROJECT_ID as PID } from "./mock";
 
+/** The seeded project's summary (the counts come with the list, as in the contract). */
+const summaryOf = async (api: CawApi) => (await api.projects()).find((p) => p.id === PID)!;
 const expectRefusal = async (p: Promise<unknown>, status: number, code: string) => {
   const e = await p.then(() => null, (x: unknown) => x);
   expect(e).toBeInstanceOf(CawError);
@@ -21,7 +23,7 @@ describe("projects", () => {
 
   test("cardsDone / cardsTotal / stuckCount / hopsUsed are computed, not stored", async () => {
     const api = createMockApi();
-    const [p, cards, hops] = [(await api.project(PID))!, await api.cards(PID), await api.hops(PID)];
+    const [p, cards, hops] = [await summaryOf(api), await api.cards(PID), await api.hops(PID)];
     expect(p.cardsTotal).toBe(cards.length);
     expect(p.cardsDone).toBe(cards.filter((c) => c.status === "done").length);
     // stuck = status stuck + open question cards + specChangedVersion set
@@ -140,23 +142,25 @@ describe("workers, chain", () => {
 });
 
 describe("runs and hops (v1.1)", () => {
-  test("one finished run with 3 hops, and one manual hop (no run, no runner) — newest first", async () => {
+  test("two finished runs (3 + 2 hops) newest first, and one manual hop (no run, no runner)", async () => {
     const api = createMockApi();
     const [runs, hops] = [await api.runs(PID), await api.hops(PID)];
-    expect(runs).toHaveLength(1);
-    const run = runs[0]!;
-    expect(run.endedAt).not.toBeNull();
-    expect(run.stopReason).toBe("budget_spent");
-    expect(run.hopsUsed).toBe(3);
-    expect(hops).toHaveLength(4);
-    expect(hops.filter((h) => h.runId === run.id)).toHaveLength(3);
+    expect(runs).toHaveLength(2);
+    const [newer, older] = runs as [typeof runs[number], typeof runs[number]];
+    expect(newer.startedAt > older.startedAt).toBe(true);
+    expect([newer.stopReason, newer.hopsUsed, older.stopReason, older.hopsUsed]).toEqual(["budget_spent", 3, "nothing_workable", 2]);
+    expect(runs.every((r) => r.endedAt !== null)).toBe(true);
+    expect(hops).toHaveLength(6);
+    expect(hops.filter((h) => h.runId === newer.id)).toHaveLength(3);
+    expect(hops.filter((h) => h.runId === older.id)).toHaveLength(2);
     const manual = hops.filter((h) => h.runId === null);
     expect(manual).toHaveLength(1);
     expect(manual[0]!.claimedBy).toBeNull();
     expect(hops.map((h) => h.startedAt)).toEqual([...hops.map((h) => h.startedAt)].sort().reverse());
-    expect((await api.hops(PID, { runId: run.id })).length).toBe(3);
+    expect((await api.hops(PID, { runId: newer.id })).length).toBe(3);
     expect(await api.hops(PID, { limit: 2 })).toHaveLength(2);
     expect(hops.every((h) => h.tokensIn !== null && h.tokensOut !== null && h.endedAt !== null && h.outcome !== null)).toBe(true);
+    expect((await api.projects())[0]!.hopsUsed).toBe(6); // every hop, run or manual
   });
 
   test("startRun opens a run (mode at start, budget given); a second one while it is open is refused 409 run_open", async () => {
@@ -167,7 +171,7 @@ describe("runs and hops (v1.1)", () => {
     expect((await api.runs(PID))[0]!.id).toBe(run.id); // newest first
     await expectRefusal(api.startRun(PID, 5), 409, "run_open");
     await expectRefusal(createMockApi().startRun("nope", 5), 404, "not_found");
-    expect(await api.runs(PID)).toHaveLength(2); // the refusal added nothing
+    expect(await api.runs(PID)).toHaveLength(3); // the refusal added nothing
   });
 });
 

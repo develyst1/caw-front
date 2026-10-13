@@ -1,6 +1,6 @@
 // REQ-011's wording table, row by row: each word is here, verbatim.
 import { describe, expect, test } from "bun:test";
-import { blueprintBuild, budget, card, cardMark, column, columnOrder, mode, refusedHandoff, runRunning, section, stopReason, workspace } from "./words";
+import { blueprintBuild, budget, card, cardMark, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, section, startRefused, stopReason, workspace } from "./words";
 
 describe("REQ-011 wording table", () => {
   test("columns, in the order they are drawn", () => {
@@ -35,5 +35,25 @@ describe("REQ-011 wording table", () => {
       heading: "โฟลเดอร์ที่ทีมเขียนได้", add: "เพิ่มโฟลเดอร์", remove: "เอาออก", hint: "ใส่ path เต็ม เช่น /Users/…/my-repo",
       none: "ยังไม่ได้กำหนดโฟลเดอร์ — ทีมจะยังเริ่มทำงานไม่ได้",
     });
+  });
+
+  // the projects list and start page words (approved by the PM, TASK-B-040 Q1) — pinned so a change is a decision, not an accident
+  test("the projects list's words", () => {
+    expect([projectCard.blueprintVersion(3), projectCard.done(3, 12), projectCard.stuck(4)]).toEqual(["spec เวอร์ชัน 3", "เสร็จ 3 จาก 12", "ติดอยู่ 4"]);
+    expect(projectCard.none).toBe("ยังไม่มีโปรเจกต์ — เริ่มจากปุ่ม ส่งไปสร้างที่ CAW ในหน้าพร้อมสร้างของ Blueprint");
+  });
+  test("the start page's refusals", () => {
+    expect(startRefused).toEqual({
+      blueprint_project_not_found: "ไม่พบโปรเจกต์นี้ใน Blueprint", version_not_confirmed: "เวอร์ชันนี้ยังไม่ได้ยืนยันใน Blueprint",
+      unreachable: "ต่อระบบไม่ได้ตอนนี้", incomplete: "ลิงก์นี้ไม่ครบ ต้องมีโปรเจกต์และเวอร์ชัน", other: "เริ่มโปรเจกต์ไม่สำเร็จ",
+    });
+  });
+
+  // the runs screen's words (approved by the PM, TASK-B-043 Q1) — pinned
+  test("the runs screen's words: units, durations, outcomes", () => {
+    expect([runWords.none, runWords.hops(3), runWords.tokens(10300), runWords.tokensInOut(4500, 1600)]).toEqual(["ยังไม่มีการรัน", "3 ก้าว", "10,300 โทเค็น", "เข้า 4,500 · ออก 1,600"]);
+    expect([0, 38_000, 60_000, 72_000, 3_600_000, 7_500_000, 90_000].map(runWords.duration)).toEqual(
+      ["0 วินาที", "38 วินาที", "1 นาที", "1 นาที 12 วินาที", "1 ชั่วโมง", "2 ชั่วโมง 5 นาที", "1 นาที 30 วินาที"]);
+    expect(hopOutcome).toEqual({ commented: "แสดงความเห็น", handed_off: "ส่งต่อ", status: "เปลี่ยนสถานะ", asked: "ถามคุณ", failed: "ไม่สำเร็จ", stopped: "หยุดไว้", interrupted: "ถูกขัดจังหวะ" });
   });
 });

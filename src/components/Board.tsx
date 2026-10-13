@@ -40,7 +40,7 @@ function initial(name: string) { return [...name][0] ?? ""; }
 function WorkCard({ card, worker, part, waiting }: { card: Card; worker: Worker | undefined; part: PartRef | undefined; waiting: boolean }) {
   return (
     <li>
-      <article className={s.card} tabIndex={0} aria-labelledby={`t-${card.id}`} data-card={card.id}>
+      <a className={s.card} href={`/p/${card.projectId}/c/${card.id}`} aria-labelledby={`t-${card.id}`} data-card={card.id}>
         <h3 id={`t-${card.id}`} className={s.title}>{card.title}</h3>
         <PartChip part={part} />
         <div className={s.foot}>
@@ -52,7 +52,7 @@ function WorkCard({ card, worker, part, waiting }: { card: Card; worker: Worker 
             </span>
           )}
         </div>
-      </article>
+      </a>
     </li>
   );
 }
@@ -96,14 +96,14 @@ export function Board({ cards, workers, parts }: { cards: Card[]; workers: Worke
         <ul className={s.questions}>
           {questions.map((q) => (
             <li key={q.id}>
-              <article className={s.question} tabIndex={0} aria-labelledby={`t-${q.id}`} data-card={q.id} data-question>
+              <a className={s.question} href={`/p/${q.projectId}/c/${q.id}`} aria-labelledby={`t-${q.id}`} data-card={q.id} data-question>
                 <QuestionCircleOutlined aria-hidden className={s.questionIcon} />
                 <div className={s.questionBody}>
                   <h3 id={`t-${q.id}`} className={s.questionText}>{q.question?.text ?? q.title}</h3>
                   <PartChip part={parts[q.anchor.key]} />
                 </div>
                 <Tag className={s.markWait} icon={<QuestionCircleOutlined aria-hidden />}>{cardMark.waitingAnswer}</Tag>
-              </article>
+              </a>
             </li>
           ))}
         </ul>

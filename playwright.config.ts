@@ -21,5 +21,7 @@ export default defineConfig({
     url: `http://127.0.0.1:${port}/`,
     reuseExistingServer: false,
     timeout: 60_000,
+    // lets /test-reset put the in-memory mock back to its seed before each test (the route answers 404 without this)
+    env: { CAW_TEST_RESET: "1" },
   },
 });

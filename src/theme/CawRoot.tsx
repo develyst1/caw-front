@@ -11,8 +11,6 @@ const theme = antTheme(cawFont.style.fontFamily);
 
 export function CawRoot({ children }: { children: ReactNode }) {
   const [still, setStill] = useState(false);
-  // the browser's 8 px body margin framed the board in white; the root layout is not this TASK's file (asked to move it there)
-  useEffect(() => { document.body.style.margin = "0"; }, []);
   useEffect(() => {
     const q = window.matchMedia("(prefers-reduced-motion: reduce)");
     const on = () => setStill(q.matches);
