@@ -1,0 +1,30 @@
+{
+  "name": "caw-front",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3510",
+    "build": "next build",
+    "start": "next start -p 3510",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ant-design/cssinjs": "2.1.2",
+    "@ant-design/icons": "6.3.4",
+    "@ant-design/nextjs-registry": "1.3.0",
+    "antd": "6.6.5",
+    "next": "16.3.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@types/bun": "1.4.2",
+    "@types/node": "24.19.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}

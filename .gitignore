@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# builds of the people who share this checkout (one folder each) and Playwright output
+/.next-*/
+/test-results/
