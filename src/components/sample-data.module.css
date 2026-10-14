@@ -1,0 +1,12 @@
+/* the sample-data mark (D-058): the no-folders strip's warning tone, slim, stuck to the top of every page; it takes its own row, so it
+   never sits over content. z-index above the pages' own sticky parts (the card's side panel, the chat box). */
+.mark { position: sticky; top: 0; z-index: 10; margin: 0; padding: 6px 24px; background: var(--caw-stuckSoft); border-bottom: 1px solid var(--caw-stuckLine); color: var(--caw-stuck); font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 16px; }
+/* the hint (TASK-B-060): quieter than the mark; its command reads as something to type */
+.hint { font-weight: 400; }
+.code { padding: 0 6px; border-radius: var(--caw-r-tag); background: var(--caw-paper); border: 1px solid var(--caw-stuckLine); font-size: 14px; } /* the desk's 14 px text floor (runs.spec) */
+/* the bar's height, for the pages' own sticky parts (the card's side panel); unset on http, where there is no bar */
+:global(body):has(.mark) { --caw-sample-bar: 34px; }
+/* under 768 the hint always takes its own line, so the bar is a known height there (two lines: 55px) — the card panel's top follows it */
+@media (max-width: 767px) { .hint { flex-basis: 100%; } :global(body):has(.mark) { --caw-sample-bar: 55px; } }
+@media (max-width: 480px) { .mark { padding: 6px 16px; } }

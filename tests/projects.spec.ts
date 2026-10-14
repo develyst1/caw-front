@@ -1,7 +1,7 @@
 // The projects list and the start-project page (TASK-B-040, REQ-011 R1), on the mock (each test starts from its seed).
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { mode, projectCard, section, startRefused } from "../src/words";
+import { mode, projectCard, sampleData, section, startRefused } from "../src/words";
 
 const BP = "11111111-2222-4333-8444-555555555555"; // the one Blueprint project the mock knows
 
@@ -53,7 +53,7 @@ test("/start for a Blueprint version that already has a project goes to that pro
 
 test("/start says why it cannot start, in words, with the way back — unknown Blueprint project, unconfirmed version, incomplete link", async ({ page }) => {
   const cases: [string, string][] = [
-    ["/start?project=nope&version=1", startRefused.blueprint_project_not_found],
+    ["/start?project=nope&version=1", sampleData], // D-058: on sample data the mock cannot know real Blueprint projects
     [`/start?project=${BP}&version=99`, startRefused.version_not_confirmed],
     [`/start?project=${BP}`, startRefused.incomplete],
     ["/start?version=3", startRefused.incomplete],

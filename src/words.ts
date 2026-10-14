@@ -164,6 +164,11 @@ export const projectCard = {
   none: "ยังไม่มีโปรเจกต์ — เริ่มจากปุ่ม ส่งไปสร้างที่ CAW ในหน้าพร้อมสร้างของ Blueprint",
 } as const;
 
+/** On sample data (CAW_API=mock), every page says so (REQ-011 l.59, D-058). */
+export const sampleData = "ข้อมูลตัวอย่าง — ไม่ได้ต่อกับ CAW จริง";
+/** After the mark (REQ-011 l.60, TASK-B-060); the command part is shown as code. */
+export const sampleDataHint = "ใช้ข้อมูลจริง: bun run dev:http";
+
 /** The start-project page, when it cannot start. `apiDown` is Blueprint's own sentence, so the two apps say it the same way. */
 export const startRefused = {
   blueprint_project_not_found: "ไม่พบโปรเจกต์นี้ใน Blueprint",

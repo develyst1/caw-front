@@ -17,7 +17,7 @@
 /* the spec first: its own column at 1440, the top of the page at 390 */
 .grid { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 20px; align-items: start; }
 .spec {
-  position: sticky; top: 16px; display: grid; gap: 16px; padding: 20px; border-radius: var(--caw-r-panel);
+  position: sticky; top: calc(16px + var(--caw-sample-bar, 0px)); /* below the sample-data bar when it is there (TASK-B-059) */ display: grid; gap: 16px; padding: 20px; border-radius: var(--caw-r-panel);
   background: var(--caw-paper); border: 2px solid var(--caw-blueSoft); box-shadow: var(--caw-shadow-rest);
 }
 .work { display: grid; gap: 16px; min-width: 0; }

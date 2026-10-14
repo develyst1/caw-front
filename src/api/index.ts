@@ -5,8 +5,13 @@ import { createMockApi, type MockState } from "./mock";
 
 declare global { var __cawMock: CawApi | undefined; var __cawHttp: CawApi | undefined }
 
+const mode = () => process.env.CAW_API || "mock";
+
+/** True on sample data — the mock (D-058: every page says so). The same value `pick()` reads. */
+export const onSampleData = () => mode() === "mock";
+
 function pick(): CawApi {
-  const which = process.env.CAW_API || "mock";
+  const which = mode();
   if (which === "mock") return (globalThis.__cawMock ??= createMockApi()); // one in-memory copy for the whole server process
   if (which === "http") return (globalThis.__cawHttp ??= createHttpApi());
   throw new Error(`CAW_API=${which}: use "mock" or "http"`);

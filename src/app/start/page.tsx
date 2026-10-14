@@ -2,11 +2,11 @@
 // back end to make the project and goes to its board; if one already exists for that version (409 already_exists) it goes to that one.
 // Anything else is said in words with the way back. The POST is idempotent, so a reload or a prefetch does no harm.
 import { redirect } from "next/navigation";
-import { api } from "@/api";
+import { api, onSampleData } from "@/api";
 import { CawError } from "@/api/caw";
 import s from "@/components/projects.module.css";
 import { CawRoot } from "@/theme/CawRoot";
-import { section, startRefused } from "@/words";
+import { sampleData, section, startRefused } from "@/words";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,8 @@ export default async function Start({ searchParams }: { searchParams: Promise<{ 
       </header>
       <main className={s.main}>
         <div className={`${s.panel} ${s.panelAlert}`} role="alert">
-          <p className={s.panelText}>{startRefused[refused ?? "other"]}</p>
+          {/* on sample data the mock cannot know real Blueprint projects — "not found" would be the wrong sentence (D-058) */}
+          <p className={s.panelText}>{refused === "blueprint_project_not_found" && onSampleData() ? sampleData : startRefused[refused ?? "other"]}</p>
           <a className={s.link} href="/">{section.projects}</a>
         </div>
       </main>

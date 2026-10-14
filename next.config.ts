@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // Stops `next dev` writing AGENTS.md / CLAUDE.md at the repo root.
   agentRules: false,
+  allowedDevOrigins: ['127.0.0.1'],
 };
 
 export default nextConfig;
