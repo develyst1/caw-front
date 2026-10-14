@@ -47,10 +47,10 @@ describe("projects", () => {
     const api = createMockApi();
     expect((await api.setWorkspace(PID, ["/Users/me/my-repo", "/Users/me/other"]))!.workspace.roots).toEqual(["/Users/me/my-repo", "/Users/me/other"]);
     expect((await api.project(PID))!.workspace.roots).toHaveLength(2);
-    await expectRefusal(api.setWorkspace(PID, ["relative/path"]), 400, "bad_request");
-    await expectRefusal(api.setWorkspace(PID, ["/Users/me/../you"]), 400, "bad_request");
-    await expectRefusal(api.setWorkspace(PID, Array.from({ length: 21 }, (_, i) => `/r${i}`)), 400, "bad_request");
-    await expectRefusal(api.setWorkspace(PID, [`/${"x".repeat(500)}`]), 400, "bad_request");
+    await expectRefusal(api.setWorkspace(PID, ["relative/path"]), 400, "validation");
+    await expectRefusal(api.setWorkspace(PID, ["/Users/me/../you"]), 400, "validation");
+    await expectRefusal(api.setWorkspace(PID, Array.from({ length: 21 }, (_, i) => `/r${i}`)), 400, "validation");
+    await expectRefusal(api.setWorkspace(PID, [`/${"x".repeat(500)}`]), 400, "validation");
     expect((await api.project(PID))!.workspace.roots).toHaveLength(2); // a refusal changes nothing
     expect((await api.setWorkspace(PID, []))!.workspace.roots).toEqual([]);
   });
@@ -114,10 +114,23 @@ describe("cards", () => {
     expect(ctx.spec.decisions.map((d) => d.key)).toContain("DEC-001");
     const withNotes = (await api.cards(PID)).find((c) => c.anchor.key === "API-003")!;
     const notes = (await api.cardContext(withNotes.id))!.notes;
-    expect(notes.map((n) => n.type)).toEqual(["comment", "handoff", "comment"]);
+    expect(notes.map((n) => n.type)).toEqual(["comment", "handoff", "handoff_refused", "comment"]); // v1.3 seed (TASK-B-048)
+    expect(notes[2]!.allowed).toEqual([]); // มิ้นท์ hands to nobody in the seeded chain
     expect(notes.map((n) => n.at)).toEqual([...notes.map((n) => n.at)].sort());
     expect(notes[1]!.fromWorkerId).not.toBeNull();
     expect(await api.cardContext("nope")).toBeNull();
+  });
+
+  test("part (v1.7): a part by key — its PartContext whether or not a card holds it; a key Blueprint does not have, or an unknown project, is null; a bad version is refused", async () => {
+    const api = createMockApi();
+    const ctx = (await api.part(PID, "SCR-003"))!;
+    expect([ctx.part.key, ctx.part.kind, ctx.part.title]).toEqual(["SCR-003", "screen", "หน้าอนุมัติคำขอ"]);
+    expect(ctx.version).toBe((await api.project(PID))!.latestSeenVersion); // default = the project's latestSeenVersion
+    expect((await api.part(PID, "SCR-003", 1))!.version).toBe(1);
+    expect(ctx.neighbours.length).toBeGreaterThan(0);
+    expect(await api.part(PID, "STEP-099")).toBeNull(); // the part that is gone
+    expect(await api.part("nope", "SCR-003")).toBeNull();
+    for (const v of [0, -1, 1.5]) await expectRefusal(api.part(PID, "SCR-003", v), 400, "validation");
   });
 });
 
@@ -175,12 +188,18 @@ describe("runs and hops (v1.1)", () => {
   });
 });
 
-describe("chat (not in the REQ-010 contract yet)", () => {
-  test("keeps what was sent", async () => {
-    const api = createMockApi();
-    const before = (await api.chat(PID)).length;
-    const after = await api.sendChat(PID, "ทดสอบ");
-    expect(after.length).toBe(before + 2);
-    expect(after.at(-2)!.text).toBe("ทดสอบ");
+describe("seed variants (POST /test-reset?state=…)", () => {
+  test("dispatcher-stopped: the project is on อัตโนมัติ, its newest run ended budget_spent by itself, no run is open", async () => {
+    const api = createMockApi({ state: "dispatcher-stopped" });
+    const [p, runs] = [(await api.project(PID))!, await api.runs(PID)];
+    expect(p.mode).toBe("dispatcher");
+    expect(runs[0]!.endedAt).not.toBeNull();
+    expect(runs[0]!.stopReason).toBe("budget_spent");
+    expect(runs.some((r) => r.endedAt === null)).toBe(false);
+    expect(p.hopBudget).toBe(40);
+  });
+  test("the plain seed is unchanged: manual, and no state means the same as before", async () => {
+    expect((await createMockApi().project(PID))!.mode).toBe("manual");
+    expect((await createMockApi({}).project(PID))!.mode).toBe("manual");
   });
 });

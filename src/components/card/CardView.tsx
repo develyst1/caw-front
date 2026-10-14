@@ -9,7 +9,7 @@ import { Tag } from "antd";
 import type { Card, CardContext, Worker } from "@/api/caw";
 import {
   card as cardWord, cardMark, column, decisionsHeading, dependsOnHeading, handoffLine, linkKind, linkedWith, operatorName,
-  partKind, proposedAnswer, section, timelineHeading, todoHeading, toSpec,
+  partKind, proposedAnswer, refusedHandoff, section, timelineHeading, todoHeading, toSpec,
 } from "@/words";
 import { AnswerQuestion, CardControls, CommentBox } from "./CardActions";
 import { Part, PartIcon } from "./Part";
@@ -131,9 +131,11 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
             <h3 id="timeline" className={s.h2}>{timelineHeading}</h3>
             {notes.length > 0 && <ol className={s.timeline}>
               {notes.map((n) => (
-                <li key={n.id} className={n.type === "handoff" ? `${s.note} ${s.handoff}` : s.note} data-note={n.type}>
+                <li key={n.id} className={n.type === "handoff" ? `${s.note} ${s.handoff}` : n.type === "handoff_refused" ? `${s.note} ${s.refusedNote}` : s.note} data-note={n.type}>
                   <div className={s.noteHead}>
-                    <span className={s.who}>{n.type === "handoff" ? handoffLine(nameOf(n.fromWorkerId), nameOf(n.toWorkerId)) : nameOf(n.actor)}</span>
+                    <span className={s.who}>{n.type === "handoff" ? handoffLine(nameOf(n.fromWorkerId), nameOf(n.toWorkerId))
+                      : n.type === "handoff_refused" ? refusedHandoff(nameOf(n.toWorkerId), nameOf(n.fromWorkerId)) /* v1.3, D-051 */
+                      : nameOf(n.actor)}</span>
                     <time className={s.at} dateTime={n.at}>{when(n.at)}</time>
                   </div>
                   {n.text && <p className={s.noteText}>{n.text}</p>}

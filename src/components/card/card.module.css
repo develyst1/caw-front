@@ -29,7 +29,8 @@
 .partHead { display: flex; align-items: center; gap: 12px; }
 .partText { display: grid; gap: 2px; min-width: 0; }
 .partTitle { font-size: 18px; font-weight: 700; line-height: 1.35; }
-.kind { font-size: 14px; color: var(--caw-ink2); }
+/* the kind word is one word: it never wraps inside itself nor shrinks — the part's name beside it is what wraps (TASK-B-054) */
+.kind { font-size: 14px; color: var(--caw-ink2); white-space: nowrap; flex: none; }
 .toSpec {
   justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: var(--caw-r-card);
   background: var(--caw-blueSoft); color: var(--caw-blue); font-weight: 600; text-decoration: none;
@@ -72,6 +73,9 @@
 .noteHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .who { font-weight: 600; }
 .handoff .who { color: var(--caw-blue); }
+/* a hand-off the chain refused (TASK-B-048): the stuck tone, so it reads as something that did not happen */
+.refusedNote::before { border-color: var(--caw-stuck); background: var(--caw-stuckSoft); }
+.refusedNote .who { color: var(--caw-stuck); }
 .at { font-size: 14px; color: var(--caw-ink2); font-variant-numeric: tabular-nums; }
 .noteText { margin: 4px 0 0; line-height: 1.6; }
 

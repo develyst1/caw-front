@@ -161,9 +161,9 @@ export function Team({ projectId, workers, chain, openCards }: { projectId: stri
 
           <form className={s.form} onSubmit={(e) => { e.preventDefault(); if (ca && cb && cname.trim()) combineAct.go(() => combineWorkers(projectId, cname.trim(), [ca, cb]), () => { setCa(undefined); setCb(undefined); setCname(""); }); }}>
             <h3 className={s.h3}>{words.combine}</h3>
-            <label className={s.field}><span className={s.label} id={ids.a}>{words.name} 1</span>
+            <label className={s.field}><span className={s.label} id={ids.a}>{words.combinePick(1)}</span>
               <Select size="large" aria-labelledby={ids.a} value={ca} onChange={setCa} options={workerOptions.filter((o) => o.value !== cb)} /></label>
-            <label className={s.field}><span className={s.label} id={ids.b}>{words.name} 2</span>
+            <label className={s.field}><span className={s.label} id={ids.b}>{words.combinePick(2)}</span>
               <Select size="large" aria-labelledby={ids.b} value={cb} onChange={setCb} options={workerOptions.filter((o) => o.value !== ca)} /></label>
             <label className={s.field}><span className={s.label}>{words.combinedName}</span><Input size="large" value={cname} onChange={(e) => setCname(e.target.value)} /></label>
             <Button size="large" type="primary" htmlType="submit" disabled={!ca || !cb || !cname.trim() || combineAct.pending}>{words.combine}</Button>

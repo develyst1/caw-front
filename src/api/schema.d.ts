@@ -86,7 +86,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -95,7 +95,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -113,7 +113,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -170,7 +170,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -179,7 +179,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -237,7 +237,7 @@ export interface paths {
                         "application/json": components["schemas"]["Note"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -246,7 +246,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -364,7 +364,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -373,7 +373,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -391,7 +391,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -446,7 +446,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -455,7 +455,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -510,7 +510,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -577,7 +577,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -586,7 +586,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -604,7 +604,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -615,6 +615,237 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/v1/chat/{messageId}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    messageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description what a worker needs to answer the message */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            chain: components["schemas"]["Chain"];
+                            message: components["schemas"]["ChatMessage"];
+                            project: components["schemas"]["Project"];
+                            thread: components["schemas"]["ChatMessage"][];
+                        };
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chat/{messageId}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    messageId: string;
+                };
+                cookie?: never;
+            };
+            /** @description the entry worker's reply */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        amendment?: {
+                            blueprintMessageId: string;
+                        };
+                        proposalId?: string;
+                        questions?: {
+                            cases: string[];
+                            proposedDefault: string;
+                            text: string;
+                        }[];
+                        text: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description the reply */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatMessage"];
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/chat/{messageId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    messageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description retry requested — the runner treats the message like a new one */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/hops/{hopId}": {
@@ -645,7 +876,7 @@ export interface paths {
                     "application/json": {
                         note?: string;
                         /** @enum {string} */
-                        outcome: "commented" | "handed_off" | "status" | "asked" | "failed" | "stopped" | "interrupted";
+                        outcome: "commented" | "handed_off" | "status" | "asked" | "failed" | "stopped" | "interrupted" | "replied" | "proposed" | "amended" | "proposed_and_amended";
                         tokensIn?: number;
                         tokensOut?: number;
                     } | {
@@ -663,7 +894,7 @@ export interface paths {
                         "application/json": components["schemas"]["Hop"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -681,7 +912,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -732,7 +963,7 @@ export interface paths {
                         "application/json": Record<string, never>;
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -844,7 +1075,7 @@ export interface paths {
                         "application/json": components["schemas"]["Project"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -853,7 +1084,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -871,7 +1102,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -943,6 +1174,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{id}/amendments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description a request to change the spec, sent to Blueprint's chat */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        about?: string[];
+                        request: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Blueprint's Message */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description blueprint_unreachable */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{id}/cards": {
         parameters: {
             query?: never;
@@ -977,7 +1289,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1032,7 +1344,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1041,7 +1353,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1059,7 +1371,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description anchor_not_in_version · version_not_confirmed */
+                /** @description anchor_not_in_version · version_not_confirmed · anchor_not_located */
                 422: {
                     headers: {
                         [name: string]: unknown;
@@ -1168,7 +1480,7 @@ export interface paths {
                         "application/json": components["schemas"]["Chain"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1177,7 +1489,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1195,7 +1507,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1234,7 +1546,7 @@ export interface paths {
                         "application/json": components["schemas"]["Chain"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1243,7 +1555,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1303,7 +1615,7 @@ export interface paths {
                         "application/json": components["schemas"]["Chain"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1312,7 +1624,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1375,7 +1687,7 @@ export interface paths {
                         "application/json": components["schemas"]["Chain"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1384,7 +1696,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1402,7 +1714,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1452,7 +1764,7 @@ export interface paths {
                         "application/json": components["schemas"]["Chain"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1461,7 +1773,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1479,7 +1791,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1490,6 +1802,121 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    after?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description oldest first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            messages: components["schemas"]["ChatMessage"][];
+                        };
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description the operator's message */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        text: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description posted */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChatMessage"];
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1527,7 +1954,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1587,7 +2014,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1617,12 +2044,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            /** @description start a hop: one turn of one worker on one workable card */
+            /** @description start a hop: one turn of one worker on one workable card — or, as the entry worker, on one unanswered chat message */
             requestBody: {
                 content: {
                     "application/json": {
-                        cardId: string;
+                        cardId?: string;
                         claim?: string;
+                        messageId?: string;
                         runId?: string;
                         workerId: string;
                     };
@@ -1638,7 +2066,7 @@ export interface paths {
                         "application/json": components["schemas"]["Hop"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1656,8 +2084,88 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}/locate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description what to find in the confirmed spec */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        request: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Blueprint's Located */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description blueprint_unreachable */
+                502: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1715,7 +2223,7 @@ export interface paths {
                         "application/json": components["schemas"]["Project"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1724,7 +2232,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1744,6 +2252,211 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/v1/projects/{id}/parts/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    version?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description the part at that version */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": unknown;
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description blueprint_unreachable */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    messageId?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description newest first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            proposals: components["schemas"]["Proposal"][];
+                        };
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description cards the entry worker proposes for the operator's message */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        items: {
+                            anchor: {
+                                key: string;
+                                version: number;
+                            };
+                            /**
+                             * @description indexes into the proposal's items
+                             * @default []
+                             */
+                            dependsOn?: number[];
+                            hops: number;
+                            title: string;
+                            todo: string;
+                            workerId: string;
+                        }[];
+                        messageId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description the open proposal */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Proposal"];
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description anchor_not_in_version · version_not_confirmed · anchor_not_located */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description blueprint_unreachable */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/projects/{id}/rebuild-check": {
@@ -1828,7 +2541,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1876,7 +2589,7 @@ export interface paths {
                         "application/json": components["schemas"]["Run"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1894,7 +2607,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1951,7 +2664,7 @@ export interface paths {
                         "application/json": components["schemas"]["Project"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1960,7 +2673,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1980,6 +2693,99 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/v1/proposals/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description the cards made */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            cards: components["schemas"]["Card"][];
+                        };
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description anchor_not_in_version · version_not_confirmed · anchor_not_located */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description blueprint_unreachable */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/runs/{runId}": {
@@ -2024,7 +2830,7 @@ export interface paths {
                         "application/json": components["schemas"]["Run"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2042,7 +2848,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2117,7 +2923,7 @@ export interface paths {
                         "application/json": components["schemas"]["Worker"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2126,7 +2932,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2135,7 +2941,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2190,7 +2996,7 @@ export interface paths {
                         "application/json": components["schemas"]["Worker"];
                     };
                 };
-                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question */
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2199,7 +3005,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card */
+                /** @description operator_only · not_your_card · not_your_message */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2217,7 +3023,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2285,6 +3091,35 @@ export interface components {
             entryWorkerId: string | null;
             members: components["schemas"]["Worker"][];
         };
+        ChatMessage: {
+            amendment: {
+                blueprintMessageId: string;
+                link: string;
+            } | null;
+            at: string;
+            /** @description operator | worker:<id> */
+            author: string;
+            /** @description the newest chat hop on this message (computed on read) */
+            chatHop: {
+                endedAt: string | null;
+                id: string;
+                outcome: string | null;
+            } | null;
+            id: string;
+            projectId: string;
+            proposalId: string | null;
+            questions: {
+                cases: string[];
+                proposedDefault: string;
+                text: string;
+            }[] | null;
+            /** @description set on an operator message when a hop answers it */
+            replyHopId: string | null;
+            replyTo: string | null;
+            /** @description set when the operator asked for a retry; cleared when the next hop starts on the message */
+            retryRequestedAt: string | null;
+            text: string;
+        };
         Error: {
             error: {
                 code: string;
@@ -2303,13 +3138,16 @@ export interface components {
             type: string;
         };
         Hop: {
-            cardId: string;
+            cardId: string | null;
             claimedBy: string | null;
             endedAt: string | null;
             id: string;
+            /** @description a chat hop: the keys of every locate it made (v1.6); never the spec text */
+            locatedKeys: string[] | null;
+            messageId: string | null;
             note: string;
             /** @enum {string|null} */
-            outcome: "commented" | "handed_off" | "status" | "asked" | "failed" | "stopped" | "interrupted" | null;
+            outcome: "commented" | "handed_off" | "status" | "asked" | "failed" | "stopped" | "interrupted" | "replied" | "proposed" | "amended" | "proposed_and_amended" | null;
             projectId: string;
             runId: string | null;
             startedAt: string;
@@ -2319,13 +3157,15 @@ export interface components {
         };
         Note: {
             actor: string;
+            /** @description handoff_refused only: who the sender could have handed the card to */
+            allowed: string[] | null;
             at: string;
             fromWorkerId: string | null;
             id: string;
             text: string;
             toWorkerId: string | null;
             /** @enum {string} */
-            type: "comment" | "handoff";
+            type: "comment" | "handoff" | "handoff_refused";
         };
         Project: {
             blueprintProjectId: string;
@@ -2347,6 +3187,33 @@ export interface components {
             cardsDone: number;
             cardsTotal: number;
             stuckCount: number;
+        };
+        Proposal: {
+            cardIds: string[] | null;
+            createdAt: string;
+            /** @description the sum of the items' hops, computed on read */
+            hopsTotal: number;
+            id: string;
+            items: {
+                anchor: {
+                    key: string;
+                    version: number;
+                };
+                /**
+                 * @description indexes into the proposal's items
+                 * @default []
+                 */
+                dependsOn: number[];
+                hops: number;
+                title: string;
+                todo: string;
+                workerId: string;
+            }[];
+            messageId: string;
+            projectId: string;
+            /** @enum {string} */
+            status: "open" | "accepted" | "superseded";
+            version: number;
         };
         Run: {
             endedAt: string | null;

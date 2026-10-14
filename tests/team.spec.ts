@@ -37,8 +37,8 @@ test("team: create a worker — it is listed, with the model its role defaults t
 
 test("team: combine two — the union of their skills and the stronger model", async ({ page }) => {
   await page.goto(TEAM);
-  await pick(page, `${words.name} 1`, "ปลา");
-  await pick(page, `${words.name} 2`, "ฝน");
+  await pick(page, words.combinePick(1), "ปลา");
+  await pick(page, words.combinePick(2), "ฝน");
   await page.locator("label").filter({ hasText: words.combinedName }).locator("input").fill("ปลาฝน");
   await page.getByRole("button", { name: words.combine }).click();
   const w = page.locator("[data-worker]").filter({ hasText: "ปลาฝน" });

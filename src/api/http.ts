@@ -6,7 +6,7 @@
 import createClient from "openapi-fetch";
 import {
   CawError, type Card, type CardContext, type CawApi, type Chain, type ChatMessage, type Hop, type Note, type PartContext, type Project,
-  type ProjectSummary, type Run, type Worker,
+  type ProjectSummary, type Proposal, type Run, type Worker,
 } from "./caw";
 import type { paths } from "./schema";
 
@@ -48,7 +48,6 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     if (r.response.status === 404) return [];
     return r.data !== undefined ? r.data[key]! : refusal(r);
   };
-  const notYet = (what: string): never => { throw new CawError(501, "not_implemented", `${what} is not in caw-back's contract yet (REQ-013)`); };
 
   return {
     projects: async () => (await ok(client.GET("/v1/projects"))).projects as ProjectSummary[],
@@ -62,11 +61,22 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
       const c = await orNull(client.GET("/v1/cards/{cardId}/context", { params: { path: { cardId } } }));
       return c ? ({ ...c, spec: c.spec as PartContext } as CardContext) : null;
     },
+    // the page still draws without the name (the key is its fallback), so a part that is gone, a project that is not there and a
+    // Blueprint that is down are all `null`; a 400 (a bad version) is the caller's mistake and stays an error
+    part: async (id, key, version) => {
+      let r: Settled<PartContext>;
+      try { r = await call(client.GET("/v1/projects/{id}/parts/{key}", { params: { path: { id, key }, query: version === undefined ? {} : { version } } }) as Promise<Settled<PartContext>>); }
+      catch (e) { if (e instanceof CawError && e.status === 0) return null; throw e; }
+      if (r.response.status === 404 || r.response.status === 502) return null;
+      return r.data !== undefined ? r.data : refusal(r);
+    },
     workers: async () => (await ok(client.GET("/v1/workers"))).workers as Worker[],
     chain: (id) => orNull(client.GET("/v1/projects/{id}/chain", { params: { path: { id } } })) as Promise<Chain | null>,
     hops: (id, q = {}) => orEmpty<Hop>(client.GET("/v1/projects/{id}/hops", { params: { path: { id }, query: q } }) as Promise<Settled<{ hops: Hop[] }>>, "hops"),
     runs: (id, limit) => orEmpty<Run>(client.GET("/v1/projects/{id}/runs", { params: { path: { id }, query: { limit } } }) as Promise<Settled<{ runs: Run[] }>>, "runs"),
     startRun: (id, hopBudget) => ok(client.POST("/v1/projects/{id}/runs", { params: { path: { id } }, body: { hopBudget } })) as Promise<Run>,
+    // the operator stops the run (D-056); `report` is required by the route — empty; 409 already_finished comes back as a CawError
+    stopRun: (runId) => ok(client.PATCH("/v1/runs/{runId}", { params: { path: { runId } }, body: { stopReason: "operator_stopped", report: "" } })) as Promise<Run>,
 
     createProject: (body) => ok(client.POST("/v1/projects", { body })) as Promise<Project>,
     comment: (cardId, text) => ok(client.POST("/v1/cards/{cardId}/comments", { params: { path: { cardId } }, body: { text } })) as Promise<Note>,
@@ -83,7 +93,15 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     removeEdge: (id, from, to) => ok(client.DELETE("/v1/projects/{id}/chain/edges", { params: { path: { id } }, body: { from, to } })) as Promise<Chain>,
     setEntry: (id, workerId) => ok(client.PUT("/v1/projects/{id}/chain/entry", { params: { path: { id } }, body: { workerId } })) as Promise<Chain>,
 
-    chat: async (): Promise<ChatMessage[]> => notYet("the chat"),
-    sendChat: async (): Promise<ChatMessage[]> => notYet("the chat"),
+    // the chat and the card proposals (SPEC-A-008 § v1.4); `author` is a plain string in the OpenAPI, the template type in caw.ts
+    chat: (id, q = {}) => orEmpty<ChatMessage>(client.GET("/v1/projects/{id}/chat", { params: { path: { id }, query: q } }) as Promise<Settled<{ messages: ChatMessage[] }>>, "messages"),
+    postChat: (id, text) => ok(client.POST("/v1/projects/{id}/chat", { params: { path: { id } }, body: { text } })) as Promise<ChatMessage>,
+    proposals: (id, q = {}) => orEmpty<Proposal>(client.GET("/v1/projects/{id}/proposals", { params: { path: { id }, query: q } }), "proposals"),
+    // 202 with an empty object: nothing to read back; the refusals (404 too — a message that is not there is a mistake, not an empty list) are CawErrors
+    retryChat: async (messageId) => {
+      const r = await call(client.POST("/v1/chat/{messageId}/retry", { params: { path: { messageId } } }) as Promise<Settled<unknown>>);
+      if (!r.response.ok) refusal(r);
+    },
+    acceptProposal: async (id) => (await ok(client.POST("/v1/proposals/{id}/accept", { params: { path: { id } } }))).cards,
   };
 }

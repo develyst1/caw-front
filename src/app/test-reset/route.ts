@@ -3,14 +3,18 @@
 // sets it); in any other build — an http one, or a mock one nobody asked to reset — it is a plain 404, like a route that is not there.
 // (Not under `__test/`: a folder starting with an underscore is private in Next's App Router and is never a route.)
 import { resetMock } from "@/api";
+import { MOCK_STATES, type MockState } from "@/api/mock";
 
 export const dynamic = "force-dynamic";
 
 const allowed = () => (process.env.CAW_API || "mock") === "mock" && process.env.CAW_TEST_RESET === "1";
 
-export function POST() {
+export function POST(req: Request) {
   if (!allowed()) return new Response(null, { status: 404 });
-  resetMock();
+  const state = new URL(req.url).searchParams.get("state");
+  if (state === null) { resetMock(); return new Response(null, { status: 204 }); }
+  if (!(MOCK_STATES as readonly string[]).includes(state)) return new Response(`unknown state "${state}"; known: ${MOCK_STATES.join(", ")}`, { status: 400 });
+  resetMock(state as MockState); // a named variant of the seed (TASK-B-049)
   return new Response(null, { status: 204 });
 }
 

@@ -1,7 +1,7 @@
 // Which implementation of `CawApi` the app uses: `CAW_API=mock` (the default) or `CAW_API=http` (caw-back at `CAW_API_URL`).
 import type { CawApi } from "./caw";
 import { createHttpApi } from "./http";
-import { createMockApi } from "./mock";
+import { createMockApi, type MockState } from "./mock";
 
 declare global { var __cawMock: CawApi | undefined; var __cawHttp: CawApi | undefined }
 
@@ -13,6 +13,6 @@ function pick(): CawApi {
 }
 
 /** Back to the seed: the next call gets a fresh mock. For the e2e's reset route only (a no-op for `http`, which has nothing of ours to reset). */
-export function resetMock() { globalThis.__cawMock = undefined; }
+export function resetMock(state?: MockState) { globalThis.__cawMock = state ? createMockApi({ state }) : undefined; }
 
 export const api: CawApi = new Proxy({} as CawApi, { get: (_t, key) => (pick() as unknown as Record<string | symbol, unknown>)[key] });

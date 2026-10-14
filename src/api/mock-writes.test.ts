@@ -66,7 +66,7 @@ describe("a card's writes", () => {
     const notes = (await api.cardContext(c.id))!.notes;
     expect(notes).toHaveLength(before + 1);
     expect(notes.at(-1)!.id).toBe(note.id);
-    await expectRefusal(api.comment(c.id, ""), 400, "bad_request");
+    await expectRefusal(api.comment(c.id, ""), 400, "validation");
     await expectRefusal(api.comment("nope", "x"), 404, "not_found");
   });
 
@@ -75,7 +75,7 @@ describe("a card's writes", () => {
     await expectRefusal(api.setStatus(card(3).id, "doing"), 409, "waiting_on_question"); // depends on card 2, still todo
     expect((await api.setStatus(card(2).id, "doing")).status).toBe("doing");
     expect((await api.setStatus(card(3).id, "review")).status).toBe("review"); // not to doing: no refusal
-    await expectRefusal(api.setStatus(card(2).id, "finished" as never), 400, "bad_request");
+    await expectRefusal(api.setStatus(card(2).id, "finished" as never), 400, "validation");
     expect((await api.card(card(3).id))!.status).toBe("review");
   });
 
@@ -98,7 +98,7 @@ describe("a card's writes", () => {
     expect(moved.assigneeId).toBe(worker("มิ้นท์").id);
     const last = (await api.cardContext(c.id))!.notes.at(-1)!;
     expect([last.type, last.fromWorkerId, last.toWorkerId, last.text]).toEqual(["handoff", worker("แบงค์").id, worker("มิ้นท์").id, "ตรวจให้หน่อย"]);
-    await expectRefusal(api.handoff(card(11).id, worker("ฝน").id, "x"), 400, "bad_request"); // the question card has no holder
+    await expectRefusal(api.handoff(card(11).id, worker("ฝน").id, "x"), 400, "validation"); // the question card has no holder
   });
 
   test("answer: only a question card, once; the card is done and the card waiting on it sees the decision", async () => {
@@ -131,7 +131,7 @@ describe("workers", () => {
     expect([pm.model, pm.effort, fe.model, fe.effort, other.model, other.effort]).toEqual(["opus", "medium", "sonnet", "medium", "sonnet", "high"]);
     expect([pm.combinedFrom, (await api.workers()).length]).toEqual([null, 7]);
     await expectRefusal(api.createWorker({ name: "ปลา", role: "PM", skills: ["role-pm"] }), 409, "name_taken");
-    await expectRefusal(api.createWorker({ name: "ไร้ทักษะ", role: "QA", skills: [] }), 400, "bad_request");
+    await expectRefusal(api.createWorker({ name: "ไร้ทักษะ", role: "QA", skills: [] }), 400, "validation");
   });
 
   test("combine: skills are the union, the model the stronger, the effort the higher, role other, combinedFrom both — and both stay", async () => {
@@ -153,7 +153,7 @@ describe("the chain", () => {
     const e = await expectRefusal(api.removeMember(PID, bank.id), 409, "has_open_cards");
     expect(e.details).toEqual({ count: 3 }); // cards 2, 4 and 6 — card 8 is done
     await expectRefusal(api.removeMember(PID, ploy.id, mint.id), 409, "is_entry");
-    await expectRefusal(api.removeMember(PID, bank.id, bank.id), 400, "bad_request");
+    await expectRefusal(api.removeMember(PID, bank.id, bank.id), 400, "validation");
     const chain = await api.removeMember(PID, bank.id, mint.id);
     expect(chain.members.map((m) => m.id)).not.toContain(bank.id);
     expect(chain.edges.some((x) => x.from === bank.id || x.to === bank.id)).toBe(false);
@@ -171,7 +171,7 @@ describe("the chain", () => {
     await expectRefusal(api.addMember(PID, "nope"), 404, "not_found");
     expect((await api.addMember(PID, outsider.id)).members.map((m) => m.id)).toContain(outsider.id);
 
-    await expectRefusal(api.addEdge(PID, ploy.id, ploy.id), 400, "bad_request");
+    await expectRefusal(api.addEdge(PID, ploy.id, ploy.id), 400, "validation");
     await expectRefusal(api.addEdge(PID, ploy.id, fern.id), 409, "edge_exists");
     const edge = await api.addEdge(PID, mint.id, ploy.id);
     expect(edge.edges).toContainEqual({ from: mint.id, to: ploy.id });

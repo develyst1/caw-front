@@ -3,9 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3510",
+    "dev": "next dev -p ${PORT:-3500}",
+    "dev:http": "CAW_API=http CAW_API_URL=${CAW_API_URL:-http://127.0.0.1:4500} next dev -p ${PORT:-3500}",
     "build": "next build",
-    "start": "next start -p 3510",
+    "start": "next start -p ${PORT:-3500}",
     "typecheck": "tsc --noEmit",
     "test": "bun test src",
     "test:e2e": "playwright test",

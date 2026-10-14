@@ -13,6 +13,7 @@ export function ProjectNav({ projectId }: { projectId: string }) {
     { href: base, label: section.board, here: path === base },
     { href: `${base}/team`, label: section.team, here: path.startsWith(`${base}/team`) }, // TASK-B-042: ทีม · สายงาน
     { href: `${base}/runs`, label: section.runs, here: path.startsWith(`${base}/runs`) },
+    { href: `${base}/chat`, label: section.chat, here: path.startsWith(`${base}/chat`) }, // TASK-B-050: แชต
   ];
   return (
     <nav className={s.nav} aria-label={section.board}>

@@ -6,8 +6,8 @@
 // Each `createMockApi()` is a fresh copy, so tests never share state; the app uses the one `index.ts` makes.
 // Anything the real server computes (workable, the counts, hopsUsed) is computed here on read, never stored.
 import {
-  CawError, type Card, type CardContext, type CardStatus, type CawApi, type Chain, type ChatMessage, type Effort, type Hop, type Mode,
-  type ModelName, type Note, type PartContext, type ProjectSummary, type Run, type Worker,
+  CawError, type Card, type CardContext, type CardStatus, type CawApi, type Chain, type ChatMessage, type Effort, type Hop, type HopOutcome, type Mode,
+  type ModelName, type Note, type PartContext, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker,
 } from "./caw";
 
 const BLUEPRINT_VERSION = 3;        // the confirmed version the project was made from
@@ -15,7 +15,7 @@ const BLUEPRINT_LATEST = 4;         // the newest version CAW has seen (two card
 const BLUEPRINT_PROJECT = "11111111-2222-4333-8444-555555555555"; // a stand-in id: the mock has no Blueprint behind it
 
 // deterministic uuid-shaped ids: a prefix per kind, then a counter
-const PREFIX = { p: "10000000", w: "20000000", c: "30000000", n: "40000000", r: "50000000", h: "60000000" } as const;
+const PREFIX = { p: "10000000", w: "20000000", c: "30000000", n: "40000000", r: "50000000", h: "60000000", m: "70000000", q: "80000000" } as const;
 const id = (kind: keyof typeof PREFIX, n: number) => `${PREFIX[kind]}-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 const PROJECT_ID = id("p", 1);
@@ -81,12 +81,14 @@ const SPECS: Record<string, { part: PartContext["part"]; neighbours: PartContext
 const actor = (w: string) => `worker:${w}`;
 const NOTES: Record<string, Note[]> = {
   [C(6)]: [
-    { id: id("n", 1), type: "comment", actor: actor(W.bank), text: "ทำ endpoint อนุมัติเสร็จแล้ว ส่งให้ตรวจ", fromWorkerId: null, toWorkerId: null, at: "2026-10-13T09:10:00+07:00" },
-    { id: id("n", 2), type: "handoff", actor: actor(W.bank), text: "ตรวจกฎห้องใหญ่ด้วย", fromWorkerId: W.bank, toWorkerId: W.mint, at: "2026-10-13T09:12:00+07:00" },
-    { id: id("n", 3), type: "comment", actor: "operator", text: "spec ขั้นอนุมัติเพิ่งเปลี่ยน ช่วยดูอีกรอบ", fromWorkerId: null, toWorkerId: null, at: "2026-10-13T09:30:00+07:00" },
+    { id: id("n", 1), type: "comment", actor: actor(W.bank), text: "ทำ endpoint อนุมัติเสร็จแล้ว ส่งให้ตรวจ", fromWorkerId: null, toWorkerId: null, allowed: null, at: "2026-10-13T09:10:00+07:00" },
+    { id: id("n", 2), type: "handoff", actor: actor(W.bank), text: "ตรวจกฎห้องใหญ่ด้วย", fromWorkerId: W.bank, toWorkerId: W.mint, allowed: null, at: "2026-10-13T09:12:00+07:00" },
+    // v1.3: มิ้นท์ tried to hand it to ฝน — the chain has no มิ้นท์ → ฝน edge (มิ้นท์ hands to nobody), so it was refused and recorded
+    { id: id("n", 5), type: "handoff_refused", actor: actor(W.mint), text: "ขอให้ฝนดูหน้าอนุมัติด้วย", fromWorkerId: W.mint, toWorkerId: W.fern, allowed: [], at: "2026-10-13T09:20:00+07:00" },
+    { id: id("n", 3), type: "comment", actor: "operator", text: "spec ขั้นอนุมัติเพิ่งเปลี่ยน ช่วยดูอีกรอบ", fromWorkerId: null, toWorkerId: null, allowed: null, at: "2026-10-13T09:30:00+07:00" },
   ],
   [C(11)]: [
-    { id: id("n", 4), type: "comment", actor: actor(W.ploy), text: "ถามคุณ: ถ้าผู้ดูแลไม่ตอบภายใน 24 ชม. ให้ปฏิเสธเองหรือเตือนก่อน?", fromWorkerId: null, toWorkerId: null, at: "2026-10-13T08:40:00+07:00" },
+    { id: id("n", 4), type: "comment", actor: actor(W.ploy), text: "ถามคุณ: ถ้าผู้ดูแลไม่ตอบภายใน 24 ชม. ให้ปฏิเสธเองหรือเตือนก่อน?", fromWorkerId: null, toWorkerId: null, allowed: null, at: "2026-10-13T08:40:00+07:00" },
   ],
 };
 
@@ -102,9 +104,39 @@ const HOPS: Hop[] = [
   { id: id("h", 4), projectId: PROJECT_ID, runId: null, claimedBy: null, cardId: C(6), workerId: W.bank, startedAt: "2026-10-13T09:10:00+07:00", endedAt: "2026-10-13T09:11:11+07:00", outcome: "commented", tokensIn: 6400, tokensOut: 2400, note: "ทำ API อนุมัติการจอง" },
 ];
 
-const CHAT: ChatMessage[] = [
-  { id: "m-1", at: "2026-10-13T08:30:00+07:00", from: "operator", text: "เริ่มจากหน้าค้นหาห้องก่อนนะ" },
-  { id: "m-2", at: "2026-10-13T08:30:20+07:00", from: "worker", text: "รับทราบ ตัดการ์ดหน้าค้นหาห้องไว้ให้ฝนแล้ว" },
+// ---- the chat and the card proposals (SPEC-A-008 § v1.4): a thread with two asks; the first was answered with questions and a proposal
+// (an older proposal on the same message is superseded), the second with a proposal whose one anchor has since gone from Blueprint ----
+// M(4) proposed one card and sent the part Blueprint does not have yet to Blueprint's chat (the proposed_and_amended case): the link is
+// `<BLUEPRINT_WEB_URL>/p/<blueprintProjectId>/chat` (SPEC-A-008 § v1.4) — the default web address, a fixed value so the seed is the same everywhere.
+const AMENDMENT = { blueprintMessageId: id("m", 91), link: `http://127.0.0.1:3100/p/${BLUEPRINT_PROJECT}/chat` };
+
+const M = (n: number) => id("m", n), Q = (n: number) => id("q", n);
+/** A message as the mock keeps it: `chatHop` is never stored, it is worked out from the project's chat hops whenever the thread is read (v1.9). */
+type StoredMessage = Omit<ChatMessage, "chatHop">;
+const CHAT: StoredMessage[] = [
+  { id: M(1), projectId: PROJECT_ID, author: "operator", text: "อยากให้ทีมทำหน้าอนุมัติคำขอจอง และแจ้งผู้ขอเมื่อมีผล", replyTo: null, replyHopId: id("h", 7), questions: null, proposalId: null, amendment: null, retryRequestedAt: null, at: "2026-10-14T09:00:00+07:00" },
+  { id: M(2), projectId: PROJECT_ID, author: `worker:${W.ploy}`, text: "ตัดเป็น 3 งานแล้ว: API แจ้งผล → หน้าอนุมัติ → ตรวจ ขอถามเรื่องการแจ้งผู้ขอก่อนเริ่ม", replyTo: M(1), replyHopId: null,
+    questions: [{ text: "ผู้ขอจองต้องได้รับแจ้งผลทางไหน", proposedDefault: "อีเมล", cases: ["อีเมล", "ในแอป", "ทั้งสองทาง"] }], proposalId: Q(2), amendment: null, retryRequestedAt: null, at: "2026-10-14T09:01:30+07:00" },
+  { id: M(3), projectId: PROJECT_ID, author: "operator", text: "ขอเพิ่มหน้าสรุปรายงานรายวันด้วย", replyTo: null, replyHopId: id("h", 8), questions: null, proposalId: null, amendment: null, retryRequestedAt: null, at: "2026-10-14T09:20:00+07:00" },
+  { id: M(4), projectId: PROJECT_ID, author: `worker:${W.ploy}`, text: "เสนอหน้าสรุปรายงานหนึ่งงาน", replyTo: M(3), replyHopId: null, questions: null, proposalId: Q(3), amendment: AMENDMENT, retryRequestedAt: null, at: "2026-10-14T09:21:00+07:00" },
+];
+
+const item = (title: string, todo: string, key: string, workerId: string, dependsOn: number[], hops: number): ProposalItem =>
+  ({ title, todo, anchor: { key, version: BLUEPRINT_VERSION }, workerId, dependsOn, hops });
+type StoredProposal = Omit<Proposal, "hopsTotal">;
+const PROPOSALS: StoredProposal[] = [
+  { id: Q(1), projectId: PROJECT_ID, messageId: M(1), version: BLUEPRINT_VERSION, status: "superseded", cardIds: null, createdAt: "2026-10-14T09:00:40+07:00", items: [
+    item("ทำหน้าอนุมัติคำขอ", "ทำหน้าอนุมัติตาม spec", "SCR-003", W.fern, [], 2), item("ตรวจหน้าอนุมัติ", "ตรวจหน้าอนุมัติกับกฎห้องใหญ่", "DEC-001", W.mint, [0], 1),
+  ] },
+  { id: Q(2), projectId: PROJECT_ID, messageId: M(1), version: BLUEPRINT_VERSION, status: "open", cardIds: null, createdAt: "2026-10-14T09:01:30+07:00", items: [
+    item("ทำ API แจ้งผลการจอง", "แจ้งผู้ขอเมื่อผู้ดูแลอนุมัติหรือปฏิเสธ", "API-003", W.bank, [], 2),
+    item("ทำหน้าอนุมัติคำขอ (แจ้งผล)", "หน้าอนุมัติเรียก API แจ้งผล แล้วแสดงว่าแจ้งแล้ว", "SCR-003", W.fern, [0], 3),
+    item("ตรวจการแจ้งผล", "ตรวจว่าแจ้งผลครบทุกกรณีของกฎห้องใหญ่", "DEC-001", W.mint, [0, 1], 1),
+  ] },
+  // its one anchor was a part of version 3 that is not in Blueprint's newest version any more: accepting it is refused, nothing is written
+  { id: Q(3), projectId: PROJECT_ID, messageId: M(3), version: BLUEPRINT_VERSION, status: "open", cardIds: null, createdAt: "2026-10-14T09:21:00+07:00", items: [
+    item("ทำหน้าสรุปรายงานรายวัน", "หน้าสรุปจำนวนการจองต่อวัน", "STEP-099", W.fern, [], 2),
+  ] },
 ];
 
 const ABSOLUTE = /^(\/|[A-Za-z]:[\\/])/;
@@ -117,19 +149,29 @@ const STATUSES: CardStatus[] = ["todo", "doing", "review", "done", "stuck"];
 interface Proj {
   id: string; name: string; blueprintProjectId: string; version: number; latestSeenVersion: number;
   mode: Mode; hopBudget: number; roots: string[]; createdAt: string;
-  cards: Seed[]; notes: Record<string, Note[]>; hops: Hop[]; runs: Omit<Run, "hopsUsed">[]; chat: ChatMessage[];
+  cards: Seed[]; notes: Record<string, Note[]>; hops: Hop[]; runs: Omit<Run, "hopsUsed">[]; chat: StoredMessage[]; proposals: StoredProposal[];
+  /** the hops of the chat steps (SPEC-A-008 § v1.4 puts them in the hop list, `Hop.messageId`; the mock keeps them apart — `Hop` does not model it yet) */
+  chatHops: { id: string; messageId: string; endedAt: string | null; outcome: HopOutcome | null }[];
   members: string[]; edges: { from: string; to: string }[]; entry: string | null;
 }
 
 const refuse = (status: number, code: string, message: string, details?: unknown): never => { throw new CawError(status, code, message, details); };
 
-export function createMockApi(): CawApi {
+/** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
+export const MOCK_STATES = ["dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running"] as const;
+export type MockState = (typeof MOCK_STATES)[number];
+
+/** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
+ *  ended that way, so the variant only turns the mode. `manual-open-run` (TASK-B-056): the project stays on แบบสั่งทีละขั้น and has one more run,
+ *  newest and still open — the runner opened it; the screen cannot. `chat-failed` / `chat-running` (TASK-B-057): the second ask has no reply — and no
+ *  proposal on it — because its chat hop ended `failed`, or is still running. Anything else (or nothing) is the plain seed. */
+export function createMockApi(opts: { state?: MockState } = {}): CawApi {
   const workers: Worker[] = structuredClone(WORKERS);
-  let nextWorker = workers.length, nextProject = 1, nextNote = 100, nextRun = 2; // runs r-1 and r-2 are seeded
+  let nextWorker = workers.length, nextProject = 1, nextNote = 100, nextRun = 2, nextCard = SEEDS.length, nextMessage = CHAT.length; // runs r-1 and r-2, 12 cards and 4 messages are seeded
   const projects: Proj[] = [{
     id: PROJECT_ID, name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version: BLUEPRINT_VERSION, latestSeenVersion: BLUEPRINT_LATEST,
-    mode: "manual", hopBudget: 40, roots: [], createdAt: "2026-10-12T20:00:00+07:00", // a new project has no folders yet (REQ-011: the warning)
-    cards: structuredClone(SEEDS), notes: structuredClone(NOTES), hops: structuredClone(HOPS), chat: structuredClone(CHAT),
+    mode: opts.state === "dispatcher-stopped" ? "dispatcher" : "manual", hopBudget: 40, roots: [], createdAt: "2026-10-12T20:00:00+07:00", // a new project has no folders yet (REQ-011: the warning)
+    cards: structuredClone(SEEDS), notes: structuredClone(NOTES), hops: structuredClone(HOPS), chat: structuredClone(CHAT), proposals: structuredClone(PROPOSALS), chatHops: [],
     runs: [{
       id: RUN_1, projectId: PROJECT_ID, mode: "dispatcher", hopBudget: 3, startedAt: "2026-10-13T08:00:00+07:00", endedAt: "2026-10-13T08:06:00+07:00",
       stopReason: "budget_spent", report: "ทำครบ 3 ก้าว: ปิดขั้นแรก ขั้นเลือกห้องและเวลา และข้อมูล Room — ยังเหลือ 9 การ์ด",
@@ -139,8 +181,24 @@ export function createMockApi(): CawApi {
     }],
     members: WORKERS.map((w) => w.id), edges: structuredClone(EDGES), entry: ENTRY,
   }];
+  if (opts.state === "chat-failed" || opts.state === "chat-running") {
+    const p = projects[0]!, failed = opts.state === "chat-failed";
+    p.chat.find((m) => m.id === M(3))!.replyHopId = null;
+    p.chat = p.chat.filter((m) => m.id !== M(4));
+    p.proposals = p.proposals.filter((x) => x.id !== Q(3));
+    p.chatHops.push({ id: id("h", 8), messageId: M(3), endedAt: failed ? "2026-10-14T09:20:40+07:00" : null, outcome: failed ? "failed" : null });
+  }
+  if (opts.state === "manual-open-run") {
+    projects[0]!.runs.unshift({ id: id("r", ++nextRun), projectId: PROJECT_ID, mode: "manual", hopBudget: 40, startedAt: "2026-10-13T09:00:00+07:00", endedAt: null, stopReason: null, report: null });
+  }
 
   const byNumber = (a: { number: number }, b: { number: number }) => a.number - b.number;
+  /** `hopsTotal` is the sum of the items' hops, computed whenever a proposal is read — never kept. */
+  const withHop = (p: Proj, m: StoredMessage): ChatMessage => {
+    const h = p.chatHops.filter((x) => x.messageId === m.id).at(-1); // the newest
+    return { ...structuredClone(m), chatHop: h ? { id: h.id, endedAt: h.endedAt, outcome: h.outcome } : null };
+  };
+  const withTotal = (x: StoredProposal): Proposal => ({ ...structuredClone(x), hopsTotal: x.items.reduce((s, i) => s + i.hops, 0) });
   const get = (pid: string) => projects.find((p) => p.id === pid) ?? null;
   const need = (pid: string) => get(pid) ?? refuse(404, "not_found", "no such project");
   const locate = (cardId: string) => {
@@ -149,7 +207,7 @@ export function createMockApi(): CawApi {
   };
   const needCard = (cardId: string) => locate(cardId) ?? refuse(404, "not_found", "no such card");
   const worker = (wid: string) => workers.find((w) => w.id === wid) ?? refuse(404, "not_found", "no such worker");
-  const text = (t: string, max = 8000) => { if (t.length < 1 || t.length > max) refuse(400, "bad_request", `text: 1–${max} characters`); return t; };
+  const text = (t: string, max = 8000) => { if (t.length < 1 || t.length > max) refuse(400, "validation", `text: 1–${max} characters`); return t; };
 
   /** The server's `workable`: a work card, todo|doing, every dependency done, no spec change waiting. */
   const workable = (p: Proj, c: Seed) => c.kind === "work" && (c.status === "todo" || c.status === "doing") && c.specChangedVersion === null
@@ -175,13 +233,15 @@ export function createMockApi(): CawApi {
       if (!p) return null;
       p.mode = next;
       if (budget !== undefined) p.hopBudget = budget;
+      // back to manual ends the open run as the runner does (SPEC-B-002 "Mode switch"; TASK-B-047 Q1) — so "stopped" is reachable
+      if (next === "manual") for (const r of p.runs) if (r.endedAt === null) { r.endedAt = new Date().toISOString(); r.stopReason = "operator_stopped"; }
       return summary(p);
     },
     setWorkspace: async (pid, next) => {
       const p = get(pid);
       if (!p) return null;
       const bad = next.length > 20 || next.some((r) => !ABSOLUTE.test(r) || r.length > 500 || r.split(/[\\/]/).includes(".."));
-      if (bad) refuse(400, "bad_request", "roots: at most 20 absolute paths, no `..` segment, each ≤ 500 chars");
+      if (bad) refuse(400, "validation", "roots: at most 20 absolute paths, no `..` segment, each ≤ 500 chars");
       p.roots = [...next];
       return summary(p);
     },
@@ -189,6 +249,15 @@ export function createMockApi(): CawApi {
       (query.assigneeId === undefined || c.assigneeId === query.assigneeId) && (query.status === undefined || c.status === query.status)
       && (query.workable === undefined || c.workable === query.workable)).sort(byNumber); },
     card: async (cardId) => { const f = locate(cardId); return f ? full(f.p, f.c) : null; },
+    part: async (pid, key, version) => {
+      if (version !== undefined && (!Number.isInteger(version) || version < 1)) refuse(400, "validation", "version: an integer ≥ 1");
+      const p = get(pid), spec = SPECS[key];
+      if (!p || !spec) return null;
+      return {
+        projectId: p.blueprintProjectId, version: version ?? p.latestSeenVersion, confirmedAt: "2026-10-12T20:00:00+07:00", part: structuredClone(spec.part),
+        neighbours: structuredClone(spec.neighbours), decisions: spec.part.kind === "decision" ? [] : [structuredClone(SPECS["DEC-001"]!.part)], flows: [], questions: [],
+      };
+    },
     cardContext: async (cardId): Promise<CardContext | null> => {
       const f = locate(cardId);
       const spec = f ? SPECS[f.c.anchor.key] : undefined;
@@ -217,6 +286,16 @@ export function createMockApi(): CawApi {
       p.runs.push(r);
       return run(p, r);
     },
+    // the operator stops an open run (D-056, TASK-B-055) — the mode is untouched; a run already over: 409 already_finished, as the route
+    stopRun: async (runId) => {
+      const found = projects.flatMap((p) => p.runs.map((r) => ({ p, r }))).find(({ r }) => r.id === runId);
+      if (!found) return refuse(404, "not_found", "no such run");
+      if (found.r.endedAt !== null) refuse(409, "already_finished", "this run is already over");
+      found.r.endedAt = new Date().toISOString();
+      found.r.stopReason = "operator_stopped";
+      found.r.report = "";
+      return run(found.p, found.r);
+    },
 
     createProject: async ({ blueprintProjectId, version }) => {
       if (blueprintProjectId !== BLUEPRINT_PROJECT) refuse(404, "blueprint_project_not_found", "Blueprint has no such project");
@@ -225,20 +304,20 @@ export function createMockApi(): CawApi {
       if (there) refuse(409, "already_exists", "a project already exists for this Blueprint version", { id: there.id });
       const p: Proj = {
         id: id("p", ++nextProject), name: "จองห้องประชุม", blueprintProjectId, version, latestSeenVersion: BLUEPRINT_LATEST,
-        mode: "manual", hopBudget: 0, roots: [], createdAt: NOW, cards: [], notes: {}, hops: [], runs: [], chat: [], members: [], edges: [], entry: null,
+        mode: "manual", hopBudget: 0, roots: [], createdAt: NOW, cards: [], notes: {}, hops: [], runs: [], chat: [], proposals: [], chatHops: [], members: [], edges: [], entry: null,
       };
       projects.push(p);
       return summary(p);
     },
     comment: async (cardId, t) => {
       const { p, c } = needCard(cardId);
-      const note: Note = { id: id("n", ++nextNote), type: "comment", actor: "operator", text: text(t), fromWorkerId: null, toWorkerId: null, at: new Date().toISOString() };
+      const note: Note = { id: id("n", ++nextNote), type: "comment", actor: "operator", text: text(t), fromWorkerId: null, toWorkerId: null, allowed: null, at: new Date().toISOString() };
       (p.notes[c.id] ??= []).push(note);
       return structuredClone(note);
     },
     setStatus: async (cardId, status) => {
       const { p, c } = needCard(cardId);
-      if (!STATUSES.includes(status)) refuse(400, "bad_request", "status: todo | doing | review | done | stuck");
+      if (!STATUSES.includes(status)) refuse(400, "validation", "status: todo | doing | review | done | stuck");
       if (status === "doing" && c.dependsOn.some((d) => p.cards.find((x) => x.id === d)?.status !== "done")) refuse(409, "waiting_on_question", "a card this one depends on is still open");
       c.status = status;
       return full(p, c);
@@ -252,14 +331,17 @@ export function createMockApi(): CawApi {
     handoff: async (cardId, toWorkerId, t) => {
       const { p, c } = needCard(cardId);
       text(t);
-      if (c.assigneeId === null) refuse(400, "bad_request", "a card nobody holds cannot be handed off");
+      if (c.assigneeId === null) refuse(400, "validation", "a card nobody holds cannot be handed off");
       member(p, toWorkerId);
       const from = c.assigneeId;
       if (!p.edges.some((e) => e.from === from && e.to === toWorkerId)) {
-        refuse(409, "chain_broken", "the chain has no edge from the card's holder to that worker", { from, allowed: p.edges.filter((e) => e.from === from).map((e) => e.to) });
+        const allowed = p.edges.filter((e) => e.from === from).map((e) => e.to);
+        // v1.3: the refusal is recorded on the card first, then the same 409 as before
+        (p.notes[c.id] ??= []).push({ id: id("n", ++nextNote), type: "handoff_refused", actor: "operator", text: t, fromWorkerId: from, toWorkerId, allowed, at: new Date().toISOString() });
+        refuse(409, "chain_broken", "the chain has no edge from the card's holder to that worker", { from, allowed });
       }
       c.assigneeId = toWorkerId;
-      (p.notes[c.id] ??= []).push({ id: id("n", ++nextNote), type: "handoff", actor: "operator", text: t, fromWorkerId: from, toWorkerId, at: new Date().toISOString() });
+      (p.notes[c.id] ??= []).push({ id: id("n", ++nextNote), type: "handoff", actor: "operator", text: t, fromWorkerId: from, toWorkerId, allowed: null, at: new Date().toISOString() });
       return full(p, c);
     },
     answer: async (cardId, a) => {
@@ -276,8 +358,8 @@ export function createMockApi(): CawApi {
       return full(p, c);
     },
     createWorker: async ({ name, role, skills, model, effort }) => {
-      if (name.length < 1 || name.length > 40) refuse(400, "bad_request", "name: 1–40 characters");
-      if (skills.length < 1) refuse(400, "bad_request", "skills: at least one");
+      if (name.length < 1 || name.length > 40) refuse(400, "validation", "name: 1–40 characters");
+      if (skills.length < 1) refuse(400, "validation", "skills: at least one");
       if (workers.some((w) => w.name === name)) refuse(409, "name_taken", "a worker with this name exists");
       const w: Worker = {
         id: id("w", ++nextWorker), name, role, skills: [...skills], combinedFrom: null,
@@ -288,7 +370,7 @@ export function createMockApi(): CawApi {
     },
     combineWorkers: async (name, [a, b]) => {
       const [wa, wb] = [worker(a), worker(b)];
-      if (name.length < 1 || name.length > 40) refuse(400, "bad_request", "name: 1–40 characters");
+      if (name.length < 1 || name.length > 40) refuse(400, "validation", "name: 1–40 characters");
       if (workers.some((w) => w.name === name)) refuse(409, "name_taken", "a worker with this name exists");
       const w: Worker = {
         id: id("w", ++nextWorker), name, role: "other", skills: [...new Set([...wa.skills, ...wb.skills])], combinedFrom: [a, b],
@@ -310,7 +392,7 @@ export function createMockApi(): CawApi {
       if (p.entry === workerId) refuse(409, "is_entry", "the entry worker cannot be removed");
       const open = p.cards.filter((c) => c.assigneeId === workerId && c.status !== "done");
       if (open.length > 0 && reassignTo === undefined) refuse(409, "has_open_cards", "this worker still has open cards", { count: open.length });
-      if (reassignTo !== undefined) { member(p, reassignTo); if (reassignTo === workerId) refuse(400, "bad_request", "reassignTo must be another member"); }
+      if (reassignTo !== undefined) { member(p, reassignTo); if (reassignTo === workerId) refuse(400, "validation", "reassignTo must be another member"); }
       for (const c of open) c.assigneeId = reassignTo!;
       p.members = p.members.filter((m) => m !== workerId);
       p.edges = p.edges.filter((e) => e.from !== workerId && e.to !== workerId);
@@ -319,7 +401,7 @@ export function createMockApi(): CawApi {
     addEdge: async (pid, from, to) => {
       const p = need(pid);
       member(p, from); member(p, to);
-      if (from === to) refuse(400, "bad_request", "an edge joins two different workers");
+      if (from === to) refuse(400, "validation", "an edge joins two different workers");
       if (p.edges.some((e) => e.from === from && e.to === to)) refuse(409, "edge_exists", "that edge exists");
       p.edges.push({ from, to });
       return chainOf(p);
@@ -337,14 +419,51 @@ export function createMockApi(): CawApi {
       return chainOf(p);
     },
 
-    chat: async (pid) => structuredClone(get(pid)?.chat ?? []),
-    sendChat: async (pid, t) => {
+    chat: async (pid, query = {}) => {
       const p = get(pid);
       if (!p) return [];
-      const at = new Date().toISOString();
-      p.chat.push({ id: `m-${p.chat.length + 1}`, at, from: "operator", text: t });
-      p.chat.push({ id: `m-${p.chat.length + 1}`, at, from: "worker", text: "รับทราบ (ข้อความจำลอง — ยังไม่ได้ต่อกับทีมจริง)" }); // TODO REQ-013
-      return structuredClone(p.chat);
+      const from = query.after === undefined ? 0 : p.chat.findIndex((m) => m.id === query.after) + 1; // an unknown `after` starts from the top, as no cut
+      return p.chat.slice(from, from + Math.min(query.limit ?? 50, 200)).map((m) => withHop(p, m));
+    },
+    postChat: async (pid, t) => {
+      const p = need(pid);
+      if (t.length < 1 || t.length > 4000) refuse(400, "validation", "text: 1–4 000 characters");
+      const m: StoredMessage = { id: id("m", ++nextMessage), projectId: p.id, author: "operator", text: t, replyTo: null, replyHopId: null, questions: null, proposalId: null, amendment: null, retryRequestedAt: null, at: new Date().toISOString() };
+      p.chat.push(m);
+      return withHop(p, m);
+    },
+    retryChat: async (messageId) => {
+      const found = projects.flatMap((p) => p.chat.map((m) => ({ p, m }))).find((x) => x.m.id === messageId);
+      if (!found) return refuse(404, "not_found", "no such message");
+      const { p, m } = found, hop = withHop(p, m).chatHop;
+      if (m.author !== "operator") refuse(400, "not_operator_message", "only an operator message is retried");
+      if (m.replyHopId !== null) refuse(409, "already_answered", "this message was answered");
+      if (hop && hop.endedAt === null) refuse(409, "hop_running", "its chat step is still running");
+      // a second retry before the runner picks it up only moves the time (never earlier, even inside the same millisecond)
+      m.retryRequestedAt = new Date(Math.max(Date.now(), m.retryRequestedAt ? Date.parse(m.retryRequestedAt) + 1 : 0)).toISOString();
+    },
+    proposals: async (pid, query = {}) => {
+      const p = get(pid);
+      return !p ? [] : p.proposals.filter((x) => query.messageId === undefined || x.messageId === query.messageId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(withTotal);
+    },
+    acceptProposal: async (proposalId) => {
+      const found = projects.flatMap((p) => p.proposals.map((x) => ({ p, x }))).find(({ x }) => x.id === proposalId);
+      if (!found) return refuse(404, "not_found", "no such proposal");
+      const { p, x } = found;
+      if (x.status !== "open") refuse(409, "not_open", "this proposal is no longer open (accepted or superseded)");
+      // the anchors are checked against Blueprint again first; one part gone and nothing is written
+      if (x.items.some((i) => !SPECS[i.anchor.key])) refuse(422, "anchor_not_in_version", "a part of this proposal is not in Blueprint's version any more");
+      const ids = x.items.map(() => id("c", ++nextCard));
+      const base = Math.max(0, ...p.cards.map((c) => c.number)); // numbers run on from the project's own last card
+      const made = x.items.map((i, k): Seed => ({
+        id: ids[k]!, number: base + k + 1, kind: "work", title: i.title, todo: i.todo, status: "todo", assigneeId: i.workerId,
+        anchor: { ...i.anchor }, specChangedVersion: null, dependsOn: i.dependsOn.map((d) => ids[d]!), question: null, answer: null,
+      }));
+      p.cards.push(...made);
+      x.status = "accepted";
+      x.cardIds = ids;
+      return made.map((c) => full(p, c));
     },
   };
 }

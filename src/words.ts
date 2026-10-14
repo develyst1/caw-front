@@ -64,38 +64,39 @@ export const cardRefused: Record<string, string> = {
 };
 
 // ---- the team + chain screen (TASK-B-042 Q1) — carried-over: `โมเดล` (Blueprint chat), `เอาออก` (workspace.remove), `ยกเลิก`
-// (Blueprint chat), `ส่งต่อให้` (handoffLine). The rest are pending PM (team-proposed 2026-10-14) — one edit away. ----
+// (Blueprint chat), `ส่งต่อให้` (handoffLine); the rest are REQ-011 rows added by the PM 2026-10-14 (TASK-B-042 Q1). ----
 export const team = {
-  name: "ชื่อ",                                   // pending PM
-  role: "บทบาท",                                  // pending PM
+  name: "ชื่อ",                                  
+  role: "บทบาท",                                 
   model: "โมเดล",                                 // carried-over
-  effort: "ความลึกในการคิด",                       // pending PM
-  skills: "สกิล",                                  // pending PM
-  skillsHint: "ใส่หลายสกิลคั่นด้วยจุลภาค",           // pending PM
-  roleOther: "อื่นๆ",                              // pending PM — the `other` role
-  effortLevel: { low: "น้อย", medium: "กลาง", high: "มาก" } as Record<string, string>, // pending PM
-  addWorker: "เพิ่มคนทำงาน",                       // pending PM — the form's heading and its button
-  combine: "รวมสองคน",                             // pending PM
-  combinedName: "ชื่อคนที่รวมแล้ว",                  // pending PM
-  combinedFrom: (a: string, b: string) => `รวมจาก ${a} กับ ${b}`, // pending PM
-  addToChain: "เพิ่มเข้าสายงาน",                    // pending PM
+  effort: "ความลึกในการคิด",                      
+  skills: "สกิล",                                 
+  skillsHint: "ใส่หลายสกิลคั่นด้วยจุลภาค",          
+  roleOther: "อื่นๆ",                              // the `other` role
+  effortLevel: { low: "น้อย", medium: "กลาง", high: "มาก" } as Record<string, string>,
+  addWorker: "เพิ่มคนทำงาน",                       // the form's heading and its button
+  combine: "รวมสองคน",                            
+  combinePick: (n: number) => `คนที่ ${n}`,          // the two picks in combine (PM 2026-10-14)
+  combinedName: "ชื่อคนที่รวมแล้ว",                 
+  combinedFrom: (a: string, b: string) => `รวมจาก ${a} กับ ${b}`,
+  addToChain: "เพิ่มเข้าสายงาน",                   
   remove: "เอาออก",                                // carried-over (workspace.remove)
   cancel: "ยกเลิก",                                // carried-over (Blueprint chat)
-  entry: "รับงานคนแรก",                            // pending PM — the entry worker's mark
-  setEntry: "ให้รับงานคนแรก",                       // pending PM
-  pickHint: "กดคนส่ง แล้วกดคนรับ เพื่อเพิ่มเส้นส่งต่อ", // pending PM
-  from: "คนส่ง",                                   // pending PM — the edge form's two fields
-  to: "คนรับ",                                     // pending PM
-  addEdge: "เพิ่มเส้นส่งต่อ",                       // pending PM
-  removeEdge: "ลบเส้นนี้",                          // pending PM
-  reassign: (name: string, n: number) => `${name} ยังถือการ์ดอยู่ ${n} ใบ ให้ใครรับต่อ`, // pending PM
+  entry: "รับงานคนแรก",                            // the entry worker's mark
+  setEntry: "ให้รับงานคนแรก",                      
+  pickHint: "กดคนส่ง แล้วกดคนรับ เพื่อเพิ่มเส้นส่งต่อ",
+  from: "คนส่ง",                                   // the edge form's two fields
+  to: "คนรับ",                                    
+  addEdge: "เพิ่มเส้นส่งต่อ",                      
+  removeEdge: "ลบเส้นนี้",                         
+  reassign: (name: string, n: number) => `${name} ยังถือการ์ดอยู่ ${n} ใบ ให้ใครรับต่อ`,
 } as const;
-/** A team/chain write the back end refused — pending PM (team-proposed 2026-10-14); `other` = cardRefused.other. */
+/** A team/chain write the back end refused — REQ-011 rows added by the PM 2026-10-14 (TASK-B-042 Q1); `other` = cardRefused.other. */
 export const teamRefused: Record<string, string> = {
   name_taken: "มีคนชื่อนี้แล้ว",
   edge_exists: "มีเส้นนี้อยู่แล้ว",
   is_entry: "เอาคนที่รับงานคนแรกออกไม่ได้ ให้คนอื่นรับงานคนแรกก่อน",
-  bad_request: "ข้อมูลยังไม่ครบ",
+  validation: "ข้อมูลยังไม่ครบ",
   unreachable: "ต่อระบบไม่ได้ตอนนี้",
   other: "ทำไม่สำเร็จ ลองอีกครั้ง",
 };
@@ -113,6 +114,37 @@ export const stopReason: Record<StopReason, string> = {
   error: "หยุดเพราะเกิดข้อผิดพลาด",
 };
 export const runRunning = "กำลังรัน";
+/** Switching to อัตโนมัติ while a run is still open (REQ-011 table, TASK-B-047 DEF-2) — nothing changes. */
+export const runStillOpen = "ยังมีการรันที่ค้างอยู่ — รอให้จบหรือสั่งหยุดก่อน";
+/** Stop the open run (REQ-011 table "Stop an open run", D-056, TASK-B-055). */
+export const stopThisRun = "หยุดการรันนี้";
+/** Mode อัตโนมัติ whose run has stopped (REQ-011 row added by the PM 2026-10-14, TASK-B-047 D-052): the reason and how to start again. */
+export const runStopped = (reason: string) => `การรันหยุดแล้ว: ${reason} · กด อัตโนมัติ เพื่อเริ่มรอบใหม่`;
+
+// ---- the chat panel (TASK-B-050): REQ-013's table; carried-over from Blueprint: `กด Enter เพื่อส่ง` (its chat), plus `send`,
+// `proposedAnswer`, `operatorName`, `partKind` above; the rest REQ-013 "Chat page" rows (PM 2026-10-14, TASK-B-050 Q1) ----
+export const chat = {
+  createCards: "สร้างการ์ด",                                                  // REQ-013
+  failed: "ทีมยังตอบข้อความนี้ไม่ได้",                                          // REQ-013 (D-057)
+  retry: "ลองอีกครั้ง",                                                       // REQ-013 (D-057)
+  estimate: (n: number, h: number) => `${n} งาน ใช้ประมาณ ${h} ก้าว`,           // REQ-013
+  notInSpec: "เรื่องนี้ยังไม่มีใน spec — ส่งไปเพิ่มใน Blueprint แล้ว",           // REQ-013
+  enterHint: "กด Enter เพื่อส่ง",                                              // carried-over (Blueprint chat)
+  placeholder: "เล่างานให้ทีมฟัง…",                                             // REQ-013 (PM 2026-10-14) — the box (and its accessible name)
+  empty: "ยังไม่มีข้อความ — เล่างานให้ทีมฟังได้เลย",                             // REQ-013 (PM 2026-10-14) — an empty thread
+  waitsFor: (items: string) => `รอข้อ ${items} ก่อน`,                            // REQ-013 (PM 2026-10-14) — an item's dependencies, by their numbers
+  superseded: "ข้อเสนอเก่า — มีข้อเสนอใหม่แทนแล้ว",                             // REQ-013 (PM 2026-10-14) — a superseded proposal (no button)
+  accepted: "สร้างการ์ดแล้ว",                                                  // REQ-013 (PM 2026-10-14) — an accepted proposal
+  openAmendment: "ดูใน Blueprint",                                             // REQ-013 (PM 2026-10-14) — the amendment's link
+} as const;
+/** A chat write the back end refused — REQ-013 (PM 2026-10-14); `other` = cardRefused.other. */
+export const chatRefused: Record<string, string> = {
+  not_open: "ข้อเสนอนี้ปิดไปแล้ว",
+  anchor_not_in_version: "บางงานในข้อเสนอนี้ไม่มีใน spec เวอร์ชันนี้แล้ว — สร้างการ์ดไม่ได้",
+  validation: "ข้อความยาวเกินไป หรือยังว่างอยู่",
+  unreachable: "ต่อระบบไม่ได้ตอนนี้",
+  other: "ทำไม่สำเร็จ ลองอีกครั้ง",
+};
 
 /** The project's workspace folders (`workspace.roots`) — the folders the team may write in. */
 export const workspace = {

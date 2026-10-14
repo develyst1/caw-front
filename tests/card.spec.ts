@@ -114,3 +114,16 @@ test("card: answering the question card (ตามนั้น) takes it out of 
   await expect(page.locator("[data-question]")).toHaveCount(0);
   await expect(page.locator("[data-column] [data-card]").filter({ hasText: cardMark.waitingAnswer })).toHaveCount(0);
 });
+
+// TASK-B-048 (v1.3, D-051): a hand-off the chain refused is in the timeline, in REQ-011's words and in time order — the seed has
+// มิ้นท์ → ฝน refused on card 6 (09:20), between the bank → มิ้นท์ hand-off (09:12) and the operator's comment (09:30)
+test("card: a refused hand-off reads ส่งต่อไม่ได้: {who} ไม่ได้อยู่ต่อจาก {from} ในสายงาน, in order with the rest", async ({ page }) => {
+  const { refusedHandoff } = await import("../src/words");
+  await page.goto(BOARD);
+  await page.locator('[data-column="review"] [data-card]').first().click(); // card 6
+  const refused = page.locator('[data-note="handoff_refused"]');
+  await expect(refused).toHaveCount(1);
+  await expect(refused).toContainText(refusedHandoff("ฝน", "มิ้นท์"));
+  const order = await page.locator("[data-note]").evaluateAll((ns) => ns.map((n) => n.getAttribute("data-note")));
+  expect(order).toEqual(["comment", "handoff", "handoff_refused", "comment"]);
+});

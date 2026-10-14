@@ -15,15 +15,17 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectLayout({ children, params }: { children: ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const p = await api.project(id);
+  const [p, [latest]] = await Promise.all([api.project(id), api.runs(id, 1)]);
   if (!p) notFound();
+  // the newest run decides the header's run state: open, or stopped with its reason (TASK-B-047)
+  const lastRun = latest ? { open: latest.endedAt === null, stopReason: latest.stopReason } : null;
   return (
     <CawRoot>
       <header className={s.header}>
         <div className={s.headerIn}>
           <a className={s.back} href="/">{section.projects}</a>
           <h1 className={s.name}>{p.name}</h1>
-          <ModeControl projectId={p.id} mode={p.mode} hopBudget={p.hopBudget} hopsUsed={p.hopsUsed} />
+          <ModeControl projectId={p.id} mode={p.mode} hopBudget={p.hopBudget} hopsUsed={p.hopsUsed} lastRun={lastRun} />
           <WorkspaceEditor projectId={p.id} roots={p.workspace.roots} />
         </div>
         <ProjectNav projectId={p.id} />

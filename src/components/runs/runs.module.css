@@ -21,11 +21,12 @@
 .report { margin: 0; padding: 12px 14px; border-radius: var(--caw-r-tag); background: var(--caw-canvas); font-size: 15px; line-height: 1.55; white-space: pre-wrap; }
 .totals { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.hop { display: grid; grid-template-columns: 72px minmax(120px, 160px) minmax(0, 1fr) auto; align-items: baseline; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--caw-line); font-size: 15px; }
+.hop { display: grid; grid-template-columns: 72px minmax(120px, 160px) minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--caw-line); font-size: 15px; }
 .time { color: var(--caw-ink2); font-size: 14px; font-variant-numeric: tabular-nums; }
 .who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; }
-.avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--caw-canvas); font-size: 13px; font-weight: 700; flex: none; }
-.cardLink { color: var(--caw-blue); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.avatar { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--caw-canvas); font-size: 14px; font-weight: 700; flex: none; }
+/* a target: ≥ 44 px tall (the desk's floor), the text centred in it */
+.cardLink { display: flex; align-items: center; min-height: 44px; color: var(--caw-blue); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
 .cardLink:hover { text-decoration: underline; }
 .cardLink:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: 2px; }
 .outcome { justify-self: end; }

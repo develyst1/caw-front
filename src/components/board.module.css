@@ -10,6 +10,16 @@
 .budget { color: var(--caw-ink2); font-size: 14px; font-variant-numeric: tabular-nums; }
 .budgetAsk { display: grid; gap: 12px; }
 .budgetLabel { display: grid; gap: 6px; font-weight: 600; }
+/* TASK-B-047: the run's state beside the mode — open (blue, กำลังรัน), stopped (the reason, quiet; the selected อัตโนมัติ loses
+   its solid blue so the header does not look like it is running), and a refusal line (DEF-2) */
+.runTag:global(.ant-tag) { margin: 0; font-size: 14px; border-radius: var(--caw-r-tag); }
+.runTag:global(.ant-tag) { background: var(--caw-blueSoft); color: var(--caw-blue); border-color: transparent; font-weight: 600; }
+.stopLine { color: var(--caw-ink2); font-size: 14px; font-weight: 600; }
+.runStopped { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.modeStopped :global(.ant-segmented-item-selected), .modeStopped :global(.ant-segmented-thumb) {
+  background: var(--caw-paper) !important; color: var(--caw-ink2) !important; box-shadow: inset 0 0 0 1px var(--caw-lineStrong);
+}
+.modeError { flex-basis: 100%; margin: 0; padding: 8px 12px; border-radius: var(--caw-r-tag); background: var(--caw-stuckSoft); color: var(--caw-stuck); font-size: 14px; font-weight: 600; }
 
 /* ---------- board ---------- */
 .main { max-width: 1600px; margin: 0 auto; padding: 20px 24px 40px; }

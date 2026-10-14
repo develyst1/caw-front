@@ -1,0 +1,62 @@
+/* CAW chat (TASK-B-050) — the board's direction (TASK-B-039 § 1); colours from the --caw-* variables (theme/tokens.ts). */
+
+.page { max-width: 880px; margin: 0 auto; padding: 20px 24px 32px; display: grid; gap: 16px; }
+.h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.empty { margin: 0; padding: 24px; border-radius: var(--caw-r-panel); background: var(--caw-paper); border: 1px dashed var(--caw-lineStrong); color: var(--caw-ink2); text-align: center; }
+.refused { margin: 0; padding: 8px 12px; border-radius: var(--caw-r-tag); background: var(--caw-stuckSoft); color: var(--caw-stuck); font-size: 14px; font-weight: 600; }
+
+/* the thread: the operator on the right in the needs-you blue's soft tone, the worker on the left on paper */
+.thread { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.msg { display: grid; gap: 10px; justify-items: start; }
+.mine { justify-items: end; }
+.bubble { display: grid; gap: 6px; max-width: min(640px, 92%); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 4px; background: var(--caw-paper); border: 1px solid var(--caw-line); box-shadow: var(--caw-shadow-rest); }
+.mine .bubble { background: var(--caw-blueSoft); border-color: transparent; border-radius: 16px; border-bottom-right-radius: 4px; }
+.msgHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.who { font-weight: 700; }
+.at { font-size: 14px; color: var(--caw-ink2); font-variant-numeric: tabular-nums; }
+.text { margin: 0; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* a worker's question — Blueprint's question card, small */
+.question { display: grid; gap: 4px; margin-top: 6px; padding: 10px 12px; border-radius: var(--caw-r-card); background: var(--caw-canvas); }
+.question p { margin: 0; }
+.qText { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; line-height: 1.5; }
+.qIcon { color: var(--caw-blue); margin-top: 4px; flex: none; }
+.label { font-size: 14px; color: var(--caw-ink2); margin-top: 4px !important; }
+.qAnswer { font-weight: 600; }
+.cases { margin: 2px 0 0; padding-left: 20px; display: grid; gap: 2px; color: var(--caw-ink2); }
+.amendment { margin: 4px 0 0; padding: 8px 12px; border-radius: var(--caw-r-tag); background: var(--caw-stuckSoft); color: var(--caw-stuck); font-weight: 600; }
+.amendment a { color: inherit; display: inline-flex; align-items: center; min-height: 44px; }
+
+/* a message the team failed to answer (D-057): a quiet note under the bubble, not an error */
+.failed { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; max-width: min(640px, 100%); }
+.failedText { color: var(--caw-ink2); font-size: 14px; font-weight: 600; }
+
+/* a card proposal */
+.proposal { box-sizing: border-box; width: min(640px, 100%); display: grid; /* border-box: its padding stays inside the 100% (390 overflowed by 18 px) */ gap: 10px; padding: 14px 16px; border-radius: var(--caw-r-card); background: var(--caw-paper); border: 1px solid var(--caw-line); box-shadow: var(--caw-shadow-rest); }
+.superseded { background: transparent; box-shadow: none; border-style: dashed; color: var(--caw-ink2); }
+.proposalHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.estimate { font-weight: 700; font-variant-numeric: tabular-nums; }
+.proposalHead :global(.ant-tag) { margin: 0; font-size: 14px; border-radius: var(--caw-r-tag); }
+.tagOld:global(.ant-tag) { background: var(--caw-paper); border-color: var(--caw-lineStrong); color: var(--caw-ink2); }
+.tagDone:global(.ant-tag) { background: var(--caw-blueSoft); border-color: transparent; color: var(--caw-blue); font-weight: 600; }
+.items { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.item { display: flex; gap: 10px; align-items: flex-start; }
+.num { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: var(--caw-r-tag); background: var(--caw-canvas); color: var(--caw-ink2); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.itemBody { display: grid; gap: 4px; min-width: 0; }
+.itemTitle { font-weight: 600; line-height: 1.45; }
+.itemMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 14px; color: var(--caw-ink2); }
+.key { font-size: 14px; }
+.worker { display: inline-flex; align-items: center; gap: 6px; }
+.avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--caw-canvas); color: var(--caw-ink); font-size: 14px; font-weight: 700; }
+.waits { font-weight: 600; }
+.proposalFoot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* the box: stays at the bottom of the screen while the thread scrolls */
+.composer { position: sticky; bottom: 0; display: grid; gap: 8px; padding: 12px; border-radius: var(--caw-r-panel); background: var(--caw-paper); border: 2px solid var(--caw-blue); box-shadow: var(--caw-shadow-lifted); }
+.composerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.hint { font-size: 14px; color: var(--caw-ink2); }
+
+@media (max-width: 640px) {
+  .page { padding: 12px 16px 16px; }
+  .bubble { max-width: 100%; }
+}
