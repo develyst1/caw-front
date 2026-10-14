@@ -5,7 +5,7 @@ import type { Card, Hop, Run, StopReason, Worker } from "@/api/caw";
 import { hopOutcome, runRunning, stopReason } from "@/words";
 import { RunsList } from "./RunsList";
 
-const worker: Worker = { id: "w1", name: "ปลา", role: "PM", skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null };
+const worker: Worker = { id: "w1", name: "ปลา", role: "PM", roles: ["PM"], skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null };
 const card: Card = {
   id: "c1", projectId: "p", number: 7, kind: "work", title: "ทำหน้าค้นหา", todo: "", status: "todo", assigneeId: "w1", anchor: { key: "SCR-001", version: 3 },
   specChangedVersion: null, dependsOn: [], question: null, answer: null, workable: true, createdAt: "", updatedAt: "",
@@ -17,7 +17,7 @@ const run = (id: string, over: Partial<Run> = {}): Run => ({
 });
 const hop = (id: string, runId: string | null, over: Partial<Hop> = {}): Hop => ({
   id, projectId: "p", runId, claimedBy: null, cardId: "c1", workerId: "w1", startedAt: "2026-10-13T08:00:10+07:00", endedAt: "2026-10-13T08:00:48+07:00",
-  outcome: "commented", tokensIn: 3100, tokensOut: 1100, note: "", ...over,
+  lastActivityAt: "2026-10-13T08:00:10+07:00", outcome: "commented", tokensIn: 3100, tokensOut: 1100, note: "", ...over,
 });
 const render = (runs: Run[], hops: Hop[]) => renderToStaticMarkup(<RunsList projectId="p" runs={runs} hops={hops} workers={[worker]} cards={[card]} />);
 

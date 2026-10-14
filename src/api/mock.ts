@@ -6,8 +6,8 @@
 // Each `createMockApi()` is a fresh copy, so tests never share state; the app uses the one `index.ts` makes.
 // Anything the real server computes (workable, the counts, hopsUsed) is computed here on read, never stored.
 import {
-  CawError, type Card, type CardContext, type CardStatus, type CawApi, type Chain, type ChatMessage, type Effort, type Hop, type HopOutcome, type Mode,
-  type ModelName, type Note, type PartContext, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker,
+  CawError, type Card, type CardContext, type CardStatus, type CawApi, type Chain, type CawEvent, type ChatMessage, type Effort, type Hop, type HopOutcome, type Mode,
+  type ModelName, type Note, type PartContext, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker, type WorkerRole,
 } from "./caw";
 
 const BLUEPRINT_VERSION = 3;        // the confirmed version the project was made from
@@ -19,14 +19,15 @@ const PREFIX = { p: "10000000", w: "20000000", c: "30000000", n: "40000000", r: 
 const id = (kind: keyof typeof PREFIX, n: number) => `${PREFIX[kind]}-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 const PROJECT_ID = id("p", 1);
+export const MOCK_NEW_PROJECT_ID = id("p", 2); // the second project of the `new-project` state: nothing in it yet (TASK-B-062)
 export const MOCK_PROJECT_ID = PROJECT_ID; // for the tests and the screens' first links, until a project list picks one
 
 const W = { ploy: id("w", 1), fern: id("w", 2), bank: id("w", 3), mint: id("w", 4) };
 const WORKERS: Worker[] = [
-  { id: W.ploy, name: "ปลา", role: "PM", skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null },
-  { id: W.fern, name: "ฝน", role: "FE", skills: ["role-fe", "frontend-finish"], model: "sonnet", effort: "medium", combinedFrom: null },
-  { id: W.bank, name: "แบงค์", role: "BE", skills: ["role-be"], model: "sonnet", effort: "medium", combinedFrom: null },
-  { id: W.mint, name: "มิ้นท์", role: "QA", skills: ["role-qa"], model: "sonnet", effort: "high", combinedFrom: null },
+  { id: W.ploy, name: "ปลา", role: "PM", roles: ["PM"], skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null },
+  { id: W.fern, name: "ฝน", role: "FE", roles: ["FE"], skills: ["role-fe", "frontend-finish"], model: "sonnet", effort: "medium", combinedFrom: null },
+  { id: W.bank, name: "แบงค์", role: "BE", roles: ["BE"], skills: ["role-be"], model: "sonnet", effort: "medium", combinedFrom: null },
+  { id: W.mint, name: "มิ้นท์", role: "QA", roles: ["QA"], skills: ["role-qa"], model: "sonnet", effort: "high", combinedFrom: null },
 ];
 const ENTRY = W.ploy;
 const EDGES = [
@@ -93,7 +94,7 @@ const NOTES: Record<string, Note[]> = {
 };
 
 const RUN_1 = id("r", 1), RUN_2 = id("r", 2); // r-2 is the older one
-const HOPS: Hop[] = [
+const HOPS: Omit<Hop, "lastActivityAt">[] = [
   { id: id("h", 1), projectId: PROJECT_ID, runId: RUN_1, claimedBy: "runner-1", cardId: C(9), workerId: W.ploy, startedAt: "2026-10-13T08:00:10+07:00", endedAt: "2026-10-13T08:00:48+07:00", outcome: "status", tokensIn: 3100, tokensOut: 1100, note: "ตัดการ์ดจาก spec และปิดขั้นแรก" },
   { id: id("h", 2), projectId: PROJECT_ID, runId: RUN_1, claimedBy: "runner-1", cardId: C(10), workerId: W.fern, startedAt: "2026-10-13T08:02:00+07:00", endedAt: "2026-10-13T08:02:52+07:00", outcome: "handed_off", tokensIn: 4500, tokensOut: 1600, note: "ทำขั้นเลือกห้องและเวลา ส่งต่อให้แบงค์" },
   { id: id("h", 3), projectId: PROJECT_ID, runId: RUN_1, claimedBy: "runner-1", cardId: C(8), workerId: W.bank, startedAt: "2026-10-13T08:05:30+07:00", endedAt: "2026-10-13T08:05:59+07:00", outcome: "commented", tokensIn: 2400, tokensOut: 900, note: "ตั้งข้อมูล Room" },
@@ -103,6 +104,8 @@ const HOPS: Hop[] = [
   // a manual hop: no run, no runner
   { id: id("h", 4), projectId: PROJECT_ID, runId: null, claimedBy: null, cardId: C(6), workerId: W.bank, startedAt: "2026-10-13T09:10:00+07:00", endedAt: "2026-10-13T09:11:11+07:00", outcome: "commented", tokensIn: 6400, tokensOut: 2400, note: "ทำ API อนุมัติการจอง" },
 ];
+// v1.11: a hop's `lastActivityAt` starts as its `startedAt`; the mock has no runner, so a heartbeat never moves it
+const SEEDED_HOPS: Hop[] = HOPS.map((h) => ({ ...h, lastActivityAt: h.startedAt }));
 
 // ---- the chat and the card proposals (SPEC-A-008 § v1.4): a thread with two asks; the first was answered with questions and a proposal
 // (an older proposal on the same message is superseded), the second with a proposal whose one anchor has since gone from Blueprint ----
@@ -142,6 +145,15 @@ const PROPOSALS: StoredProposal[] = [
 const ABSOLUTE = /^(\/|[A-Za-z]:[\\/])/;
 const NOW = "2026-10-13T10:00:00+07:00";
 const STRENGTH: Record<ModelName, number> = { haiku: 0, sonnet: 1, opus: 2 };
+const ROLE_WORDS: readonly WorkerRole[] = ["PM", "BA", "SA", "FE", "BE", "QA", "other"];
+/** a role's default model (v1.10): the thinking roles — PM · BA · SA · QA — on opus, the rest on sonnet */
+const roleModel = (r: WorkerRole): ModelName => (r === "PM" || r === "BA" || r === "SA" || r === "QA" ? "opus" : "sonnet");
+const strongest = (models: ModelName[]): ModelName => models.reduce((a, b) => (STRENGTH[b] > STRENGTH[a] ? b : a));
+/** `roles` as the back end takes it: at least one, no repeats, only known words */
+const rolesOf = (roles: WorkerRole[]): WorkerRole[] => {
+  if (roles.length < 1 || new Set(roles).size !== roles.length || roles.some((r) => !ROLE_WORDS.includes(r))) refuse(400, "validation", "roles: one or more distinct roles");
+  return [...roles];
+};
 const LEVEL: Record<Effort, number> = { low: 0, medium: 1, high: 2 };
 const STATUSES: CardStatus[] = ["todo", "doing", "review", "done", "stuck"];
 
@@ -157,21 +169,29 @@ interface Proj {
 
 const refuse = (status: number, code: string, message: string, details?: unknown): never => { throw new CawError(status, code, message, details); };
 
+/** a project with nothing in it yet (what `createProject` makes; also the `new-project` state) */
+const blank = (version: number, n: number): Proj => ({
+  id: id("p", n), name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version, latestSeenVersion: BLUEPRINT_LATEST,
+  mode: "manual", hopBudget: 0, roots: [], createdAt: NOW, cards: [], notes: {}, hops: [], runs: [], chat: [], proposals: [], chatHops: [], members: [], edges: [], entry: null,
+});
+
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running"] as const;
+export const MOCK_STATES = ["dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
  *  ended that way, so the variant only turns the mode. `manual-open-run` (TASK-B-056): the project stays on แบบสั่งทีละขั้น and has one more run,
  *  newest and still open — the runner opened it; the screen cannot. `chat-failed` / `chat-running` (TASK-B-057): the second ask has no reply — and no
- *  proposal on it — because its chat hop ended `failed`, or is still running. Anything else (or nothing) is the plain seed. */
+ *  proposal on it — because its chat hop ended `failed`, or is still running. `new-project` (TASK-B-062): a second project, `MOCK_NEW_PROJECT_ID`, with no
+ *  chain members, folders, cards or chat — the first-steps screen. `working-now`: one card hop is running (the BE on card 4) so a seat reads `working`.
+ *  Anything else (or nothing) is the plain seed. */
 export function createMockApi(opts: { state?: MockState } = {}): CawApi {
   const workers: Worker[] = structuredClone(WORKERS);
   let nextWorker = workers.length, nextProject = 1, nextNote = 100, nextRun = 2, nextCard = SEEDS.length, nextMessage = CHAT.length; // runs r-1 and r-2, 12 cards and 4 messages are seeded
   const projects: Proj[] = [{
     id: PROJECT_ID, name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version: BLUEPRINT_VERSION, latestSeenVersion: BLUEPRINT_LATEST,
     mode: opts.state === "dispatcher-stopped" ? "dispatcher" : "manual", hopBudget: 40, roots: [], createdAt: "2026-10-12T20:00:00+07:00", // a new project has no folders yet (REQ-011: the warning)
-    cards: structuredClone(SEEDS), notes: structuredClone(NOTES), hops: structuredClone(HOPS), chat: structuredClone(CHAT), proposals: structuredClone(PROPOSALS), chatHops: [],
+    cards: structuredClone(SEEDS), notes: structuredClone(NOTES), hops: structuredClone(SEEDED_HOPS), chat: structuredClone(CHAT), proposals: structuredClone(PROPOSALS), chatHops: [],
     runs: [{
       id: RUN_1, projectId: PROJECT_ID, mode: "dispatcher", hopBudget: 3, startedAt: "2026-10-13T08:00:00+07:00", endedAt: "2026-10-13T08:06:00+07:00",
       stopReason: "budget_spent", report: "ทำครบ 3 ก้าว: ปิดขั้นแรก ขั้นเลือกห้องและเวลา และข้อมูล Room — ยังเหลือ 9 การ์ด",
@@ -187,6 +207,11 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi {
     p.chat = p.chat.filter((m) => m.id !== M(4));
     p.proposals = p.proposals.filter((x) => x.id !== Q(3));
     p.chatHops.push({ id: id("h", 8), messageId: M(3), endedAt: failed ? "2026-10-14T09:20:40+07:00" : null, outcome: failed ? "failed" : null });
+  }
+  if (opts.state === "new-project") projects.push(blank(1, ++nextProject));
+  if (opts.state === "working-now") {
+    const now = new Date().toISOString(); // just now, so the seat is not quiet
+    projects[0]!.hops.unshift({ id: id("h", 20), projectId: PROJECT_ID, runId: null, claimedBy: null, cardId: C(4), workerId: W.bank, startedAt: now, lastActivityAt: now, endedAt: null, outcome: null, tokensIn: null, tokensOut: null, note: "" }); // just now, so the seat is not quiet
   }
   if (opts.state === "manual-open-run") {
     projects[0]!.runs.unshift({ id: id("r", ++nextRun), projectId: PROJECT_ID, mode: "manual", hopBudget: 40, startedAt: "2026-10-13T09:00:00+07:00", endedAt: null, stopReason: null, report: null });
@@ -225,7 +250,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi {
   });
   const member = (p: Proj, wid: string) => { if (!p.members.includes(wid)) refuse(400, "not_a_member", "that worker is not in this project's chain"); };
 
-  return {
+  const base: Omit<CawApi, "events"> = {
     projects: async () => projects.map(summary),
     project: async (pid) => { const p = get(pid); return p ? summary(p) : null; },
     setMode: async (pid, next, budget) => {
@@ -302,10 +327,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi {
       if (!Number.isInteger(version) || version < 1 || version > BLUEPRINT_LATEST) refuse(409, "version_not_confirmed", "that version is not confirmed in Blueprint");
       const there = projects.find((p) => p.blueprintProjectId === blueprintProjectId && p.version === version);
       if (there) refuse(409, "already_exists", "a project already exists for this Blueprint version", { id: there.id });
-      const p: Proj = {
-        id: id("p", ++nextProject), name: "จองห้องประชุม", blueprintProjectId, version, latestSeenVersion: BLUEPRINT_LATEST,
-        mode: "manual", hopBudget: 0, roots: [], createdAt: NOW, cards: [], notes: {}, hops: [], runs: [], chat: [], proposals: [], chatHops: [], members: [], edges: [], entry: null,
-      };
+      const p = blank(version, ++nextProject);
       projects.push(p);
       return summary(p);
     },
@@ -357,15 +379,34 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi {
       c.specChangedVersion = null;
       return full(p, c);
     },
-    createWorker: async ({ name, role, skills, model, effort }) => {
+    createWorker: async (input) => {
+      const { name, skills, model, effort } = input;
       if (name.length < 1 || name.length > 40) refuse(400, "validation", "name: 1–40 characters");
       if (skills.length < 1) refuse(400, "validation", "skills: at least one");
+      const given = input as { role?: WorkerRole; roles?: WorkerRole[] };
+      if ((given.role === undefined) === (given.roles === undefined)) refuse(400, "validation", "send exactly one of `roles` and `role`");
+      const roles = rolesOf(given.roles ?? [given.role!]);
       if (workers.some((w) => w.name === name)) refuse(409, "name_taken", "a worker with this name exists");
       const w: Worker = {
-        id: id("w", ++nextWorker), name, role, skills: [...skills], combinedFrom: null,
-        model: model ?? (role === "PM" || role === "SA" || role === "QA" ? "opus" : "sonnet"), effort: effort ?? "medium",
+        id: id("w", ++nextWorker), name, role: roles[0]!, roles, skills: [...skills], combinedFrom: null,
+        model: model ?? strongest(roles.map(roleModel)), effort: effort ?? "medium",
       };
       workers.push(w);
+      return structuredClone(w);
+    },
+    updateWorker: async (workerId, patch) => {
+      const w = worker(workerId);
+      const sent = (Object.keys(patch) as (keyof typeof patch)[]).filter((k) => patch[k] !== undefined);
+      if (sent.length < 1) refuse(400, "validation", "send at least one of name, roles, skills, model, effort");
+      if (patch.name !== undefined && (patch.name.length < 1 || patch.name.length > 40)) refuse(400, "validation", "name: 1–40 characters");
+      if (patch.skills !== undefined && patch.skills.length < 1) refuse(400, "validation", "skills: at least one");
+      const roles = patch.roles === undefined ? undefined : rolesOf(patch.roles);
+      if (patch.name !== undefined && workers.some((x) => x.id !== w.id && x.name === patch.name)) refuse(409, "name_taken", "a worker with this name exists");
+      if (patch.name !== undefined) w.name = patch.name;
+      if (roles) { w.roles = roles; w.role = roles[0]!; }
+      if (patch.skills !== undefined) w.skills = [...patch.skills];
+      if (patch.model !== undefined) w.model = patch.model;
+      if (patch.effort !== undefined) w.effort = patch.effort;
       return structuredClone(w);
     },
     combineWorkers: async (name, [a, b]) => {
@@ -373,7 +414,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi {
       if (name.length < 1 || name.length > 40) refuse(400, "validation", "name: 1–40 characters");
       if (workers.some((w) => w.name === name)) refuse(409, "name_taken", "a worker with this name exists");
       const w: Worker = {
-        id: id("w", ++nextWorker), name, role: "other", skills: [...new Set([...wa.skills, ...wb.skills])], combinedFrom: [a, b],
+        id: id("w", ++nextWorker), name, role: "other", roles: ["other"], skills: [...new Set([...wa.skills, ...wb.skills])], combinedFrom: [a, b],
         model: STRENGTH[wa.model] >= STRENGTH[wb.model] ? wa.model : wb.model, effort: LEVEL[wa.effort] >= LEVEL[wb.effort] ? wa.effort : wb.effort,
       };
       workers.push(w);
@@ -466,4 +507,32 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi {
       return made.map((c) => full(p, c));
     },
   };
+
+  // ---- the event log: every write that succeeds appends one event of its project (seq rising by one) — what the screens' live refresh looks at ----
+  const log: CawEvent[] = [];
+  const projectOfCard = (cardId: string) => locate(cardId)?.p.id ?? null;
+  /** write method → [event type, the project it belongs to (from the call's arguments and its result)] */
+  const WRITES: Record<string, [string, (args: any[], result: any) => string | null]> = {
+    createProject: ["project.created", (_a, r) => r.id],
+    setMode: ["project.mode_set", (a) => a[0]], setWorkspace: ["project.workspace_set", (a) => a[0]], startRun: ["run.started", (a) => a[0]],
+    comment: ["card.commented", (a) => projectOfCard(a[0])], setStatus: ["card.status_set", (a) => projectOfCard(a[0])], assign: ["card.assigned", (a) => projectOfCard(a[0])],
+    handoff: ["card.handed_off", (a) => projectOfCard(a[0])], answer: ["card.question_answered", (a) => projectOfCard(a[0])], clearSpecChange: ["card.spec_change_cleared", (a) => projectOfCard(a[0])],
+    createWorker: ["worker.created", () => null], combineWorkers: ["worker.combined", () => null], updateWorker: ["worker.updated", () => null],
+    addMember: ["chain.member_added", (a) => a[0]], removeMember: ["chain.member_removed", (a) => a[0]], addEdge: ["chain.edge_added", (a) => a[0]],
+    removeEdge: ["chain.edge_removed", (a) => a[0]], setEntry: ["chain.entry_set", (a) => a[0]],
+    postChat: ["chat.posted", (a) => a[0]], retryChat: ["chat.retry_requested", (a) => projects.find((p) => p.chat.some((m) => m.id === a[0]))?.id ?? null],
+    acceptProposal: ["proposal.accepted", (_a, r) => r[0]?.projectId ?? null],
+  };
+  const api: Record<string, unknown> = { ...base };
+  for (const [name, [type, projectOf]] of Object.entries(WRITES)) {
+    const write = (base as unknown as Record<string, (...a: any[]) => Promise<any>>)[name]!;
+    api[name] = async (...args: any[]) => {
+      const result = await write(...args); // a refused write throws here and appends nothing
+      log.push({ seq: log.length + 1, at: new Date().toISOString(), actor: "operator", projectId: projectOf(args, result), type, data: {} });
+      return result;
+    };
+  }
+  api.events = async (pid: string, query: { after?: number; limit?: number } = {}) =>
+    structuredClone(log.filter((e) => e.projectId === pid && e.seq > (query.after ?? 0)).slice(0, Math.min(query.limit ?? 100, 500)));
+  return api as unknown as CawApi;
 }

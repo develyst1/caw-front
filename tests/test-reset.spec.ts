@@ -1,6 +1,7 @@
 // The reset door itself (TASK-B-045, -049): no state = the plain seed, a known state = that variant, an unknown one is refused and changes nothing.
 import { expect, test } from "./fixtures";
-import { MOCK_PROJECT_ID } from "../src/api/mock";
+import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
+import { runRunning } from "../src/words";
 
 const modeOf = async (page: import("@playwright/test").Page) => {
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
@@ -35,3 +36,19 @@ test("POST /test-reset?state=chat-failed → 204 and the thread's second ask has
   expect(await chat()).toContain(reply);
 });
 
+test("POST /test-reset?state=new-project → 204 and a second project with nothing in it exists; working-now → 204 and one card hop is running; a plain POST undoes both", async ({ page, request }) => {
+  const projects = async () => { await page.goto("/"); return page.locator('a[href^="/p/"]').count(); };
+  const running = async () => { await page.goto(`/p/${MOCK_PROJECT_ID}/runs`); return page.locator("[data-hop]").filter({ hasText: runRunning }).count(); };
+  expect([await projects(), await running()]).toEqual([1, 0]);
+
+  expect((await request.post("/test-reset?state=new-project")).status()).toBe(204);
+  expect(await projects()).toBe(2);
+  expect((await page.goto(`/p/${MOCK_NEW_PROJECT_ID}`))!.status()).toBe(200);
+  await expect(page.locator("[data-card]")).toHaveCount(0);
+
+  expect((await request.post("/test-reset?state=working-now")).status()).toBe(204);
+  expect([await projects(), await running()]).toEqual([1, 1]);
+
+  expect((await request.post("/test-reset")).status()).toBe(204);
+  expect([await projects(), await running()]).toEqual([1, 0]);
+});

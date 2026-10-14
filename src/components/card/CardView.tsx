@@ -11,6 +11,7 @@ import {
   card as cardWord, cardMark, column, decisionsHeading, dependsOnHeading, handoffLine, linkKind, linkedWith, operatorName,
   partKind, proposedAnswer, refusedHandoff, section, timelineHeading, todoHeading, toSpec,
 } from "@/words";
+import { Avatar, Person } from "@/components/Person";
 import { AnswerQuestion, CardControls, CommentBox } from "./CardActions";
 import { Part, PartIcon } from "./Part";
 import s from "./card.module.css";
@@ -39,7 +40,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
         <h2 className={s.title}>{card.title}</h2>
         <div className={s.meta}>
           <Tag className={card.status === "stuck" ? s.tagStuck : s.tag}>{column[card.status]}</Tag>
-          {worker && <span className={s.worker}><span className={s.avatar} aria-hidden>{[...worker.name][0]}</span>{worker.name}</span>}
+          {worker && <span className={s.worker}><Person name={worker.name} roles={worker.roles} size="sm" state={card.status === "stuck" ? "stuck" : null} /></span>}
           {card.specChangedVersion !== null && <Tag className={s.markSpec} icon={<SyncOutlined aria-hidden />}>{cardMark.specChanged}</Tag>}
           {waiting && <Tag className={s.markWait} icon={<QuestionCircleOutlined aria-hidden />}>{cardMark.waitingAnswer}</Tag>}
         </div>
@@ -133,6 +134,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
               {notes.map((n) => (
                 <li key={n.id} className={n.type === "handoff" ? `${s.note} ${s.handoff}` : n.type === "handoff_refused" ? `${s.note} ${s.refusedNote}` : s.note} data-note={n.type}>
                   <div className={s.noteHead}>
+                    {n.type === "comment" && <Avatar name={nameOf(n.actor)} size="sm" />}
                     <span className={s.who}>{n.type === "handoff" ? handoffLine(nameOf(n.fromWorkerId), nameOf(n.toWorkerId))
                       : n.type === "handoff_refused" ? refusedHandoff(nameOf(n.toWorkerId), nameOf(n.fromWorkerId)) /* v1.3, D-051 */
                       : nameOf(n.actor)}</span>

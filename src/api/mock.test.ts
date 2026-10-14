@@ -104,6 +104,13 @@ describe("cards", () => {
     expect(await api.card("nope")).toBeNull();
   });
 
+  test("every hop has `lastActivityAt` (v1.11, never null); the mock has no runner, so none has had a heartbeat: it is each hop's `startedAt`", async () => {
+    const hops = await createMockApi({ state: "working-now" }).hops(PID);
+    expect(hops.length).toBeGreaterThan(0);
+    for (const h of hops) expect(h.lastActivityAt).toBe(h.startedAt);
+    expect(hops.filter((h) => h.endedAt === null)).toHaveLength(1);
+  });
+
   test("a card's context carries the card, its Blueprint part with neighbours and decisions, and its notes oldest first", async () => {
     const api = createMockApi();
     const step3 = (await api.cards(PID)).find((c) => c.anchor.key === "STEP-003")!;

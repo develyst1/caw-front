@@ -7,7 +7,8 @@
 export type Mode = "manual" | "dispatcher";
 export type CardStatus = "todo" | "doing" | "review" | "done" | "stuck";
 export type CardKind = "work" | "question";
-export type WorkerRole = "PM" | "SA" | "FE" | "BE" | "QA" | "other";
+export type WorkerRole = "PM" | "BA" | "SA" | "FE" | "BE" | "QA" | "other"; // v1.10: BA is new
+export type Role = WorkerRole;
 export type ModelName = "opus" | "sonnet" | "haiku";
 export type Effort = "low" | "medium" | "high";
 export type StopReason = "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error";
@@ -32,7 +33,8 @@ export interface ProjectSummary extends Project { cardsDone: number; cardsTotal:
 export interface Worker {
   id: string;
   name: string;
-  role: WorkerRole;
+  role: WorkerRole;               // deprecated (v1.10): `roles[0]` — read `roles`
+  roles: WorkerRole[];            // v1.10: ≥ 1, no repeats, in the order picked
   skills: string[];
   model: ModelName;
   effort: Effort;
@@ -99,6 +101,7 @@ export interface Hop {
   workerId: string;
   startedAt: string;
   endedAt: string | null;         // null while running
+  lastActivityAt: string;         // v1.11, never null: `startedAt`, then moved by each runner heartbeat — `endedAt === null` and 10 min old = `เงียบไป`
   outcome: HopOutcome | null;
   tokensIn: number | null;
   tokensOut: number | null;
@@ -166,6 +169,10 @@ export interface Proposal {
   hopsTotal: number;               // computed on read: the sum of the items' hops — never stored
 }
 
+/** One line of the project's event log (SPEC-A-008 § Event types): every write is one event. `data` is the write's input — the screens only look at `seq`, `at`, `actor`
+ *  and `type` (what changed, when, by whom). */
+export interface CawEvent { seq: number; at: string; actor: string; projectId: string | null; type: string; data?: unknown }
+
 export interface CawApi {
   projects(): Promise<ProjectSummary[]>;                                        // GET /v1/projects
   project(id: string): Promise<Project | null>;                                 // GET /v1/projects/{id} (a `Project`: the counts come with the list)
@@ -205,8 +212,12 @@ export interface CawApi {
   answer(cardId: string, answer: string): Promise<Card>;
   /** POST /v1/cards/{id}/spec-change/clear */
   clearSpecChange(cardId: string): Promise<Card>;
-  /** POST /v1/workers — 409 `name_taken`. `model` / `effort` default by role. */
-  createWorker(input: { name: string; role: WorkerRole; skills: string[]; model?: ModelName; effort?: Effort }): Promise<Worker>;
+  /** POST /v1/workers — 409 `name_taken`. v1.10: `roles` (≥ 1, distinct) or the old single `role` (read as `[role]`) — both or neither is a 400
+   *  `validation`. `model` / `effort` default to the strongest of the picked roles'. `skills` is the client's list (see `lib/roles.ts`). */
+  createWorker(input: { name: string; skills: string[]; model?: ModelName; effort?: Effort } & ({ roles: WorkerRole[] } | { role: WorkerRole })): Promise<Worker>;
+  /** PATCH /v1/workers/{id} (v1.10) — sets only the fields sent (at least one, else 400 `validation`); changing `roles` leaves skills, model and effort alone.
+   *  404 · 409 `name_taken`. */
+  updateWorker(workerId: string, patch: { name?: string; roles?: WorkerRole[]; skills?: string[]; model?: ModelName; effort?: Effort }): Promise<Worker>;
   /** POST /v1/workers/combine — skills = union, model = the stronger, effort = the higher, role `other`, `combinedFrom` = both; the two stay. */
   combineWorkers(name: string, workerIds: [string, string]): Promise<Worker>;
   /** POST /v1/projects/{id}/chain/members — 409 `already_member`. */
@@ -220,6 +231,9 @@ export interface CawApi {
   /** PUT /v1/projects/{id}/chain/entry — 400 when the worker is not a member. */
   setEntry(projectId: string, workerId: string): Promise<Chain>;
 
+
+  /** GET /v1/projects/{id}/events?after=&limit= — oldest first; `after` = a seq (default 0), `limit` ≤ 500. An unknown project has no events. */
+  events(projectId: string, query?: { after?: number; limit?: number }): Promise<CawEvent[]>;
 
   // ---- the chat with the entry worker, and the cards it proposes (REQ-013) ----
   /** GET /v1/projects/{id}/chat — oldest first; `after` = a message id, `limit` ≤ 200. An unknown project has no messages. */

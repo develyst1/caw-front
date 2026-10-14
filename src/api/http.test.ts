@@ -229,3 +229,29 @@ describe("retrying a chat step (SPEC-A-008 § v1.9)", () => {
   });
 });
 
+describe("roles (SPEC-A-008 § v1.10)", () => {
+  test("createWorker sends `roles` as given; updateWorker is PATCH /v1/workers/{id} with only the fields sent and the operator's actor", async () => {
+    const { api, log } = against(() => json(200, { id: "w9" }));
+    await api.createWorker({ name: "ก", roles: ["FE", "BE"], skills: ["role-fe", "role-be"] });
+    await api.updateWorker("w9", { roles: ["PM", "BA"] });
+    await api.updateWorker("w9", { name: "ข", model: "opus" });
+    expect(log.map((s) => [s.method, s.path, s.body, s.actor])).toEqual([
+      ["POST", "/v1/workers", { name: "ก", roles: ["FE", "BE"], skills: ["role-fe", "role-be"] }, "operator"],
+      ["PATCH", "/v1/workers/w9", { roles: ["PM", "BA"] }, "operator"],
+      ["PATCH", "/v1/workers/w9", { name: "ข", model: "opus" }, "operator"],
+    ]);
+  });
+  test("updateWorker's refusals arrive as CawError: 409 name_taken, 400 validation, 404 (an unknown worker is an error, not null)", async () => {
+    for (const [status, code] of [[409, "name_taken"], [400, "validation"], [404, "not_found"]] as const) {
+      const { api } = against(() => json(status, { error: { code, message: "no" } }));
+      const e = (await api.updateWorker("w9", { name: "x" }).then(() => null, (x: unknown) => x)) as CawError;
+      expect([e.status, e.code]).toEqual([status, code]);
+    }
+  });
+  test("a worker's roles pass through as the back end sent them", async () => {
+    const w = { id: "w1", name: "ปลา", role: "PM", roles: ["PM", "BA"], skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null };
+    const { api } = against(() => json(200, { workers: [w] }));
+    expect(await api.workers()).toEqual([w as never]);
+  });
+});
+

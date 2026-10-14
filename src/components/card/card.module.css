@@ -4,7 +4,7 @@
 .back { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; color: var(--caw-blue); font-size: 14px; font-weight: 600; text-decoration: none; }
 .back:hover { text-decoration: underline; }
 .head { display: grid; gap: 10px; }
-.title { margin: 0; font-size: 22px; line-height: 1.35; font-weight: 700; }
+.title { margin: 0; font-size: var(--caw-t-page); line-height: 1.3; font-weight: 800; letter-spacing: -0.01em; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .meta :global(.ant-tag) { margin: 0; font-size: 14px; border-radius: var(--caw-r-tag); }
 .tag:global(.ant-tag) { background: var(--caw-paper); border-color: var(--caw-lineStrong); color: var(--caw-ink); font-weight: 600; }
@@ -12,7 +12,6 @@
 .markSpec:global(.ant-tag) { background: var(--caw-paper); border-color: var(--caw-lineStrong); color: var(--caw-ink2); }
 .markWait:global(.ant-tag) { background: var(--caw-blueSoft); border-color: transparent; color: var(--caw-blue); }
 .worker { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--caw-ink2); }
-.avatar { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--caw-paper); border: 1px solid var(--caw-line); color: var(--caw-ink); font-size: 14px; font-weight: 700; }
 
 /* the spec first: its own column at 1440, the top of the page at 390 */
 .grid { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -22,7 +21,7 @@
 }
 .work { display: grid; gap: 16px; min-width: 0; }
 .panel { display: grid; gap: 12px; padding: 20px; border-radius: var(--caw-r-panel); background: var(--caw-paper); border: 1px solid var(--caw-line); box-shadow: var(--caw-shadow-rest); }
-.h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.h2 { margin: 0; font-size: var(--caw-t-panel); font-weight: 700; }
 .h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--caw-ink2); }
 .block { padding-top: 12px; border-top: 1px solid var(--caw-line); }
 
@@ -70,7 +69,7 @@
 .note::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px; border-radius: 999px; background: var(--caw-paper); border: 2px solid var(--caw-lineStrong); }
 .note:last-child { padding-bottom: 0; }
 .handoff::before { border-color: var(--caw-blue); background: var(--caw-blueSoft); }
-.noteHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.noteHead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .who { font-weight: 600; }
 .handoff .who { color: var(--caw-blue); }
 /* a hand-off the chain refused (TASK-B-048): the stuck tone, so it reads as something that did not happen */

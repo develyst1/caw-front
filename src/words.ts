@@ -164,6 +164,31 @@ export const projectCard = {
   none: "ยังไม่มีโปรเจกต์ — เริ่มจากปุ่ม ส่งไปสร้างที่ CAW ในหน้าพร้อมสร้างของ Blueprint",
 } as const;
 
+// ---- REQ-014 redesign (D-061): the 24 words of TASK-B-061 § 3, as written; the starting team's names are in Bob's startingTeam.ts ----
+export const redesign = {
+  workingCount: (n: number) => `กำลังทำ ${n} คน`,                                   // REQ-014 (D-061) home card
+  noTeam: "ยังไม่มีทีม",                                                               // REQ-014 (D-061) home card
+  setUpTeam: "จัดทีม",                                                                 // REQ-014 (D-061) home card action · step 1 title
+  openBlueprint: "เปิด Blueprint",                                                     // REQ-014 (D-061) home empty state
+  stepsHeading: "เริ่มงานใน 3 ขั้น",                                                    // REQ-014 (D-061)
+  stepsLine: "ทำครบแล้วทีมจะเริ่มแตกงานเป็นการ์ดบนบอร์ดนี้",                               // REQ-014 (D-061)
+  stepTeamText: "ทีมเริ่มต้นห้าคน รับงานจากคุณที่ PM แล้วส่งต่อกันตามสายงาน เปลี่ยนคนหรือบทบาททีหลังได้", // REQ-014 (D-061)
+  useStartingTeam: "ใช้ทีมเริ่มต้น",                                                    // REQ-014 (D-061)
+  ownTeam: "จัดทีมเอง",                                                               // REQ-014 (D-061)
+  startingChain: "PM → SA → FE และ BE → QA → PM",                                      // REQ-014 (D-061)
+  stepChatTitle: "เล่างานแรกให้ทีมฟัง",                                                  // REQ-014 (D-061)
+  stepChatText: "พิมพ์ในแชต ทีมจะเสนอการ์ดให้คุณกดสร้าง",                                  // REQ-014 (D-061)
+  emptyBoard: "บอร์ดยังว่าง — การ์ดจะขึ้นที่นี่เมื่อคุณกดสร้างการ์ดจากแชต",                     // REQ-014 (D-061)
+  teamIncomplete: "ทีมยังไม่ครบ",                                                       // REQ-014 (D-061) chat head
+  entryLine: (name: string, role: string) => `${name} · ${role} ${team.entry}`,          // REQ-014 (D-061) chat head
+  seatWorking: (card: string) => `${column.doing}: ${card}`,                           // REQ-014 (D-061) crew seat
+  seatStuck: (card: string) => `${column.stuck}: ${card}`,                             // REQ-014 (D-061) crew seat
+  seatWaiting: "รอคำตอบจากคุณ",                                                        // REQ-014 (D-061) crew seat
+  seatFree: "ว่าง",                                                                    // REQ-014 (D-061) crew seat
+  workingNow: column.doing,                                                             // carried-over word, new place (a tag)
+  asks: (name: string, part: string) => `${name} ถาม · ${part}`,                        // REQ-014 (D-061) question card meta
+} as const;
+
 /** On sample data (CAW_API=mock), every page says so (REQ-011 l.59, D-058). */
 export const sampleData = "ข้อมูลตัวอย่าง — ไม่ได้ต่อกับ CAW จริง";
 /** After the mark (REQ-011 l.60, TASK-B-060); the command part is shown as code. */

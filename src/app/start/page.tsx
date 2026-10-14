@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { api, onSampleData } from "@/api";
 import { CawError } from "@/api/caw";
 import s from "@/components/projects.module.css";
+import st from "./start.module.css";
 import { CawRoot } from "@/theme/CawRoot";
 import { sampleData, section, startRefused } from "@/words";
 
@@ -40,10 +41,10 @@ export default async function Start({ searchParams }: { searchParams: Promise<{ 
         </div>
       </header>
       <main className={s.main}>
-        <div className={`${s.panel} ${s.panelAlert}`} role="alert">
+        <div className={st.panel} role="alert">
           {/* on sample data the mock cannot know real Blueprint projects — "not found" would be the wrong sentence (D-058) */}
-          <p className={s.panelText}>{refused === "blueprint_project_not_found" && onSampleData() ? sampleData : startRefused[refused ?? "other"]}</p>
-          <a className={s.link} href="/">{section.projects}</a>
+          <p className={st.text}>{refused === "blueprint_project_not_found" && onSampleData() ? sampleData : startRefused[refused ?? "other"]}</p>
+          <a className={st.back} href="/">{section.projects}</a>
         </div>
       </main>
     </CawRoot>

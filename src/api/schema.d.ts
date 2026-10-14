@@ -2898,7 +2898,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            /** @description a worker; model / effort default by role */
+            /** @description a worker; model / effort default to the strongest of the roles' defaults */
             requestBody: {
                 content: {
                     "application/json": {
@@ -2907,8 +2907,13 @@ export interface paths {
                         /** @enum {string} */
                         model?: "opus" | "sonnet" | "haiku";
                         name: string;
-                        /** @enum {string} */
-                        role: "PM" | "SA" | "FE" | "BE" | "QA" | "other";
+                        /**
+                         * @description deprecated — the old single role, read as roles: [role]; send exactly one of `roles` / `role`
+                         * @enum {string}
+                         */
+                        role?: "PM" | "BA" | "SA" | "FE" | "BE" | "QA" | "other";
+                        /** @description one or more roles, in the order picked */
+                        roles?: ("PM" | "BA" | "SA" | "FE" | "BE" | "QA" | "other")[];
                         skills: string[];
                     };
                 };
@@ -2967,6 +2972,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: {
             parameters: {
                 query?: never;
@@ -3038,6 +3044,93 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/workers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description the fields to change — only what is sent changes */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        effort?: "low" | "medium" | "high";
+                        /** @enum {string} */
+                        model?: "opus" | "sonnet" | "haiku";
+                        name?: string;
+                        /** @description one or more roles, in the order picked */
+                        roles?: ("PM" | "BA" | "SA" | "FE" | "BE" | "QA" | "other")[];
+                        skills?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description the worker after the change */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Worker"];
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · not_your_card · not_your_message */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
 }
@@ -3237,8 +3330,12 @@ export interface components {
             /** @enum {string} */
             model: "opus" | "sonnet" | "haiku";
             name: string;
-            /** @enum {string} */
-            role: "PM" | "SA" | "FE" | "BE" | "QA" | "other";
+            /**
+             * @description roles[0] — deprecated, read `roles`
+             * @enum {string}
+             */
+            role: "PM" | "BA" | "SA" | "FE" | "BE" | "QA" | "other";
+            roles: ("PM" | "BA" | "SA" | "FE" | "BE" | "QA" | "other")[];
             skills: string[];
         };
     };

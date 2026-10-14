@@ -15,6 +15,11 @@ export const color = {
   stuck: "#A44F08", // only stuck
   stuckSoft: "#FFF4E5",
   stuckLine: "#E8C3A5", // a stuck card's border
+  // REQ-014 direction (specs/SPEC-B-003-findings/TASK-B-061-direction-and-comps.md § 1): one new meaning — someone is working on it right now
+  work: "#15733F", // 5.2:1 on workSoft, 5.9:1 on paper — only "working now"
+  workSoft: "#E5F5EC",
+  workLine: "#A9D9BE",
+  column: "#E9EEF5", // a board column: a step darker than the canvas
 } as const;
 
 /** Blueprint's spec-part groups (clean-blue tokens) — only ever inside a spec-part chip. */
@@ -32,13 +37,18 @@ export const kindGroup: Record<string, keyof typeof group> = {
   data: "knowledge", decision: "knowledge", question: "question",
 };
 
-export const radius = { tag: 6, card: 10, column: 12, panel: 16 } as const;
+export const radius = { tag: 6, card: 10, column: 12, seat: 14, panel: 16 } as const;
+/** The spacing scale (direction § 1) — every gap and padding is one of these. */
+export const space = [4, 8, 12, 16, 20, 24, 32] as const;
+/** The type scale (direction § 1): 14 is the floor; one dominant title per page. */
+export const type = { meta: 14, card: 15, body: 16, panel: 18, section: 22, page: 26 } as const;
 export const shadow = { rest: "0 1px 2px rgba(24,33,47,.06)", lifted: "0 4px 12px rgba(24,33,47,.10)" } as const;
 
 /** The variables the CSS modules read — set on the CAW root only. */
 export const cssVars = {
   ...Object.fromEntries(Object.entries(color).map(([k, v]) => [`--caw-${k}`, v])),
-  "--caw-r-tag": `${radius.tag}px`, "--caw-r-card": `${radius.card}px`, "--caw-r-column": `${radius.column}px`, "--caw-r-panel": `${radius.panel}px`,
+  "--caw-r-tag": `${radius.tag}px`, "--caw-r-card": `${radius.card}px`, "--caw-r-column": `${radius.column}px`, "--caw-r-panel": `${radius.panel}px`, "--caw-r-seat": `${radius.seat}px`,
+  ...Object.fromEntries(Object.entries(type).map(([k, v]) => [`--caw-t-${k}`, `${v}px`])),
   "--caw-shadow-rest": shadow.rest, "--caw-shadow-lifted": shadow.lifted,
 } as Record<string, string>;
 

@@ -5,7 +5,7 @@
 // `CawError(0, "unreachable")`. A 404 on a read of one thing is `null` (or an empty list), not an error.
 import createClient from "openapi-fetch";
 import {
-  CawError, type Card, type CardContext, type CawApi, type Chain, type ChatMessage, type Hop, type Note, type PartContext, type Project,
+  CawError, type Card, type CardContext, type CawApi, type CawEvent, type Chain, type ChatMessage, type Hop, type Note, type PartContext, type Project,
   type ProjectSummary, type Proposal, type Run, type Worker,
 } from "./caw";
 import type { paths } from "./schema";
@@ -86,6 +86,7 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     answer: (cardId, answer) => ok(client.POST("/v1/cards/{cardId}/answer", { params: { path: { cardId } }, body: { answer } })) as Promise<Card>,
     clearSpecChange: (cardId) => ok(client.POST("/v1/cards/{cardId}/spec-change/clear", { params: { path: { cardId } } })) as Promise<Card>,
     createWorker: (body) => ok(client.POST("/v1/workers", { body })) as Promise<Worker>,
+    updateWorker: (id, patch) => ok(client.PATCH("/v1/workers/{id}", { params: { path: { id } }, body: patch })) as Promise<Worker>,
     combineWorkers: (name, workerIds) => ok(client.POST("/v1/workers/combine", { body: { name, workerIds } })) as Promise<Worker>,
     addMember: (id, workerId) => ok(client.POST("/v1/projects/{id}/chain/members", { params: { path: { id } }, body: { workerId } })) as Promise<Chain>,
     removeMember: (id, workerId, reassignTo) => ok(client.DELETE("/v1/projects/{id}/chain/members/{workerId}", { params: { path: { id, workerId }, query: { reassignTo } } })) as Promise<Chain>,
@@ -97,6 +98,7 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     chat: (id, q = {}) => orEmpty<ChatMessage>(client.GET("/v1/projects/{id}/chat", { params: { path: { id }, query: q } }) as Promise<Settled<{ messages: ChatMessage[] }>>, "messages"),
     postChat: (id, text) => ok(client.POST("/v1/projects/{id}/chat", { params: { path: { id } }, body: { text } })) as Promise<ChatMessage>,
     proposals: (id, q = {}) => orEmpty<Proposal>(client.GET("/v1/projects/{id}/proposals", { params: { path: { id }, query: q } }), "proposals"),
+    events: (id, q = {}) => orEmpty<CawEvent>(client.GET("/v1/projects/{id}/events", { params: { path: { id }, query: q } }) as Promise<Settled<{ events: CawEvent[] }>>, "events"),
     // 202 with an empty object: nothing to read back; the refusals (404 too — a message that is not there is a mistake, not an empty list) are CawErrors
     retryChat: async (messageId) => {
       const r = await call(client.POST("/v1/chat/{messageId}/retry", { params: { path: { messageId } } }) as Promise<Settled<unknown>>);

@@ -3,6 +3,7 @@
 // test renders it to a string.
 import type { Card, Hop, Run, Worker } from "@/api/caw";
 import { budget, hopOutcome, mode, runRunning, runWords, stopReason } from "@/words";
+import { Person } from "@/components/Person";
 import s from "./runs.module.css";
 import { clockOf, groupHops, hopWallMs, totalsOf, whenOf, type Totals } from "./totals";
 
@@ -26,7 +27,7 @@ function HopRows({ projectId, hops, workers, cards }: { projectId: string; hops:
         return (
           <li key={h.id} className={s.hop} data-hop>
             <span className={s.time}>{clockOf(h.startedAt)}</span>
-            <span className={s.who}><span className={s.avatar} aria-hidden>{[...(w?.name ?? "?")][0]}</span>{w?.name ?? h.workerId}</span>
+            <span className={s.who}><Person name={w?.name ?? h.workerId} roles={w?.roles ?? []} size="sm" state={h.endedAt ? null : "working"} /></span>
             {c ? <a className={s.cardLink} href={`/p/${projectId}/c/${c.id}`}>{`#${c.number} ${c.title}`}</a> : <span>{h.cardId}</span>}
             <span className={`${s.chip} ${s.outcome}`}>{h.outcome ? hopOutcome[h.outcome] : runRunning}</span>
             <span className={s.cost}>

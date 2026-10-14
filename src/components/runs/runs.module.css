@@ -1,19 +1,20 @@
 /* The runs screen (TASK-B-043): each run a native <details> (keyboard and screen reader for free), its hops inside. */
 .main { max-width: 1200px; margin: 0 auto; padding: 20px 24px 48px; display: grid; gap: 20px; }
-.title { margin: 0; font-size: 20px; font-weight: 700; }
+.title { margin: 0; font-size: var(--caw-t-section); font-weight: 800; letter-spacing: -0.01em; }
 .none { margin: 0; color: var(--caw-ink2); font-size: 16px; }
 .runs, .hops { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 
-.run, .manual { border: 1px solid var(--caw-line); border-radius: var(--caw-r-card); background: var(--caw-paper); box-shadow: var(--caw-shadow-rest); }
+.run, .manual { border: 1px solid var(--caw-line); border-radius: var(--caw-r-panel); background: var(--caw-paper); box-shadow: var(--caw-shadow-rest); }
 .run[open] { box-shadow: var(--caw-shadow-lifted); }
 .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 44px; padding: 12px 16px; cursor: pointer; list-style: none; }
 .summary::-webkit-details-marker { display: none; }
+.summary:hover { background: var(--caw-canvas); border-radius: var(--caw-r-panel); } /* every control answers (frontend-finish rule 8) */
 .summary::before { content: "▸"; display: inline-block; width: 14px; margin-right: 4px; color: var(--caw-ink2); font-size: 14px; line-height: 1; text-align: center; flex: none; }
 .run[open] > .summary::before { content: "▾"; }
 .summary:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: -3px; border-radius: var(--caw-r-card); }
 .when { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: var(--caw-r-tag); background: var(--caw-canvas); color: var(--caw-ink2); font-size: 14px; font-weight: 600; }
-.chipRunning { background: var(--caw-blueSoft); color: var(--caw-blue); }
+.chipRunning { background: var(--caw-workSoft); color: var(--caw-work); } /* running = working now: green (REQ-014 direction) */
 .chipStop { background: var(--caw-stuckSoft); color: var(--caw-stuck); }
 .budget { font-size: 14px; color: var(--caw-ink2); font-variant-numeric: tabular-nums; }
 
@@ -21,10 +22,9 @@
 .report { margin: 0; padding: 12px 14px; border-radius: var(--caw-r-tag); background: var(--caw-canvas); font-size: 15px; line-height: 1.55; white-space: pre-wrap; }
 .totals { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.hop { display: grid; grid-template-columns: 72px minmax(120px, 160px) minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--caw-line); font-size: 15px; }
+.hop { display: grid; grid-template-columns: 72px minmax(150px, 200px) minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--caw-line); font-size: 15px; }
 .time { color: var(--caw-ink2); font-size: 14px; font-variant-numeric: tabular-nums; }
 .who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; }
-.avatar { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--caw-canvas); font-size: 14px; font-weight: 700; flex: none; }
 /* a target: ≥ 44 px tall (the desk's floor), the text centred in it */
 .cardLink { display: flex; align-items: center; min-height: 44px; color: var(--caw-blue); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
 .cardLink:hover { text-decoration: underline; }

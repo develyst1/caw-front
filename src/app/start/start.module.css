@@ -1,0 +1,10 @@
+/* /start when it cannot start (REQ-014 direction § 1): an empty / refusal state is one sentence + one button — on paper, not amber
+   (amber means stuck, and nothing is stuck here); the way back is the next action, so it is the one primary. */
+.panel { display: grid; justify-items: center; gap: 20px; max-width: 560px; margin: 48px auto 0; padding: 40px 32px; text-align: center; border: 1px solid var(--caw-line); border-radius: var(--caw-r-panel); background: var(--caw-paper); box-shadow: var(--caw-shadow-rest); }
+.text { margin: 0; font-size: var(--caw-t-panel); line-height: 1.55; font-weight: 600; max-width: 40ch; }
+.back { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: var(--caw-r-card); background: var(--caw-blue); color: var(--caw-paper); font-size: 15px; font-weight: 600; text-decoration: none; transition: background-color .15s; }
+.back:hover { background: #154FB4; }
+.back:active { background: #11439A; }
+.back:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: 3px; }
+@media (max-width: 480px) { .panel { margin-top: 24px; padding: 28px 20px; } }
+@media (prefers-reduced-motion: reduce) { .back { transition: none; } }
