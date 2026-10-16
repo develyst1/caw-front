@@ -9,12 +9,19 @@ export interface Seat { worker: Worker; state: SeatState; card: Card | null; n?:
 
 /** Does the entry worker wait for the operator in the chat (C3)? Its newest chat reply carries questions and no operator message came after it. */
 export function entryAsked(chain: Chain, chat: ChatMessage[]): boolean {
-  if (!chain.entryWorkerId) return false;
+  return entryQuestions(chain, chat) !== null;
+}
+
+/** The questions the entry worker asked in its newest reply, while no operator message came after it — the board's "waits on you" sheet shows them
+ *  (TASK-B-087 § 2); null when there are none. Same rule as `entryAsked`. */
+export function entryQuestions(chain: Chain, chat: ChatMessage[]): { message: ChatMessage; questions: NonNullable<ChatMessage["questions"]> } | null {
+  if (!chain.entryWorkerId) return null;
   const mine: ChatMessage["author"] = `worker:${chain.entryWorkerId}`;
   const at = chat.map((m) => m.author).lastIndexOf(mine);
-  if (at < 0) return false;
+  if (at < 0) return null;
   const reply = chat[at]!;
-  return (reply.questions?.length ?? 0) > 0 && !chat.slice(at + 1).some((m) => m.author === "operator");
+  if (!reply.questions?.length || chat.slice(at + 1).some((m) => m.author === "operator")) return null;
+  return { message: reply, questions: reply.questions };
 }
 
 /** Priority: a running hop → `working` (its card), or `answeringChat` when the hop is on a chat message; else a stuck card of theirs → `stuck`; else an open

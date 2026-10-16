@@ -10,7 +10,7 @@ type Page = import("@playwright/test").Page;
 // TASK-B-085: the mode is a Radix ToggleGroup (one of two → role radio, aria-checked), no longer Ant's Segmented
 const auto = (page: Page) => page.locator("[data-mode-control]").getByRole("radio", { name: mode.dispatcher });
 const manual = (page: Page) => page.locator("[data-mode-control]").getByRole("radio", { name: mode.manual });
-const budgetBox = (page: Page) => page.locator(".ant-popover:visible input");
+const budgetBox = (page: Page) => page.locator("[data-budget-ask] input") /* TASK-B-088: Radix Dialog */;
 const submitBudget = (page: Page) => page.getByRole("button", { name: mode.dispatcher, exact: true }).last().click();
 const budgetLine = async (page: Page) => /งบ \d+ ก้าว · ใช้ไป \d+/.exec((await page.locator("header").first().textContent())!)![0];
 
@@ -92,7 +92,7 @@ test("mode: หยุดการรันนี้ stops the open run — the s
   await expect(auto(page)).toHaveAttribute("aria-checked", "true"); // the mode is not changed by stopping
   await page.locator('[data-run-state="stopped"]').getByRole("button", { name: mode.dispatcher }).click();
   await expect(budgetBox(page)).toBeVisible();
-  await page.locator(".ant-popover:visible").getByRole("button", { name: mode.dispatcher }).click(); // the box's own button, not the stopped line's
+  await page.locator("[data-budget-ask]").getByRole("button", { name: mode.dispatcher }).click(); // the box's own button, not the stopped line's
   await expect(page.getByRole("alert").filter({ hasText: runStillOpen })).toHaveCount(0); // no DEF-2 refusal: the run was closed
   await expect(page.locator('[data-run-state="open"]')).toHaveText(runRunning);
 });
@@ -114,7 +114,7 @@ test.describe("D-056: an open run in แบบสั่งทีละขั้�
     await expect(manual).toHaveAttribute("aria-checked", "true"); // the mode is not changed by stopping
     await auto(page).click();
     await expect(budgetBox(page)).toBeVisible();
-    await page.locator(".ant-popover:visible").getByRole("button", { name: mode.dispatcher }).click();
+    await page.locator("[data-budget-ask]").getByRole("button", { name: mode.dispatcher }).click();
     await expect(page.getByRole("alert").filter({ hasText: runStillOpen })).toHaveCount(0); // the run was closed: no DEF-2 refusal
     await expect(page.locator('[data-run-state="open"]')).toHaveText(runRunning);
   });

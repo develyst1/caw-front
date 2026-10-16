@@ -57,7 +57,7 @@ const openCard = async (page: import("@playwright/test").Page, col: string) => {
 };
 const pick = async (page: import("@playwright/test").Page, label: string, option: string) => {
   await page.getByLabel(label).click();
-  await page.locator(".ant-select-dropdown:visible .ant-select-item-option").filter({ hasText: option }).click();
+  await page.getByRole("option") /* TASK-B-088: Radix Select */.filter({ hasText: option }).click();
 };
 
 test("card: a comment appears in the timeline", async ({ page }) => {
@@ -97,8 +97,8 @@ test("card: กำลังทำ is off while a card it depends on is open, and
   await page.goto(BOARD);
   await page.locator('[data-column="stuck"] [data-card]').first().click(); // card 12 waits on the open question
   await page.getByLabel(statusLabel).click();
-  const doing = page.locator(".ant-select-dropdown:visible .ant-select-item-option").filter({ hasText: column.doing });
-  await expect(doing).toHaveClass(/ant-select-item-option-disabled/);
+  const doing = page.getByRole("option") /* TASK-B-088: Radix Select */.filter({ hasText: column.doing });
+  await expect(doing).toHaveAttribute("data-disabled", "");
   await page.keyboard.press("Escape");
   expect(await page.getByLabel(statusLabel).getAttribute("aria-describedby")).toBe("deps");
 });

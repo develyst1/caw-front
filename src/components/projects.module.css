@@ -53,3 +53,7 @@
 .cta:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: 3px; }
 .title { font-size: var(--caw-t-page) !important; font-weight: 800 !important; letter-spacing: -0.015em; }
 @media (prefers-reduced-motion: reduce) { .cta { transition: none; } }
+
+/* TASK-B-088: the one line saying where projects come from, above the list */
+.from { margin: 0 0 16px; color: var(--caw-ink2); font-size: 15px; }
+.from a { display: inline-flex; align-items: center; min-height: 44px; color: var(--caw-blue); font-weight: 600; text-underline-offset: 4px; }

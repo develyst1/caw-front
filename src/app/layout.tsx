@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { SampleDataMark } from "@/components/SampleDataMark";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -25,11 +24,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: theme }} />
       </head>
       <body>
-        {/* Ant Design's server-side style extraction; it only emits styles for the Ant components a route renders. */}
         <SampleDataMark />
-        <AntdRegistry>
-          <TooltipProvider>{children}</TooltipProvider>
-        </AntdRegistry>
+        <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
   );

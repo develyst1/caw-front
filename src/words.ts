@@ -283,3 +283,43 @@ export const runWords = {
 export const hopOutcome: Record<HopOutcome, string> = {
   commented: "แสดงความเห็น", handed_off: "ส่งต่อ", status: "เปลี่ยนสถานะ", asked: "ถามคุณ", failed: "ไม่สำเร็จ", stopped: "หยุดไว้", interrupted: "ถูกขัดจังหวะ",
 };
+
+/** The team page rebuild (TASK-B-086, D-081, OD-12). Approved by the PM (D-086, 2026-10-16). */
+export const teamPage = {
+  addPerson: `+ ${team.addWorker}`,                                              // D-086 (the "+" mark only; the words are team.addWorker)
+  close: "ปิด",                                                                   // D-086 — the drawer's and the modal's close button
+  removeFromProject: "เอาออกจากโปรเจกต์นี้",                                       // D-086 (D-081 item 1)
+  bench: "คนที่ไม่ได้อยู่ในโปรเจกต์นี้",                                              // D-086 — the bench's heading (D-081 item 2)
+  deleteWorker: "ลบคนนี้",                                                        // D-086 — only on the bench (D-081 item 2)
+  inProjects: (names: string) => `ลบไม่ได้ ยังอยู่ในโปรเจกต์ ${names}`,               // D-086 — 409 worker_in_chain
+  hopRunning: (name: string) => `${name} กำลังทำงานอยู่ เอาออกได้เมื่องานนี้จบ`,       // D-086 — 409 hop_running (D-081 item 3)
+  entryFirst: (name: string) => `${name} ${team.entry}อยู่ — ให้ใคร${team.entry}แทน?`,  // D-086 — removing the entry person
+  chainHint: "ลูกศรคือการส่งงานต่อ — คนหนึ่งทำเสร็จ งานไปที่คนถัดไป",                  // D-086 — under the chain picture
+  noQa: { text: "ยังไม่มี QA", fix: "เพิ่ม QA" },                                    // D-086 — readiness fix (B10 / OD-3)
+  returnLine: (from: string, to: string) => `↩ ${handoffLine(from, to)}`,          // D-086 (the "↩" mark only) — the 390 list
+} as const;
+
+/** The chat panel's head (D-083 (3), final: PM 2026-10-16, SPEC-B-003 Decision 8 / REQ-014 § User-facing). */
+export const chatHead = {
+  title: (entry: string) => `แชตกับ ${entry}`,
+  line: (entry: string) => `เล่างาน แล้ว ${entry} เสนอการ์ดให้`,
+} as const;
+
+/** The smaller screens (TASK-B-088). `team-proposed B-088` until the PM approves. */
+export const headerMenu = {
+  label: "โหมดและโฟลเดอร์",                                                         // team-proposed B-088 — the 390 header menu's name
+} as const;
+export const homePage = {
+  fromBlueprint: "โปรเจกต์ใหม่มาจากปุ่ม ส่งไปสร้างที่ CAW ใน Blueprint —",          // team-proposed B-088 — the home's one line (§ 6: no start action here)
+} as const;
+export const errorPage = {
+  notFound: "ไม่พบหน้านี้ — ลิงก์อาจเก่าหรือถูกลบไปแล้ว",                           // team-proposed B-088
+  failed: "หน้านี้เปิดไม่สำเร็จ ลองอีกครั้ง หรือกลับไปที่โปรเจกต์",                    // team-proposed B-088
+  retry: "ลองอีกครั้ง",                                                            // carried-over (chat.retry)
+} as const;
+export const runPage = {
+  chatStep: (text: string) => `ตอบแชต: ${text}`,                                // team-proposed B-088 — a chat step in the runs list
+} as const;
+export const cardPage = {
+  noActivity: "ยังไม่มีความเคลื่อนไหว — ความเห็นและการส่งต่อจะขึ้นที่นี่", // team-proposed B-088 — an empty timeline
+} as const;

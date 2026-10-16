@@ -69,7 +69,7 @@ for (const [vw, vh] of [[1440, 900], [390, 844]] as const) {
 test("a run that is still going reads กำลังรัน — switching to อัตโนมัติ opens one; switching back keeps it on screen", async ({ page }) => {
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
   await page.getByText(mode.dispatcher, { exact: true }).first().click();
-  await page.locator(".ant-popover form button[type=submit]").click(); // the budget question's submit (scoped: the board also has the chat box's submit, TASK-B-064) — it starts at the project's budget (D-051)
+  await page.locator("[data-budget-ask] form button[type=submit]").click(); // the budget question's submit (scoped: the board also has the chat box's submit, TASK-B-064) — it starts at the project's budget (D-051)
   const seeded = (await createMockApi().project(MOCK_PROJECT_ID))!.hopBudget; // read from the seed, not a number (TASK-B-047 Q2)
   await expect(page.locator("header")).toContainText(budget(seeded, 0)); // A4 (TASK-B-074): the open run's own budget, not the project's total
   await page.goto(RUNS);
@@ -110,3 +110,18 @@ for (const [vw, vh] of [[1440, 900], [390, 844]] as const) {
     expect(found.short, "targets under 44 px tall").toEqual([]);
   });
 }
+
+// TASK-B-092 DEF-2: names on the runs screen break only at their spaces (Person draws NameParts, with data-name + title)
+test.describe("on operator-like", () => {
+  test.use({ seedState: "operator-like" });
+  test("every name part on the runs screen stays on one line, at 1440 and 390", async ({ page }) => {
+    for (const w of [1440, 390]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      await page.goto(`/p/${MOCK_PROJECT_ID}/runs`);
+      await expect(page.locator("[data-hop] [data-name]").first()).toHaveAttribute("title", /.+/);
+      const broken = await page.locator("[data-name-part]:visible").evaluateAll((ps) =>
+        ps.filter((p) => new Set([...p.getClientRects()].map((r) => Math.round(r.top))).size > 1).map((p) => p.textContent));
+      expect(broken, `@${w}`).toEqual([]);
+    }
+  });
+});

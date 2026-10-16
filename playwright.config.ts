@@ -6,8 +6,7 @@ const port = Number(process.env.PLAYWRIGHT_PORT || 3510);
 
 export default defineConfig({
   testDir: "tests",
-  // the AC-5 check (tests/ac5.spec.ts) is red until the screen TASKs make it green: it runs only with AC5=1 (TASK-B-084; B-088 puts it in the default run)
-  grepInvert: process.env.AC5 ? undefined : /@ac5/,
+  // the AC-5 check (tests/ac5.spec.ts) is part of the default run since TASK-B-088 — every screen, every width, both themes
   outputDir: process.env.PLAYWRIGHT_OUTPUT || "test-results",
   reporter: [["list"]],
   fullyParallel: false,

@@ -1,32 +1,32 @@
-/* first steps — one panel (STUDY-002 A-P1 + B4; comps B-066/B-068 2) */
-.panel { display: grid; border-radius: var(--caw-r-panel); background: var(--caw-paper); border: 1px solid var(--caw-line); box-shadow: var(--caw-shadow-rest); overflow: hidden; }
-.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; padding: 20px 22px 16px; border-bottom: 1px solid var(--caw-line); }
-.head h2 { margin: 0; font-size: var(--caw-t-section); font-weight: 800; letter-spacing: -0.01em; }
-.line { flex-basis: 100%; margin: 0; color: var(--caw-ink2); font-size: 15px; }
+/* first steps — one panel (STUDY-002 A-P1 + B4) in direction B's tokens (TASK-B-087): hairlines, the current step in the indigo tint */
+.panel { display: grid; border-radius: 10px; background: var(--gd-sheet); border: 1px solid var(--gd-hair); box-shadow: none; overflow: hidden; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; padding: 20px 22px 16px; border-bottom: 1px solid var(--gd-hair); }
+.head h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.line { flex-basis: 100%; margin: 0; color: var(--gd-ink2); font-size: 15px; }
 .ready { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.ready i { display: block; width: 96px; height: 8px; border-radius: 999px; background: var(--caw-canvas); overflow: hidden; }
-.ready b { display: block; height: 100%; background: var(--caw-work); border-radius: 999px; }
+.ready i { display: block; width: 96px; height: 8px; border-radius: 999px; background: var(--gd-accent-soft); overflow: hidden; }
+.ready b { display: block; height: 100%; background: var(--gd-accent); border-radius: 999px; }
 .steps { margin: 0; padding: 0; list-style: none; }
-.step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; padding: 18px 22px; border-top: 1px solid var(--caw-line); }
+.step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; padding: 18px 22px; border-top: 1px solid var(--gd-hair); }
 .step:first-child { border-top: 0; }
-.no { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; font-weight: 800; font-size: 18px; background: var(--caw-canvas); color: var(--caw-ink2); }
-.current { background: var(--caw-blueSoft); box-shadow: inset 4px 0 0 var(--caw-blue); }
-.current .no { background: var(--caw-blue); color: var(--caw-onBlue); }
-.open .no { background: var(--caw-paper); color: var(--caw-blue); box-shadow: inset 0 0 0 2px var(--caw-blue); } /* available now, not locked (A2) */
-.done .no { background: var(--caw-workSoft); color: var(--caw-work); }
+.no { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; font-weight: 800; font-size: 18px; background: var(--gd-accent-soft); color: var(--gd-ink2); }
+.current { background: var(--gd-accent-soft); box-shadow: inset 4px 0 0 var(--gd-accent); }
+.current .no { background: var(--gd-accent); color: var(--gd-on-accent); }
+.open .no { background: var(--gd-sheet); color: var(--gd-accent); box-shadow: inset 0 0 0 2px var(--gd-accent); } /* available now, not locked (A2) */
+.done .no { background: var(--gd-accent-soft); color: var(--gd-accent); }
 .body { display: grid; gap: 10px; min-width: 0; }
-.body p { margin: 0; color: var(--caw-ink2); font-size: 15px; }
+.body p { margin: 0; color: var(--gd-ink2); font-size: 15px; }
 .title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.title h3 { margin: 0; font-size: var(--caw-t-panel); font-weight: 700; }
-.fact { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--caw-workSoft); color: var(--caw-work); font-size: 14px; font-weight: 700; }
-.chain { font-weight: 700; color: var(--caw-ink) !important; }
+.title h3 { margin: 0; font-size: 17px; font-weight: 700; }
+.fact { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--gd-accent-soft); color: var(--gd-accent); font-size: 14px; font-weight: 700; }
+.chain { font-weight: 700; color: var(--gd-ink) !important; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .row :global(.ant-input) { flex: 1 1 260px; }
-.quiet { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; border-radius: var(--caw-r-card); color: var(--caw-blue); font-weight: 600; text-decoration: none; transition: background-color .15s; }
-.quiet:hover { background: var(--caw-blueSoft); }
-.quiet:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: 2px; }
-.refused { margin: 0 22px 18px; padding: 8px 12px; border-radius: var(--caw-r-tag); background: var(--caw-stuckSoft); color: var(--caw-stuck); font-size: 14px; font-weight: 600; }
-.folded { margin: 0; padding: 12px 16px; border-radius: var(--caw-r-card); background: var(--caw-workSoft); color: var(--caw-work); font-weight: 700; }
+.quiet { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; border-radius: 6px; color: var(--gd-accent); font-weight: 600; text-decoration: none; transition: background-color .15s; }
+.quiet:hover { background: var(--gd-accent-soft); }
+.quiet:focus-visible { outline: 3px solid var(--gd-accent); outline-offset: 2px; }
+.refused { margin: 0 22px 18px; padding: 8px 12px; border-radius: 6px; background: var(--gd-stuck-soft); color: var(--gd-stuck); font-size: 14px; font-weight: 600; }
+.folded { margin: 0; padding: 12px 16px; border-radius: 6px; background: var(--gd-accent-soft); color: var(--gd-accent); font-weight: 700; }
 @media (max-width: 760px) { .step { grid-template-columns: 1fr; padding: 16px; } .head { padding: 16px; } }
 @media (prefers-reduced-motion: reduce) { .quiet { transition: none; } }
 /* A6 (TASK-B-074): while the steps show, step 2 owns "no folder yet" — the header's banner steps aside */

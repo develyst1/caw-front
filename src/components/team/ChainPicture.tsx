@@ -1,18 +1,17 @@
 "use client";
 
-// The chain as the editor (REQ-014 comp 4, SPEC-B-003 STUDY-002 merge C-P1 / B2 / B3; comps B-068 4a / 4b): on a quiet dot-grid canvas, `คุณ` inverted
-// on top, then the people in rows by hand-off distance from the entry worker (derived on every render, never stored), directed arrows. Link: tap a
-// person's out-dot, then `ต่อที่นี่` on the receiver (keyboard: Tab to the dot, Enter, Tab to a target, Enter; Escape lets go). Cut: tap a line's
-// handle (or Tab to it, Enter). Live state rings the people (green working, amber stuck). Below 768 px the picture gives way to a read-only tree.
-import { useState, type KeyboardEvent } from "react";
+// The chain IS the team (TASK-B-086, polish-plan § 2.1/§ 6, comps studies/REQ-014-direction-B/team.html): `คุณ` on top, then each person ONCE, in rows by
+// hand-off distance from the entry person (derived on every render, never stored). A node is a button — face, name (2 lines, then …; the full name in
+// `title` and in the drawer), role marks, the live ring — that opens the person's drawer. Lines are thin arrows; a line that goes back up, sideways or skips a
+// row runs in its own lane in the left gutter and crosses the gaps between rows only, never a node (B2 / OD-1). No dots: linking is done from the drawer's
+// list (OD-4). Below 768 px the picture is a list, and each return line is said in words under the person who sends it.
 import type { Worker } from "@/api/caw";
-import { Face } from "@/components/faces/Face";
-import { faceFor } from "@/lib/faces";
-import { handoffLine, live, operatorName, team as words } from "@/words";
-import s from "./team.module.css";
+import { NameParts } from "@/components/NameParts";
+import { Avatar } from "@/components/Person";
+import { live, operatorName, redesign, section, team as words, teamPage } from "@/words";
 
 export type NodeState = "working" | "stuck" | null;
-const W = 200, H = 68, GX = 28, GY = 76, PAD = 28, YOU = "you";
+const W = 236, H = 76, GX = 24, GY = 64, PAD = 24, LANE = 18, YOU_W = 200, YOU_H = 60;
 
 /** rows by hand-off distance from the entry worker (BFS along the edges); people no edge reaches go on a last row */
 export function layoutRows(members: Worker[], edges: { from: string; to: string }[], entryId: string | null): Worker[][] {
@@ -28,104 +27,112 @@ export function layoutRows(members: Worker[], edges: { from: string; to: string 
   return [...rows.filter(Boolean), ...(tray.length ? [tray] : [])];
 }
 
-export function ChainPicture({ members, edges, entryId, states, onLink, onCut }: {
-  members: Worker[]; edges: { from: string; to: string }[]; entryId: string | null; states: Record<string, NodeState>;
-  onLink: (from: string, to: string) => void; onCut: (from: string, to: string) => void;
-}) {
-  const [picked, setPicked] = useState<string | null>(null);
-  const rows = layoutRows(members, edges, entryId);
-  const width = Math.max(W + 2 * PAD, ...rows.map((r) => r.length * W + (r.length - 1) * GX + 2 * PAD));
-  const pos = new Map<string, { x: number; y: number }>();
-  pos.set(YOU, { x: (width - W) / 2, y: PAD });
-  rows.forEach((row, i) => {
-    const total = row.length * W + (row.length - 1) * GX, x0 = (width - total) / 2;
-    row.forEach((m, k) => pos.set(m.id, { x: x0 + k * (W + GX), y: PAD + (i + 1) * (H + GY) }));
-  });
-  const height = PAD * 2 + (rows.length + 1) * H + rows.length * GY;
-  const byId = new Map(members.map((m) => [m.id, m]));
-  const nameOf = (id: string) => byId.get(id)?.name ?? id;
+const roleMarks = (m: Worker) => m.roles.map((r) => (r === "other" ? words.roleOther : r)).join(" · ");
 
-  // a line from the sender's out-dot (bottom middle) to the receiver's top middle; a line back up or across arcs round the left side
-  const path = (from: { x: number; y: number }, to: { x: number; y: number }) => {
-    if (to.y > from.y) {
-      const a = { x: from.x + W / 2, y: from.y + H }, b = { x: to.x + W / 2, y: to.y - 6 }, my = (a.y + b.y) / 2;
-      return { d: `M${a.x} ${a.y} C${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}`, mid: { x: (a.x + b.x) / 2, y: my } };
-    }
-    if (to.y === from.y) { // same row: straight across, side to side
-      const right = to.x > from.x, a = { x: right ? from.x + W : from.x, y: from.y + H / 2 }, b = { x: right ? to.x - 6 : to.x + W + 6, y: to.y + H / 2 };
-      return { d: `M${a.x} ${a.y} L${b.x} ${b.y}`, mid: { x: (a.x + b.x) / 2, y: a.y - 16 } };
-    }
-    const a = { x: from.x, y: from.y + H / 2 }, b = { x: to.x - 6, y: to.y + H / 2 }, cx = Math.min(a.x, b.x) - 70;
-    return { d: `M${a.x} ${a.y} C${cx} ${a.y} ${cx} ${b.y} ${b.x} ${b.y}`, mid: { x: cx + 18, y: (a.y + b.y) / 2 } };
-  };
-  const press = (fn: () => void) => (e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } };
-  const linked = (from: string, to: string) => edges.some((e) => e.from === from && e.to === to);
-  const link = (to: string) => { if (picked) { onLink(picked, to); setPicked(null); } };
+function NodeBody({ m, entry, state, compact = false }: { m: Worker; entry: boolean; state: NodeState; compact?: boolean }) {
+  return (
+    <>
+      <Avatar name={m.name} avatar={m.avatar} size={compact ? "sm" : "md"} state={state} />
+      <span className="grid min-w-0 gap-0.5 text-left">
+        {compact
+          ? <span className="name text-[15px] font-semibold" data-name title={m.name}>{m.name}</span>
+          : <span className="clamp-2 text-[15px] font-semibold leading-snug [word-break:normal]" data-name title={m.name}><NameParts name={m.name} /></span>}
+        {/* one text run, so the ellipsis clips text, never a child box (AC-5 outside-clip); "now" colours the whole line while working */}
+        <span className={`name text-sm ${state === "working" ? "text-now" : "text-ink3"}`}>
+          {[roleMarks(m), entry ? words.entry : null, state === "working" ? redesign.workingNow : null].filter(Boolean).join(" · ")}
+        </span>
+      </span>
+    </>
+  );
+}
+
+export function ChainPicture({ members, edges, entryId, states, selected, onOpen }: {
+  members: Worker[]; edges: { from: string; to: string }[]; entryId: string | null; states: Record<string, NodeState>;
+  selected: string | null; onOpen: (id: string) => void;
+}) {
+  const rows = layoutRows(members, edges, entryId);
+  const rowOf = new Map<string, number>();
+  rows.forEach((row, i) => row.forEach((m) => rowOf.set(m.id, i)));
+  // a line is "lane-routed" when it does not go exactly one row down; each gets its own lane in the left gutter
+  const laned = edges.filter((e) => rowOf.has(e.from) && rowOf.has(e.to) && rowOf.get(e.to)! !== rowOf.get(e.from)! + 1);
+  const gutter = laned.length ? PAD + laned.length * LANE : 0;
+  const inner = Math.max(YOU_W, ...rows.map((r) => r.length * W + (r.length - 1) * GX));
+  const width = gutter + inner + 2 * PAD;
+  const top = PAD + YOU_H + GY;
+  // a lane line leaves its sender through the gap below its row — the bottom row's lines need that gap too, inside the drawing (AC-5 svg-stroke)
+  const height = top + rows.length * H + Math.max(0, rows.length - 1) * GY + (laned.length ? GY / 2 + PAD : PAD);
+  const pos = new Map<string, { x: number; y: number }>();
+  rows.forEach((row, i) => {
+    const total = row.length * W + (row.length - 1) * GX, x0 = gutter + PAD + (inner - total) / 2;
+    row.forEach((m, k) => pos.set(m.id, { x: x0 + k * (W + GX), y: top + i * (H + GY) }));
+  });
+  const you = { x: gutter + PAD + (inner - YOU_W) / 2, y: PAD };
   const entry = entryId ? pos.get(entryId) : undefined;
+  const nameOf = new Map(members.map((m) => [m.id, m.name]));
+
+  const down = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const p = { x: a.x + W / 2, y: a.y + H }, q = { x: b.x + W / 2, y: b.y - 4 }, my = (p.y + q.y) / 2;
+    return `M${p.x} ${p.y} C${p.x} ${my} ${q.x} ${my} ${q.x} ${q.y}`;
+  };
+  // out of the sender's bottom-left, along the gap below its row to the lane, up/down the lane, along the gap above the receiver's row, into its top-left
+  const lane = (a: { x: number; y: number }, b: { x: number; y: number }, k: number) => {
+    const x = PAD + k * LANE, s = a.x + 28 + k * 6, t = b.x + 28 + k * 6;
+    const yo = a.y + H + GY / 2 - k * 4, yi = b.y - GY / 2 + k * 4;
+    return `M${s} ${a.y + H} V${yo} H${x} V${yi} H${t} V${b.y - 4}`;
+  };
 
   return (
     <>
-      <div className={s.canvas}>
-        <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className={s.picture} role="group" aria-label={live.linkHint}
-          onKeyDown={(e) => { if (e.key === "Escape" && picked) { e.preventDefault(); setPicked(null); } }}>
+      <div className="overflow-x-auto max-md:hidden">
+        <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ maxWidth: width, display: "block", margin: "0 auto" }} role="group" aria-label={section.chain} data-chain-picture>
           <defs>
-            <marker id="caw-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" className={s.arrowHead} /></marker>
+            <marker id="gd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0 0L10 5L0 10z" fill="var(--gd-hair2)" />
+            </marker>
           </defs>
-          {entry && <path d={path(pos.get(YOU)!, entry).d} className={`${s.edge} ${s.edgeYou}`} markerEnd="url(#caw-arrow)" />}
-          {edges.map((e) => {
-            const a = pos.get(e.from), b = pos.get(e.to);
-            if (!a || !b) return null;
-            const p = path(a, b), label = `${words.removeEdge} ${handoffLine(nameOf(e.from), nameOf(e.to))}`;
-            return (
-              <g key={`${e.from}>${e.to}`}>
-                <path d={p.d} className={s.edge} markerEnd="url(#caw-arrow)" />
-                <circle cx={p.mid.x} cy={p.mid.y} r={5} className={s.cutDot} aria-hidden />
-                <circle cx={p.mid.x} cy={p.mid.y} r={22} className={s.cutHit} role="button" tabIndex={0} aria-label={label} data-edge={`${e.from}>${e.to}`}
-                  onClick={() => onCut(e.from, e.to)} onKeyDown={press(() => onCut(e.from, e.to))}><title>{label}</title></circle>
-              </g>
-            );
-          })}
-          <g className={`${s.node} ${s.nodeYou}`} transform={`translate(${pos.get(YOU)!.x} ${pos.get(YOU)!.y})`}>
-            <rect width={W} height={H} rx={14} />
-            <text x={18} y={30} className={s.nodeName}>{operatorName}</text>
-            <text x={18} y={52} className={s.nodeSub}>{live.youLine}</text>
+          <g fill="none" stroke="var(--gd-hair2)" strokeWidth={1.5} strokeLinejoin="round">
+            {entry && <path d={`M${you.x + YOU_W / 2} ${you.y + YOU_H} V${entry.y - 4}`} strokeDasharray="4 5" markerEnd="url(#gd-arrow)" />}
+            {edges.map((e) => {
+              const a = pos.get(e.from), b = pos.get(e.to);
+              if (!a || !b) return null;
+              const k = laned.indexOf(e);
+              return <path key={`${e.from}>${e.to}`} d={k < 0 ? down(a, b) : lane(a, b, k)} strokeDasharray={k < 0 ? undefined : "4 5"} markerEnd="url(#gd-arrow)" data-edge={`${e.from}>${e.to}`} />;
+            })}
           </g>
+          <foreignObject x={you.x} y={you.y} width={YOU_W} height={YOU_H}>
+            <div className="flex h-full flex-col justify-center rounded-lg bg-ink px-4 text-sheet">
+              <b className="text-[15px] font-semibold">{operatorName}</b><span className="text-sm opacity-80">{live.youLine}</span>
+            </div>
+          </foreignObject>
           {members.map((m) => {
-            const p = pos.get(m.id)!, st = states[m.id] ?? null, isEntry = m.id === entryId;
-            const sub = [m.roles.join(" +"), isEntry ? words.entry : null].filter(Boolean).join(" · ");
-            const target = picked !== null && picked !== m.id && !linked(picked, m.id);
+            const p = pos.get(m.id);
+            if (!p) return null;
+            const isEntry = m.id === entryId, on = selected === m.id;
             return (
-              <g key={m.id} className={`${s.node} ${isEntry ? s.nodeEntry : ""} ${st === "working" ? s.nodeWorking : st === "stuck" ? s.nodeStuck : ""}`}
-                transform={`translate(${p.x} ${p.y})`} data-node={m.id}>
-                <rect width={W} height={H} rx={14} />
-                <g transform="translate(12 12)"><Face face={faceFor(m)} size={44} /></g>
-                <text x={66} y={30} className={s.nodeName}>{m.name}</text>
-                <text x={66} y={52} className={s.nodeSub}>{sub}</text>
-                <circle cx={W / 2} cy={H} r={10} className={`${s.outDot} ${picked === m.id ? s.outDotOn : ""}`} aria-hidden />
-                <circle cx={W / 2} cy={H} r={22} className={s.outHit} role="button" tabIndex={0}
-                  aria-pressed={picked === m.id} aria-label={`${words.from} ${m.name}`} data-out
-                  onClick={() => setPicked(picked === m.id ? null : m.id)} onKeyDown={press(() => setPicked(picked === m.id ? null : m.id))} />
-                {target && (
-                  <g className={s.target} transform={`translate(${W - 100} -26)`} role="button" tabIndex={0} aria-label={`${live.linkHere} ${m.name}`} data-target
-                    onClick={() => link(m.id)} onKeyDown={press(() => link(m.id))}>
-                    <rect width={96} height={44} rx={22} />
-                    <text x={48} y={28} textAnchor="middle">{live.linkHere}</text>
-                  </g>
-                )}
-              </g>
+              <foreignObject key={m.id} x={p.x} y={p.y} width={W} height={H}>
+                <button type="button" onClick={() => onOpen(m.id)} aria-pressed={on} data-node={m.id}
+                  className={`flex h-full w-full items-center gap-3 rounded-lg border bg-sheet px-3 transition-colors hover:border-ink3 ${on ? "border-ink ring-1 ring-ink" : isEntry ? "border-now" : "border-hair2"}`}>
+                  <NodeBody m={m} entry={isEntry} state={states[m.id] ?? null} />
+                </button>
+              </foreignObject>
             );
           })}
         </svg>
       </div>
-      <ol className={s.tree} data-chain-tree aria-label={live.linkHint}>
-        <li style={{ ["--d" as string]: 0 }}><span className={s.youMark} aria-hidden>{[...operatorName][0]}</span><b>{operatorName}</b></li>
-        {rows.flatMap((row, i) => row.map((m) => (
-          <li key={m.id} style={{ ["--d" as string]: i + 1 }}>
-            <span className={`${s.treeFace} ${states[m.id] === "working" ? s.ringWork : states[m.id] === "stuck" ? s.ringStuck : ""}`}><Face face={faceFor(m)} size={28} /></span>
-            <b>{m.name}</b>{m.roles.map((r, k) => <span key={r} className={s.role}>{k ? `+${r}` : r}</span>)}
-            {m.id === entryId && <span className={s.entryTag}>{words.entry}</span>}
-          </li>
-        )))}
+      {/* 390: the same chain as a list, indented by distance; a return line is said in words under its sender */}
+      <ol className="m-0 grid list-none gap-0 p-0 md:hidden" data-chain-tree aria-label={section.chain}>
+        {rows.flatMap((row, i) => row.map((m) => {
+          // a return line goes back UP the chain (to an earlier row); the unreached tray's sideways lines are not "returns"
+          const back = edges.filter((e) => e.from === m.id && rowOf.has(e.to) && rowOf.get(e.to)! < i);
+          return (
+            <li key={m.id} className="border-t border-hair first:border-t-0" style={{ paddingLeft: Math.min(i, 4) * 16 }}>
+              <button type="button" onClick={() => onOpen(m.id)} data-node={m.id} className="flex min-h-14 w-full items-center gap-3 py-2 text-left">
+                <NodeBody m={m} entry={m.id === entryId} state={states[m.id] ?? null} compact />
+              </button>
+              {back.map((e) => <p key={e.to} className="m-0 pb-2 pl-11 text-sm text-ink2" data-return-line>{teamPage.returnLine(nameOf.get(e.from) ?? "", nameOf.get(e.to) ?? "")}</p>)}
+            </li>
+          );
+        }))}
       </ol>
     </>
   );

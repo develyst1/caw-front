@@ -1,18 +1,18 @@
-/* the person (REQ-014 direction § 1, R7) — colours from --caw-* / --face-* (theme/tokens.ts): green = working now only, amber = stuck only */
+/* the person (REQ-014 R7; direction B, TASK-B-087) — colours from the --gd-* tokens (app/globals.css) and --face-*: indigo = working now only, amber = stuck only */
 .person { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.name { font-weight: 600; min-width: 0; word-break: normal; } /* TASK-B-092 DEF-2: breaks only at spaces (NameParts), never inside a part */
 .p-sm .name { font-size: 14px; }
 .p-md .name { font-size: 15px; }
 .p-lg .name { font-size: 17px; font-weight: 700; }
-.role { flex: none; display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--caw-r-tag); background: var(--caw-canvas); color: var(--caw-ink2); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+.role { flex: none; display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--caw-r-tag); background: var(--gd-accent-soft); color: var(--gd-ink2); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
 
 /* the round frame around the face: the state ring sits on it, never on the face */
 .frame { position: relative; flex: none; display: inline-grid; place-items: center; border-radius: 999px; }
 .sm { width: 28px; height: 28px; }
 .md { width: 36px; height: 36px; }
 .lg { width: 52px; height: 52px; }
-.working { box-shadow: 0 0 0 2px var(--caw-paper), 0 0 0 4px var(--caw-work); }
-.working::after { content: ""; position: absolute; right: -4px; bottom: -4px; width: 10px; height: 10px; border-radius: 999px; background: var(--caw-work); border: 2px solid var(--caw-paper); animation: breathe 2.4s ease-in-out infinite; }
-.stuck { box-shadow: 0 0 0 2px var(--caw-paper), 0 0 0 4px var(--caw-stuck); }
+.working { box-shadow: 0 0 0 2px var(--gd-sheet), 0 0 0 4px var(--gd-accent); }
+.working::after { content: ""; position: absolute; right: -4px; bottom: -4px; width: 10px; height: 10px; border-radius: 999px; background: var(--gd-accent); border: 2px solid var(--gd-sheet); animation: breathe 2.4s ease-in-out infinite; }
+.stuck { box-shadow: 0 0 0 2px var(--gd-sheet), 0 0 0 4px var(--gd-stuck); }
 @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .working::after { animation: none; } }

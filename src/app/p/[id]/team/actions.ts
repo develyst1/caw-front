@@ -4,7 +4,7 @@
 // refreshes the project and returns `{ ok }` or the refusal's code (+ details: `has_open_cards` carries `{ count }`).
 import { revalidatePath } from "next/cache";
 import { api } from "@/api";
-import { CawError, type Avatar, type Effort, type ModelName, type WorkerRole } from "@/api/caw";
+import { isCawError, type Avatar, type Effort, type ModelName, type WorkerRole } from "@/api/caw";
 
 export type TeamResult = { ok: true } | { ok: false; code: string; details?: unknown };
 
@@ -13,7 +13,7 @@ async function run(projectId: string, fn: () => Promise<unknown>): Promise<TeamR
     await fn();
     return { ok: true };
   } catch (e) {
-    return e instanceof CawError ? { ok: false, code: e.code, details: e.details } : { ok: false, code: "unreachable" };
+    return isCawError(e) ? { ok: false, code: e.code, details: e.details } : { ok: false, code: "unreachable" };
   } finally {
     revalidatePath(`/p/${projectId}`, "layout");
   }
@@ -32,3 +32,9 @@ export async function removeMember(projectId: string, workerId: string, reassign
 export async function addEdge(projectId: string, from: string, to: string) { return run(projectId, () => api.addEdge(projectId, from, to)); }
 export async function removeEdge(projectId: string, from: string, to: string) { return run(projectId, () => api.removeEdge(projectId, from, to)); }
 export async function setEntry(projectId: string, workerId: string) { return run(projectId, () => api.setEntry(projectId, workerId)); }
+/** Delete a person everywhere (v1.14, D-081 item 2): only from the bench; 409 `worker_in_chain` carries `{ projectIds }`. */
+export async function deleteWorker(projectId: string, workerId: string) { return run(projectId, () => api.deleteWorker(workerId)); }
+/** Add a person from the modal (OD-12): make the worker, then put them in this project's chain — one press, one result. */
+export async function createMember(projectId: string, input: { name: string; roles: WorkerRole[]; skills: string[]; avatar?: Avatar | null }) {
+  return run(projectId, async () => { const w = await api.createWorker(input); await api.addMember(projectId, w.id); });
+}

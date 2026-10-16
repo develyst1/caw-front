@@ -5,7 +5,7 @@
 // project, so the board shows the change on the next look. A refusal comes back as its code; the screen turns it into words.
 import { revalidatePath } from "next/cache";
 import { api } from "@/api";
-import { CawError, type CardStatus } from "@/api/caw";
+import { isCawError, type CardStatus } from "@/api/caw";
 
 export type ActionResult = { ok: true } | { ok: false; code: string };
 
@@ -14,7 +14,7 @@ async function run(projectId: string, fn: () => Promise<unknown>): Promise<Actio
     await fn();
     return { ok: true };
   } catch (e) {
-    return { ok: false, code: e instanceof CawError ? e.code : "unreachable" };
+    return { ok: false, code: isCawError(e) ? e.code : "unreachable" };
   } finally {
     revalidatePath(`/p/${projectId}`, "layout");
   }

@@ -4,7 +4,7 @@
 // are made in one go). Each refreshes the project — the board shows the new cards; a refusal comes back as its code.
 import { revalidatePath } from "next/cache";
 import { api } from "@/api";
-import { CawError } from "@/api/caw";
+import { isCawError } from "@/api/caw";
 
 export type ChatResult = { ok: true } | { ok: false; code: string };
 
@@ -13,7 +13,7 @@ async function run(projectId: string, fn: () => Promise<unknown>): Promise<ChatR
     await fn();
     return { ok: true };
   } catch (e) {
-    return { ok: false, code: e instanceof CawError ? e.code : "unreachable" };
+    return { ok: false, code: isCawError(e) ? e.code : "unreachable" };
   } finally {
     revalidatePath(`/p/${projectId}`, "layout");
   }

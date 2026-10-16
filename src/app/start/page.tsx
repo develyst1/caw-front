@@ -3,7 +3,7 @@
 // Anything else is said in words with the way back. The POST is idempotent, so a reload or a prefetch does no harm.
 import { redirect } from "next/navigation";
 import { api, onSampleData } from "@/api";
-import { CawError } from "@/api/caw";
+import { isCawError } from "@/api/caw";
 import s from "@/components/projects.module.css";
 import st from "./start.module.css";
 import { CawRoot } from "@/theme/CawRoot";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 type Refusal = keyof typeof startRefused;
 const refusalOf = (e: unknown): Refusal => {
-  if (!(e instanceof CawError)) throw e; // a bug, not a refusal: let Next show it
+  if (!isCawError(e)) throw e; // a bug, not a refusal: let Next show it
   if (e.code === "unreachable" || e.status >= 500) return "unreachable";
   return e.code === "blueprint_project_not_found" || e.code === "version_not_confirmed" ? e.code : "other";
 };
@@ -28,7 +28,7 @@ export default async function Start({ searchParams }: { searchParams: Promise<{ 
   else {
     try { target = (await api.createProject({ blueprintProjectId: project, version: n })).id; }
     catch (e) {
-      if (e instanceof CawError && e.code === "already_exists" && typeof (e.details as { id?: unknown } | undefined)?.id === "string") target = (e.details as { id: string }).id;
+      if (isCawError(e) && e.code === "already_exists" && typeof (e.details as { id?: unknown } | undefined)?.id === "string") target = (e.details as { id: string }).id;
       else refused = refusalOf(e);
     }
   }

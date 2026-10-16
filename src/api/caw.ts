@@ -131,6 +131,10 @@ export interface Run {
 export class CawError extends Error {
   constructor(readonly status: number, readonly code: string, message: string, readonly details?: unknown) { super(message); }
 }
+/** A refusal from the API, checked by its shape (a numeric `status` + a string `code`) and not only by class: a seeded mock (`/test-reset?state=…`)
+ *  builds its errors in another module graph, where a class test is false (TASK-B-086 Q1 → B-087). */
+export const isCawError = (e: unknown): e is CawError =>
+  e instanceof Error && typeof (e as CawError).status === "number" && typeof (e as CawError).code === "string";
 
 // ---- the chat and the card proposals (SPEC-A-008 § v1.4, REQ-013) — shapes verbatim; hand-typed until caw-back's openapi.json has them ----
 

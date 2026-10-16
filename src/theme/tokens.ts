@@ -1,60 +1,16 @@
-// CAW's one look (TASK-B-039 direction, specs/SPEC-B-002-findings/TASK-B-039-direction-and-comp.md § 1; REQ-014 direction,
-// specs/SPEC-B-003-findings/TASK-B-061-direction-and-comps.md § 1): Blueprint clean-blue's family — the same canvas, ink, one blue,
-// amber for stuck, and its spec-part kind colours. One source: every colour, radius and shadow a screen uses is named here.
-// Two sets with the same names (STUDY-002 B1, TASK-B-063): light and dark. `themeCss()` writes both as CSS variables — the computer's
-// setting (prefers-color-scheme) unless the header toggle put `data-theme` on <html> — so the CSS modules name no colour at all.
-import { theme as antd, type ThemeConfig } from "antd";
+// CAW's one look: direction B "Graphite Desk" in palette P1 Indigo (D-083/D-084/D-085). The colours themselves live ONCE, as the `--gd-*` tokens in
+// app/globals.css (light + dark on `data-theme`). This file only (1) names the older `--caw-*` variables the screens' CSS modules still read as ALIASES of
+// those tokens — never a second copy of a value (rule §9), (2) holds what globals.css does not: the spec-part kind colours and the faces' body colours
+// (light / dark pairs), and the radius / type scales. TASK-B-088: Ant's theme is gone with Ant.
 
-export const color = {
-  canvas: "#F2F5FA",
-  paper: "#FFFFFF",
-  sunk: "#FAFBFD", // a recessed area inside a surface (the chat thread)
-  ink: "#18212F",
-  ink2: "#4A5568", // 7.4:1 on paper
-  line: "#DCE3EE",
-  lineStrong: "#B8C3D3",
-  blue: "#1A5FD6", // only "this needs you / this is where you are"
-  blueHover: "#154FB4",
-  blueActive: "#11439A",
-  blueSoft: "#E8F1FE",
-  onBlue: "#FFFFFF", // text on a blue fill
-  stuck: "#A44F08", // only stuck
-  stuckSoft: "#FFF4E5",
-  stuckLine: "#E8C3A5", // a stuck card's border
-  // REQ-014 direction: one new meaning — someone is working on it right now
-  work: "#15733F", // 5.2:1 on workSoft, 5.9:1 on paper — only "working now"
-  workSoft: "#E5F5EC",
-  workLine: "#A9D9BE",
-  column: "#E9EEF5", // a board column: a step darker than the canvas
-  you: "#18212F", // the operator's own node (inverted)
-  youInk: "#FFFFFF",
-  faceEye: "#FFFFFF", // the faces' eyes: white in both schemes (≥ 3:1 on every body colour, TASK-B-070)
-} as const;
-
-/** The dark set — same names, values derived from Blueprint's family (B-066 comps, AA computed there: lowest text pair 6.43:1). */
-export const colorDark: Record<keyof typeof color, string> = {
-  canvas: "#0F141C",
-  paper: "#171E29",
-  sunk: "#131923",
-  ink: "#E6EBF2",
-  ink2: "#A9B4C4",
-  line: "#2A3443",
-  lineStrong: "#3C4859",
-  blue: "#86AEFF",
-  blueHover: "#A3C2FF",
-  blueActive: "#B8D0FF",
-  blueSoft: "#1A2B47",
-  onBlue: "#0F141C",
-  stuck: "#F2A766",
-  stuckSoft: "#36240F",
-  stuckLine: "#6A4624",
-  work: "#62D39B",
-  workSoft: "#12301F",
-  workLine: "#2D6B4A",
-  column: "#131923",
-  you: "#E6EBF2",
-  youInk: "#0F141C",
-  faceEye: "#FFFFFF",
+/** The older names → the direction's tokens. A board column is the sheet (no grey tubs, D-084); "working now" is the indigo accent. */
+const alias: Record<string, string> = {
+  canvas: "--gd-canvas", paper: "--gd-sheet", sunk: "--gd-accent-soft", ink: "--gd-ink", ink2: "--gd-ink2",
+  line: "--gd-hair", lineStrong: "--gd-hair2",
+  blue: "--gd-accent", blueHover: "--gd-accent", blueActive: "--gd-accent", blueSoft: "--gd-accent-soft", onBlue: "--gd-on-accent",
+  stuck: "--gd-stuck", stuckSoft: "--gd-stuck-soft", stuckLine: "--gd-stuck",
+  work: "--gd-accent", workSoft: "--gd-accent-soft", workLine: "--gd-accent",
+  column: "--gd-sheet", you: "--gd-ink", youInk: "--gd-sheet",
 };
 
 /** Blueprint's spec-part groups — only ever inside a spec-part chip. Light / dark pairs; screens read `group` (CSS variables). */
@@ -88,68 +44,26 @@ export const face = {
   olive: ["#6E7718", "#86902D"], teal: ["#0B7D86", "#1E959E"], slate: ["#596579", "#8592A6"], ink: ["#2C333F", "#76819A"],
 } as const;
 
-export const radius = { tag: 6, card: 10, column: 12, seat: 14, panel: 16 } as const;
-/** The spacing scale (direction § 1) — every gap and padding is one of these. */
-export const space = [4, 8, 12, 16, 20, 24, 32] as const;
-/** The type scale: 14 is the floor; one dominant title per page — 36/800 at 1440, 30 under 760 (STUDY-002 B5). */
-export const type = { meta: 14, card: 15, body: 16, panel: 18, section: 22, title: 26, page: 36, pageNarrow: 30 } as const; // title: a page's subject under the project h1 (the card)
-export const shadow = { rest: "0 1px 2px rgba(24,33,47,.06)", lifted: "0 4px 12px rgba(24,33,47,.10)" } as const;
-const shadowDark = { rest: "0 1px 2px rgba(0,0,0,.4)", lifted: "0 6px 18px rgba(0,0,0,.45)" } as const;
+export const radius = { tag: 6, card: 6, column: 10, seat: 10, panel: 10 } as const;
+/** The type scale: 14 is the floor (direction B: 26 title · 17–22 headings · 15 body · 14 meta). */
+export const type = { meta: 14, card: 15, body: 15, panel: 17, section: 19, title: 22, page: 26, pageNarrow: 22 } as const;
 
 const decl = (o: Record<string, string>) => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(";");
 const schemeVars = (dark: boolean) => decl({
-  ...Object.fromEntries(Object.entries(dark ? colorDark : color).map(([k, v]) => [`--caw-${k}`, v])),
   ...Object.fromEntries(Object.entries(dark ? groupDark : groupLight).flatMap(([k, v]) => [[`--caw-k-${k}`, v.fg], [`--caw-k-${k}-bg`, v.bg]])),
   ...Object.fromEntries(Object.entries(face).map(([k, v]) => [`--face-${k}`, v[dark ? 1 : 0]])),
-  "--caw-shadow-rest": (dark ? shadowDark : shadow).rest, "--caw-shadow-lifted": (dark ? shadowDark : shadow).lifted,
-  "color-scheme": dark ? "dark" : "light",
 });
 const fixedVars = decl({
+  ...Object.fromEntries(Object.entries(alias).map(([k, v]) => [`--caw-${k}`, `var(${v})`])),
+  "--caw-faceEye": "#FFFFFF", // the faces' eyes: white in both schemes (≥ 3:1 on every body colour, TASK-B-070)
+  "--caw-shadow-rest": "none", "--caw-shadow-lifted": "0 8px 24px rgb(13 16 23 / 0.12)", // direction B: hairlines, not shadows; only what floats lifts
   "--caw-r-tag": `${radius.tag}px`, "--caw-r-card": `${radius.card}px`, "--caw-r-column": `${radius.column}px`, "--caw-r-panel": `${radius.panel}px`, "--caw-r-seat": `${radius.seat}px`,
   ...Object.fromEntries(Object.entries(type).map(([k, v]) => [`--caw-t-${k}`, `${v}px`])),
 });
 
-/** Both sets as CSS, from the values above (never a second copy in a .css file). */
+/** The aliases, the kind and face colours for both schemes, as CSS (never a second copy in a .css file). */
 export function themeCss(): string {
   return `:root{${fixedVars};${schemeVars(false)}}`
-    + `@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${schemeVars(true)}}}`
     + `:root[data-theme="dark"]{${schemeVars(true)}}`
     + `@media (max-width:760px){:root{--caw-t-page:${type.pageNarrow}px}}`;
-}
-
-export function antTheme(fontFamily: string, dark = false): ThemeConfig {
-  const c = dark ? colorDark : color;
-  return {
-    algorithm: dark ? antd.darkAlgorithm : antd.defaultAlgorithm,
-    token: {
-      fontFamily,
-      fontSize: 15,
-      colorPrimary: c.blue,
-      colorInfo: c.blue,
-      colorError: c.stuck,
-      colorWarning: c.stuck,
-      colorText: c.ink,
-      colorTextSecondary: c.ink2,
-      colorTextTertiary: c.ink2,
-      colorTextDescription: c.ink2,
-      colorTextPlaceholder: c.ink2,
-      colorTextLightSolid: c.onBlue,
-      colorBorder: c.line,
-      colorBorderSecondary: c.line,
-      colorBgLayout: c.canvas,
-      colorBgContainer: c.paper,
-      colorBgElevated: c.paper,
-      borderRadius: radius.card,
-      borderRadiusSM: radius.tag,
-      controlHeightLG: 44,
-      controlOutline: dark ? "rgba(134,174,255,0.4)" : "rgba(26,95,214,0.35)",
-      controlOutlineWidth: 3,
-      motionDurationMid: "0.15s",
-    },
-    components: {
-      // the track's 2 px padding on each side: 48 makes each option 44 px tall (the target floor)
-      Segmented: { itemSelectedBg: c.blue, itemSelectedColor: c.onBlue, trackBg: c.canvas, controlHeightLG: 48 },
-      Tag: { defaultBg: c.paper, defaultColor: c.ink2 },
-    },
-  };
 }

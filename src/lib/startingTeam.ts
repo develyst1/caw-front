@@ -1,7 +1,7 @@
 // The starting team of a new project (SPEC-B-003 Decision 2, D-061): five seats made with routes the back end already has — no core change.
 // Not atomic, so every step skips what is already there (`already_member` / `edge_exists` are fine, a worker with the name is reused): a second
 // call is a no-op and a retry after a drop finishes the team. The five names and the chain are `team-proposed`.
-import { CawError, type CawApi, type Chain, type WorkerRole } from "@/api/caw";
+import { CawError, isCawError, type CawApi, type Chain, type WorkerRole } from "@/api/caw";
 import { STARTING_FACES } from "./faces";
 import { skillsFor } from "./roles";
 
@@ -14,7 +14,7 @@ const ENTRY: WorkerRole = "PM";
 
 /** Runs `step`; a refusal that only says "already there" is success, any other error is the caller's. */
 const idempotent = async (step: () => Promise<unknown>, already: string) => {
-  try { await step(); } catch (e) { if (!(e instanceof CawError && e.status === 409 && e.code === already)) throw e; }
+  try { await step(); } catch (e) { if (!(isCawError(e) && e.status === 409 && e.code === already)) throw e; }
 };
 
 /** Makes the starting team in the project's chain and returns the chain as it is after. */

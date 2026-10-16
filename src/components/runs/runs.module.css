@@ -14,7 +14,8 @@
 .summary:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: -3px; border-radius: var(--caw-r-card); }
 .when { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: var(--caw-r-tag); background: var(--caw-canvas); color: var(--caw-ink2); font-size: 14px; font-weight: 600; }
-.chipRunning { background: var(--caw-workSoft); color: var(--caw-work); } /* running = working now: green (REQ-014 direction) */
+.chipRunning { background: var(--caw-workSoft); color: var(--caw-work); } /* running = working now: the indigo accent (direction B, via tokens.ts aliases) */
+.nowText { color: var(--caw-work); font-weight: 600; }
 .chipStop { background: var(--caw-stuckSoft); color: var(--caw-stuck); }
 .budget { font-size: 14px; color: var(--caw-ink2); font-variant-numeric: tabular-nums; }
 

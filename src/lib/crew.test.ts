@@ -94,7 +94,7 @@ describe("crewState", () => {
 // ---- the home's one line per project: who is working, how many seats are stuck, how many wait on you (D-066 C4) ----
 import type { CawApi, ProjectSummary } from "@/api/caw";
 import { createMockApi, MOCK_PROJECT_ID } from "@/api/mock";
-import { crewSummary, entryAsked, homeSummaries } from "./crew";
+import { crewSummary, entryAsked, entryQuestions, homeSummaries } from "./crew";
 
 describe("crewSummary", () => {
   test("working = the name of the first working seat in chain order (null when nobody), stuck and waitingOnYou are counts of seats", () => {
@@ -224,6 +224,13 @@ describe("chat questions wait on you (C3)", () => {
     expect(entryAsked(chain(), chat)).toBe(true);
     expect(crewSummary(seats, [], entryAsked(chain(), chat))).toEqual({ working: null, stuck: 0, waitingOnYou: 1 });
     expect(entryAsked(chain(), [...chat, msg(2, "operator")])).toBe(false);
+  });
+  // TASK-B-087: the board's "waits on you" sheet shows the questions themselves
+  test("entryQuestions gives the newest reply's questions while nobody answered; null once the operator writes, or with no entry worker", () => {
+    const chat = [msg(1, `worker:${entry}`, { questions: asks })];
+    expect(entryQuestions(chain(), chat)).toEqual({ message: chat[0], questions: asks });
+    expect(entryQuestions(chain(), [...chat, msg(2, "operator")])).toBeNull();
+    expect(entryQuestions(chain(null), chat)).toBeNull();
   });
 });
 

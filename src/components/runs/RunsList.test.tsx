@@ -1,8 +1,8 @@
 // The runs screen's markup, rendered to a string: every stop reason's word, a running run, the cost of each, the manual group (REQ-011 AC-7).
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { Card, Hop, Run, StopReason, Worker } from "@/api/caw";
-import { hopOutcome, runRunning, stopReason } from "@/words";
+import type { Card, ChatMessage, Hop, Run, StopReason, Worker } from "@/api/caw";
+import { hopOutcome, runPage, runRunning, runWords, stopReason } from "@/words";
 import { RunsList } from "./RunsList";
 
 const worker: Worker = { id: "w1", name: "ปลา", role: "PM", roles: ["PM"], skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null, avatar: null, deletedAt: null };
@@ -68,5 +68,19 @@ describe("RunsList", () => {
   test("a hop still running has no outcome word, only กำลังรัน; with nothing at all there is one sentence", () => {
     expect(render([run("r1", { endedAt: null, stopReason: null })], [hop("h", "r1", { endedAt: null, outcome: null, tokensIn: null, tokensOut: null })])).toContain(`${runRunning}</span>`);
     expect(render([], [])).toContain("ยังไม่มีการรัน");
+  });
+
+  // TASK-B-088 § 2.5
+  test("while a hop runs, the run's time reads กำลังรัน — not 0 วินาที — and the hop has no empty cost pill", () => {
+    const html = render([run("r1", { endedAt: null, stopReason: null })], [hop("h", "r1", { endedAt: null, outcome: null, tokensIn: null, tokensOut: null })]);
+    expect(html).toContain("data-cost-running");
+    expect(html).not.toContain(runWords.duration(0));
+    expect(html).not.toMatch(/class="[^"]*cost[^"]*"><\/span>/);
+  });
+  test("a chat step reads ตอบแชต: {the message's first words}, linking to the chat", () => {
+    const m = { id: "m1", text: "อยากให้ห้องประชุมใหญ่ต้องอนุมัติ" } as ChatMessage;
+    const html = renderToStaticMarkup(<RunsList projectId="p" runs={[]} hops={[hop("h", null, { cardId: null, messageId: "m1" })]} workers={[worker]} cards={[card]} chat={[m]} />);
+    expect(html).toContain(runPage.chatStep("อยากให้ห้องประชุมใหญ่ต้องอนุมัติ"));
+    expect(html).toContain('href="/p/p/chat"');
   });
 });

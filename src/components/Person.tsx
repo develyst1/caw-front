@@ -6,6 +6,7 @@
 import type { Avatar as Face_ } from "@/api/caw";
 import { Face } from "@/components/faces/Face";
 import { faceFor } from "@/lib/faces";
+import { NameParts } from "./NameParts";
 import s from "./person.module.css";
 
 export type PersonState = "working" | "stuck" | null;
@@ -28,7 +29,7 @@ export function Person({ name, avatar = null, roles = [], size = "md", state = n
   return (
     <span className={`${s.person} ${s[`p-${size}`]}`} data-person>
       <Avatar name={name} avatar={avatar} size={size} state={state} />
-      <span className={s.name}>{name}</span>
+      <span className={s.name} data-name title={name}><NameParts name={name} /></span>
       {showRoles && roles.map((r) => <span key={r} className={s.role}>{r}</span>)}
     </span>
   );

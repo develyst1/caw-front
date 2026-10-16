@@ -7,9 +7,10 @@ import { Chat, type PartRef } from "@/components/chat/Chat";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ChatPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ draft?: string }> }) {
   const { id } = await params;
-  const [project, messages, proposals, workers] = await Promise.all([api.project(id), api.chat(id, { limit: 200 }), api.proposals(id), api.workers()]);
+  const { draft } = await searchParams; // `ตอบเอง…` on the board's "waits on you" sheet arrives with the question as the box's draft (TASK-B-087)
+  const [project, messages, proposals, workers, chain] = await Promise.all([api.project(id), api.chat(id, { limit: 200 }), api.proposals(id), api.workers(), api.chain(id)]);
   if (!project) notFound();
   // a proposed item's spec part, by key — one read per distinct (key, version) the items anchor on (v1.7), so a part no card holds yet has
   // its name too; a part that cannot be read stays out and the item shows its key
@@ -19,7 +20,8 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
   for (const [key, ctx] of read) if (ctx) parts[key] = { kind: ctx.part.kind, title: ctx.part.title };
   return (
     <main>
-      <Chat projectId={id} messages={messages} proposals={proposals} workers={workers} parts={parts} />
+      <Chat projectId={id} messages={messages} proposals={proposals} workers={workers} parts={parts} draft={draft ?? ""}
+        entry={chain?.entryWorkerId ? workers.find((w) => w.id === chain.entryWorkerId) ?? null : null} />
     </main>
   );
 }

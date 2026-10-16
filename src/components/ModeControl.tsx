@@ -6,7 +6,9 @@
 // stopped does not look like it is running: the last stop reason shows, with how to start the next run (D-052). Choosing
 // แบบสั่งทีละขั้น switches at once. An open run, in either mode, has หยุดการรันนี้ beside กำลังรัน (D-056, B-056): it stops the run
 // and leaves the mode, so on อัตโนมัติ the stopped line above takes over. The page around it is never reset — only the header's state changes.
-import { Button, InputNumber, Popover, Tag } from "antd";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -51,52 +53,50 @@ export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
 
   return (
     <div className={s.mode}>
-      <Popover
-        open={asking}
-        onOpenChange={(o) => { if (!o) setAsking(false); }}
-        trigger="click"
-        placement="bottomRight"
-        content={
+      {/* TASK-B-085: the mode is a ToggleGroup (Radix, one of two — role radio). The chosen side is a filled indigo-tint object;
+          on อัตโนมัติ that has stopped it is outlined only, so the header does not look like it is running (D-052). */}
+      <ToggleGroup
+        type="single"
+        value={mode}
+        disabled={pending}
+        aria-label={`${modeWord.manual} / ${modeWord.dispatcher}`}
+        spacing={0}
+        variant="outline"
+        className="rounded-lg"
+        onValueChange={(next) => { if (next === "dispatcher") ask(); else if (next === "manual") go("manual"); }}
+        data-mode-control
+        data-stopped={stopped || undefined}
+      >
+        {(["manual", "dispatcher"] as const).map((m) => (
+          <ToggleGroupItem key={m} value={m}
+            className="min-h-11 px-4 text-[15px] text-ink2 data-[state=on]:bg-now-soft data-[state=on]:text-now data-[state=on]:font-semibold hover:bg-now-soft hover:text-ink group-data-[stopped]/toggle-group:data-[state=on]:bg-transparent group-data-[stopped]/toggle-group:data-[state=on]:text-ink2">
+            {modeWord[m]}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      {/* อัตโนมัติ first asks for the budget (TASK-B-088: a small Radix Dialog; same words, same data-budget field) */}
+      <Dialog open={asking} onOpenChange={(o) => { if (!o) setAsking(false); }}>
+        <DialogContent showCloseButton={false} aria-describedby={undefined} className="w-[min(360px,calc(100vw-32px))] gap-4 border-hair bg-sheet p-6" data-budget-ask>
+          <DialogTitle className="m-0 text-[17px] font-semibold text-ink">{modeWord.dispatcher}</DialogTitle>
           <form className={s.budgetAsk} onSubmit={(e) => { e.preventDefault(); go("dispatcher", n); }}>
             <label className={s.budgetLabel}>
               <span>{budgetLabel(n)}</span>
-              <InputNumber size="large" min={1} max={500} value={n} onChange={(v) => setN(typeof v === "number" ? v : start0)} autoFocus data-budget />
+              <Input type="number" min={1} max={500} value={n} onChange={(e) => { const v = Number(e.target.value); setN(Number.isFinite(v) && v >= 1 ? Math.min(500, Math.round(v)) : start0); }}
+                className="h-11 text-[15px]" autoFocus data-budget />
             </label>
-            <Button size="large" type="primary" htmlType="submit" loading={pending}>{modeWord.dispatcher}</Button>
+            <Button type="submit" className="min-h-11 px-5 font-semibold" disabled={pending}>{modeWord.dispatcher}</Button>
           </form>
-        }
-      >
-        {/* TASK-B-085: the mode is a ToggleGroup (Radix, one of two — role radio). The chosen side is a filled indigo-tint object;
-            on อัตโนมัติ that has stopped it is outlined only, so the header does not look like it is running (D-052). */}
-        <ToggleGroup
-          type="single"
-          value={mode}
-          disabled={pending}
-          aria-label={`${modeWord.manual} / ${modeWord.dispatcher}`}
-          spacing={0}
-          variant="outline"
-          className="rounded-lg"
-          onValueChange={(next) => { if (next === "dispatcher") ask(); else if (next === "manual") go("manual"); }}
-          data-mode-control
-          data-stopped={stopped || undefined}
-        >
-          {(["manual", "dispatcher"] as const).map((m) => (
-            <ToggleGroupItem key={m} value={m}
-              className="min-h-11 px-4 text-[15px] text-ink2 data-[state=on]:bg-now-soft data-[state=on]:text-now data-[state=on]:font-semibold hover:bg-now-soft hover:text-ink group-data-[stopped]/toggle-group:data-[state=on]:bg-transparent group-data-[stopped]/toggle-group:data-[state=on]:text-ink2">
-              {modeWord[m]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </Popover>
+        </DialogContent>
+      </Dialog>
       {/* A4 (TASK-B-074): the budget only while an automatic run is open — that run's own งบ / ใช้ไป; otherwise nothing */}
       {running && lastRun!.mode === "dispatcher" && <span className={s.budget}>{budget(lastRun!.hopBudget, lastRun!.hopsUsed)}</span>}
-      {running && <Tag className={s.runTag} data-run-state="open">{runRunning}</Tag>}
-      {running && <Button size="large" onClick={stop} loading={pending} data-stop-run>{stopThisRun}</Button>}
+      {running && <span className="inline-flex min-h-[26px] items-center rounded-md bg-now-soft px-2 text-sm font-semibold text-now" data-run-state="open">{runRunning}</span>}
+      {running && <Button variant="outline" className="min-h-11" onClick={stop} disabled={pending} data-stop-run>{stopThisRun}</Button>}
       {stopped && lastRun?.stopReason && (
         <span className={s.runStopped} data-run-state="stopped">
           <span id="caw-run-stopped" className={s.stopLine}>{runStopped(stopReason[lastRun.stopReason])}</span>
           {/* the Segmented's selected option fires no change, so the next run starts from a real button — also the keyboard path */}
-          <Button size="large" onClick={ask} disabled={pending} aria-describedby="caw-run-stopped">{modeWord.dispatcher}</Button>
+          <Button variant="outline" className="min-h-11" onClick={ask} disabled={pending} aria-describedby="caw-run-stopped">{modeWord.dispatcher}</Button>
         </span>
       )}
       {/* the mode switch explains itself (D-063, TASK-B-064): one line for the mode in effect */}

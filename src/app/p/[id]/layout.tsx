@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { api } from "@/api";
 import { ModeControl } from "@/components/ModeControl";
-import { ProjectNav } from "@/components/runs/ProjectNav";
+import { HeaderMenu, ProjectNav } from "@/components/runs/ProjectNav";
 import w from "@/components/workspace/workspace.module.css";
 import { WorkspaceEditor } from "@/components/workspace/WorkspaceEditor";
 import { homeSummaries } from "@/lib/crew";
@@ -31,14 +31,19 @@ export default async function ProjectLayout({ children, params }: { children: Re
           <div className="max-md:order-last max-md:-mx-1 max-md:w-full">
             <ProjectNav projectId={p.id} waiting={summary[p.id]?.waitingOnYou ?? 0} />
           </div>
-          <div className="ml-auto flex flex-wrap items-center gap-3 max-md:ml-0 max-md:w-full">
+          <div className="ml-auto flex flex-wrap items-center gap-3 max-md:hidden">
             {/* the mode's one-line explanation (D-063) wraps under the toggle instead of widening the row, so the header stays one row at 1280 */}
-            <div className="max-w-[300px] text-sm max-md:max-w-none">
+            <div className="max-w-[300px] text-sm">
               <ModeControl projectId={p.id} mode={p.mode} hopBudget={p.hopBudget} hopsUsed={p.hopsUsed} lastRun={lastRun} />
             </div>
             <WorkspaceEditor projectId={p.id} roots={p.workspace.roots} />
             <ThemeToggle />
           </div>
+          {/* below 768: the same three in one menu (B-088); its content mounts only while open, so nothing is drawn twice */}
+          <HeaderMenu>
+            <ModeControl projectId={p.id} mode={p.mode} hopBudget={p.hopBudget} hopsUsed={p.hopsUsed} lastRun={lastRun} />
+            <div className="flex flex-wrap items-center gap-3"><WorkspaceEditor projectId={p.id} roots={p.workspace.roots} /><ThemeToggle /></div>
+          </HeaderMenu>
         </div>
         {p.workspace.roots.length === 0 && <p className={w.warn} role="status" data-folder-warn><span className={w.warnIn}>{workspace.none}</span></p>}
       </header>

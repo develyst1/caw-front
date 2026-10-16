@@ -82,13 +82,12 @@ test.describe("the crew strip", () => {
   });
 });
 
-for (const vw of [1440, 390]) {
-  test(`@${vw}: the request box is in view on the board`, async ({ page }) => {
-    await page.setViewportSize({ width: vw, height: 900 });
-    await page.goto(BOARD);
-    await expect(box(page)).toBeInViewport();
-  });
-}
+// TASK-B-087 § 4: the box is beside the board only at ≥ 1440; at 390 the แชต tab is the way in and no box sits over the board
+test("@1440: the request box is in view on the board", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BOARD);
+  await expect(box(page)).toBeInViewport();
+});
 
 test("the mode switch explains itself, and both headers have the light / dark toggle", async ({ page }) => {
   await page.goto(BOARD);
@@ -109,7 +108,7 @@ test("home: a project row shows who is working, stuck and waiting on you, with t
 test("@1440: the board shows exactly one visible primary button", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(BOARD);
-  await expect(page.locator(".ant-btn-primary:visible")).toHaveCount(1);
+  await expect(page.locator('[data-slot="button"][data-variant="default"]:visible')).toHaveCount(1); // TASK-B-087: shadcn Button
 });
 
 test("the chat head names the first missing thing as a link to its fix (a project with cards and no folder)", async ({ page }) => {
@@ -122,7 +121,7 @@ test("A4: the header shows a budget only while an automatic run is open", async 
   await page.goto(BOARD);
   await expect(page.locator("header").first()).not.toContainText("ใช้ไป");
   await page.locator("[data-mode-control]").getByRole("radio", { name: "อัตโนมัติ" }).click(); // TASK-B-085: ToggleGroup
-  await page.locator(".ant-popover form button[type=submit]").click();
+  await page.locator("[data-budget-ask] form button[type=submit]").click();
   await expect(page.locator("header").first()).toContainText(/งบ \d+ ก้าว · ใช้ไป 0/);
 });
 

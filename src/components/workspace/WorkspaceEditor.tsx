@@ -2,10 +2,13 @@
 
 // The folders the team may write in (REQ-011 / SPEC-A-008 v1.1): a button in the project header opens a dialog listing them, each with
 // เอาออก, and a field to add one. A path the rules refuse (relative, `..`, more than 20) answers with the field's own hint — no new word.
-import { Button, Input, Modal } from "antd";
+// TASK-B-088: rebuilt on shadcn (Radix Dialog, Input, Button); undo is as before.
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { undo, workspace } from "@/words";
+import { teamPage, undo, workspace } from "@/words";
 import { saveRoots } from "./actions";
 import { canAdd } from "./roots";
 import s from "./workspace.module.css";
@@ -33,16 +36,22 @@ export function WorkspaceEditor({ projectId, roots }: { projectId: string; roots
   };
 
   return (
-    <>
-      <Button className={s.trigger} size="large" onClick={() => setOpen(true)} data-folders>{workspace.heading}{roots.length > 0 ? ` (${roots.length})` : ""}</Button>
-      <Modal title={workspace.heading} open={open} onCancel={() => { setOpen(false); setRefused(false); }} footer={null} destroyOnHidden>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setRefused(false); }}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className={`${s.trigger} min-h-11 text-[15px]`} data-folders>{workspace.heading}{roots.length > 0 ? ` (${roots.length})` : ""}</Button>
+      </DialogTrigger>
+      <DialogContent showCloseButton={false} aria-describedby={undefined} className="w-[min(600px,calc(100vw-32px))] max-w-none gap-4 border-hair bg-sheet p-6 sm:max-w-none">
+        <div className="flex items-center justify-between gap-4">
+          <DialogTitle className="m-0 text-[19px] font-semibold text-ink">{workspace.heading}</DialogTitle>
+          <Button variant="ghost" className="min-h-11" onClick={() => setOpen(false)}>{teamPage.close}</Button>
+        </div>
         <div className={s.body}>
           {roots.length > 0 && (
             <ul className={s.list}>
               {roots.map((r) => (
                 <li key={r} className={s.root} data-root>
                   <span className={s.path}>{r}</span>
-                  <Button size="large" disabled={pending} onClick={() => save(roots.filter((x) => x !== r), () => {
+                  <Button variant="outline" className="min-h-11" disabled={pending} onClick={() => save(roots.filter((x) => x !== r), () => {
                     setRemoved(r);
                     if (timer.current) clearTimeout(timer.current);
                     timer.current = setTimeout(() => setRemoved(null), 5000);
@@ -59,14 +68,14 @@ export function WorkspaceEditor({ projectId, roots }: { projectId: string; roots
           )}
           <form className={s.add} onSubmit={(e) => { e.preventDefault(); add(); }}>
             <div className={s.row}>
-              <Input size="large" value={draft} placeholder={workspace.hint} aria-label={workspace.heading} aria-invalid={refused} status={refused ? "error" : undefined}
+              <Input className="h-11 min-w-0 flex-1 text-[15px]" value={draft} placeholder={workspace.hint} aria-label={workspace.heading} aria-invalid={refused}
                 onChange={(e) => { setDraft(e.target.value); setRefused(false); }} />
-              <Button size="large" type="primary" htmlType="submit" loading={pending}>{workspace.add}</Button>
+              <Button type="submit" className="min-h-11 px-5 font-semibold" disabled={pending}>{workspace.add}</Button>
             </div>
             {refused && <p className={s.error} role="alert">{workspace.hint}</p>}
           </form>
         </div>
-      </Modal>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

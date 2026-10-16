@@ -4,12 +4,11 @@
 // the answered questions it rests on, and a link that opens the part in Blueprint — then what to do, the timeline of comments
 // and hand-offs, and the cards it waits on. The operator's actions — status and re-assign under the title, answering on a
 // question card, the comment box under the timeline — are in CardActions. Words only from src/words.ts.
-import { QuestionCircleOutlined, SyncOutlined } from "@ant-design/icons";
-import { Tag } from "antd";
+import { CircleHelp, RefreshCw } from "lucide-react";
 import type { Card, CardContext, Worker } from "@/api/caw";
 import {
   card as cardWord, cardMark, column, decisionsHeading, dependsOnHeading, handoffLine, linkKind, linkedWith, operatorName,
-  partKind, proposedAnswer, refusedHandoff, section, timelineHeading, todoHeading, toSpec,
+  partKind, proposedAnswer, redesign, refusedHandoff, section, timelineHeading, todoHeading, toSpec, cardPage,
 } from "@/words";
 import { Avatar, Person } from "@/components/Person";
 import { AnswerQuestion, CardControls, CommentBox } from "./CardActions";
@@ -18,8 +17,9 @@ import s from "./card.module.css";
 
 const when = (iso: string) => new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(iso));
 
-export function CardView({ projectId, ctx, workers, members, deps, blueprintHref, openQuestions }: {
-  projectId: string; ctx: CardContext; workers: Worker[]; members: Worker[]; deps: Card[]; blueprintHref: string; openQuestions: string[];
+/** `running`: who runs a hop on this card right now (TASK-B-088) — shown with the same "now" mark as the roster and the board. */
+export function CardView({ projectId, ctx, workers, members, deps, blueprintHref, openQuestions, running = null }: {
+  projectId: string; ctx: CardContext; workers: Worker[]; members: Worker[]; deps: Card[]; blueprintHref: string; openQuestions: string[]; running?: Worker | null;
 }) {
   const { card, spec, notes, decisions } = ctx;
   const byId = new Map(workers.map((w) => [w.id, w]));
@@ -41,10 +41,12 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
       <header className={s.head}>
         <h2 className={s.title}>{card.title}</h2>
         <div className={s.meta}>
-          <Tag className={card.status === "stuck" ? s.tagStuck : s.tag}>{column[card.status]}</Tag>
-          {worker && <span className={s.worker}><Person name={worker.name} avatar={worker.avatar} roles={worker.roles} size="sm" state={card.status === "stuck" ? "stuck" : null} /></span>}
-          {card.specChangedVersion !== null && <Tag className={s.markSpec} icon={<SyncOutlined aria-hidden />}>{cardMark.specChanged}</Tag>}
-          {waiting && <Tag className={s.markWait} icon={<QuestionCircleOutlined aria-hidden />}>{cardMark.waitingAnswer}</Tag>}
+          {/* status and assignee once each (TASK-B-088): a work card shows them as its two controls below; a question card has no controls */}
+          {card.kind !== "work" && <span className={card.status === "stuck" ? s.tagStuck : s.tag}>{column[card.status]}</span>}
+          {card.kind !== "work" && worker && <span className={s.worker}><Person name={worker.name} avatar={worker.avatar} roles={worker.roles} size="sm" /></span>}
+          {running && <span className={s.now} data-running><Person name={running.name} avatar={running.avatar} size="sm" state="working" showRoles={false} /><span>{redesign.workingNow}</span></span>}
+          {card.specChangedVersion !== null && <span className={s.markSpec}><RefreshCw aria-hidden className="size-3.5" />{cardMark.specChanged}</span>}
+          {waiting && <span className={s.markWait}><CircleHelp aria-hidden className="size-3.5" />{cardMark.waitingAnswer}</span>}
         </div>
         {card.kind === "work" && (
           <CardControls projectId={projectId} cardId={card.id} status={card.status} assigneeId={card.assigneeId} members={members}
@@ -122,7 +124,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
                   <li key={d.id}>
                     <a className={s.dep} href={`/p/${projectId}/c/${d.id}`}>
                       <span className={s.depTitle}>{d.title}</span>
-                      <Tag className={d.status === "stuck" ? s.tagStuck : s.tag}>{column[d.status]}</Tag>
+                      <span className={d.status === "stuck" ? s.tagStuck : s.tag}>{column[d.status]}</span>
                     </a>
                   </li>
                 ))}
@@ -132,6 +134,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
 
           <section className={s.panel} aria-labelledby="timeline">
             <h3 id="timeline" className={s.h2}>{timelineHeading}</h3>
+            {notes.length === 0 && <p className={s.none} data-no-activity>{cardPage.noActivity}</p>}
             {notes.length > 0 && <ol className={s.timeline}>
               {notes.map((n) => (
                 <li key={n.id} className={n.type === "handoff" ? `${s.note} ${s.handoff}` : n.type === "handoff_refused" ? `${s.note} ${s.refusedNote}` : s.note} data-note={n.type}>

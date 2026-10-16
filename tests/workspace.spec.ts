@@ -7,8 +7,11 @@ import { workspace } from "../src/words";
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 const warning = (page: import("@playwright/test").Page) => page.locator("header [role=status]");
 const open = async (page: import("@playwright/test").Page) => {
+  // below 768 the folders sit in the header's menu (TASK-B-088): open it first
+  const menu = page.locator("[data-header-menu]");
+  if (await menu.isVisible()) await menu.click();
   await page.getByRole("button", { name: new RegExp(workspace.heading) }).click();
-  return page.getByRole("dialog");
+  return page.getByRole("dialog", { name: workspace.heading });
 };
 
 test("with no folders the header says so — on the board and on the runs page", async ({ page }) => {
@@ -39,7 +42,8 @@ test("add a folder: it is listed, the warning goes, it survives a reload; a repe
   await expect(dialog.locator("[data-root]")).toHaveText(new RegExp("/Users/me/my-repo"));
   await expect(dialog.getByRole("textbox")).toHaveValue("");
   await expect(warning(page)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: new RegExp(workspace.heading) })).toContainText("(1)");
+  // TASK-B-088: the Radix dialog is modal — the header behind it is aria-hidden while it is open, so the trigger is found by its attribute
+  await expect(page.locator("[data-folders]")).toContainText("(1)");
 
   await dialog.getByRole("textbox").fill("/Users/me/my-repo");                       // the same again
   await dialog.getByRole("button", { name: workspace.add }).click();

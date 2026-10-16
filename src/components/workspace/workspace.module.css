@@ -1,5 +1,5 @@
 /* The folder editor (TASK-B-043): a button in the project header opening a dialog; the warning bar under the header while there are none. */
-.trigger:global(.ant-btn) { min-height: 44px; }
+.trigger { min-height: 44px; }
 .warn { margin: 0; padding: 10px 24px; background: var(--caw-stuckSoft); border-top: 1px solid var(--caw-stuckLine); color: var(--caw-stuck); font-size: 15px; font-weight: 600; }
 .warnIn { display: block; max-width: 1600px; margin: 0 auto; }
 .body { display: grid; gap: 16px; }

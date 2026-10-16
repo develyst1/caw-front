@@ -5,7 +5,7 @@
 // `CawError(0, "unreachable")`. A 404 on a read of one thing is `null` (or an empty list), not an error.
 import createClient from "openapi-fetch";
 import {
-  CawError, type Card, type CardContext, type CawApi, type CawEvent, type Chain, type ChatMessage, type Hop, type Note, type PartContext, type Project,
+  CawError, isCawError, type Card, type CardContext, type CawApi, type CawEvent, type Chain, type ChatMessage, type Hop, type Note, type PartContext, type Project,
   type ProjectSummary, type Proposal, type Run, type Worker,
 } from "./caw";
 import type { paths } from "./schema";
@@ -66,7 +66,7 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     part: async (id, key, version) => {
       let r: Settled<PartContext>;
       try { r = await call(client.GET("/v1/projects/{id}/parts/{key}", { params: { path: { id, key }, query: version === undefined ? {} : { version } } }) as Promise<Settled<PartContext>>); }
-      catch (e) { if (e instanceof CawError && e.status === 0) return null; throw e; }
+      catch (e) { if (isCawError(e) && e.status === 0) return null; throw e; }
       if (r.response.status === 404 || r.response.status === 502) return null;
       return r.data !== undefined ? r.data : refusal(r);
     },

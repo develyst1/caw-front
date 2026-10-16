@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TeamPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [project, workers, chain, cards, hops, seq, chat] = await Promise.all([api.project(id), api.workers(), api.chain(id), api.cards(id), api.hops(id, { limit: 20 }), lastSeq(api, id), api.chat(id, { limit: 200 })]);
+  const [project, workers, chain, cards, hops, seq, chat, projects] = await Promise.all([api.project(id), api.workers(), api.chain(id), api.cards(id), api.hops(id, { limit: 20 }), lastSeq(api, id), api.chat(id, { limit: 200 }), api.projects()]);
   if (!project || !chain) notFound();
   const openCards: Record<string, number> = {};
   for (const c of cards) if (c.assigneeId && c.status !== "done") openCards[c.assigneeId] = (openCards[c.assigneeId] ?? 0) + 1;
@@ -20,9 +20,10 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
   for (const seat of crewState(chain, cards, hops, chat)) states[seat.worker.id] = seat.state === "working" || seat.state === "answeringChat" ? "working" : seat.state === "stuck" ? "stuck" : null;
   return (
     <main>
-      {/* the page follows the project without a reload (C4, D-063): 3 s while a hop runs, else 30 s */}
-      <LiveRefresh projectId={id} after={seq} busy={hops.some((h) => h.endedAt === null)} />
-      <Team projectId={id} project={project} workers={workers} chain={chain} openCards={openCards} states={states} />
+      {/* the page follows the project without a reload (C4, D-088): every 3 s */}
+      <LiveRefresh projectId={id} after={seq} />
+      {/* projectNames: a person who cannot be deleted is still in these projects, said by name (D-081 item 2) */}
+      <Team projectId={id} project={project} workers={workers} chain={chain} openCards={openCards} states={states} projectNames={Object.fromEntries(projects.map((x) => [x.id, x.name]))} />
     </main>
   );
 }

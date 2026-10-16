@@ -1,7 +1,7 @@
-// The poll loop behind LiveRefresh (D-063): every 3 s while a run or hop is open, every 30 s otherwise; one poll at a time; nothing while the tab
-// is hidden. Driven with a hand-made clock, so no test waits for real time.
+// The poll loop behind LiveRefresh (D-063 → D-088, TASK-B-092): every 3 s, always; one poll at a time; nothing while the tab is hidden. Driven with a
+// hand-made clock, so no test waits for real time.
 import { describe, expect, test } from "bun:test";
-import { BUSY_MS, IDLE_MS, startPoller } from "./livePoll";
+import { POLL_MS, startPoller } from "./livePoll";
 
 /** a clock the test winds by hand: `schedule` queues one callback, `advance(ms)` runs what is due */
 const clock = () => {
@@ -26,23 +26,16 @@ const clock = () => {
 };
 
 describe("startPoller", () => {
-  test("the intervals are 3 s when busy and 30 s when not", () => {
-    expect([BUSY_MS, IDLE_MS]).toEqual([3000, 30000]);
-  });
+  test("the interval is 3 s", () => { expect(POLL_MS).toBe(3000); });
 
-  test("polls every 3 s while busy, every 30 s while idle — the interval is read again after each poll, so a switch takes effect on the next one", async () => {
+  test("polls every 3 s, always — never a 30 s idle wait (DEF-4: a hop started elsewhere shows within one tick)", async () => {
     const c = clock();
-    let busy = true, polls = 0;
-    const stop = startPoller({ busy: () => busy, visible: () => true, poll: async () => { polls++; }, schedule: c.schedule });
-    await c.advance(3000); expect(polls).toBe(1);
+    let polls = 0;
+    const stop = startPoller({ visible: () => true, poll: async () => { polls++; }, schedule: c.schedule });
+    await c.advance(2999); expect(polls).toBe(0);
+    await c.advance(1); expect(polls).toBe(1);
     await c.advance(3000); expect(polls).toBe(2);
-    busy = false;
-    await c.advance(3000); expect(polls).toBe(3); // the one already waiting still fires at 3 s; the next wait is 30 s
-    await c.advance(29_000); expect(polls).toBe(3);
-    await c.advance(1000); expect(polls).toBe(4);
-    busy = true;
-    await c.advance(30_000); expect(polls).toBe(5);
-    await c.advance(3000); expect(polls).toBe(6);
+    await c.advance(27_000); expect(polls).toBe(11);
     stop();
   });
 
@@ -51,7 +44,7 @@ describe("startPoller", () => {
     let inFlight = 0, maxInFlight = 0, polls = 0;
     let release: () => void = () => {};
     const stop = startPoller({
-      busy: () => true, visible: () => true, schedule: c.schedule,
+      visible: () => true, schedule: c.schedule,
       poll: () => new Promise<void>((resolve) => { polls++; inFlight++; maxInFlight = Math.max(maxInFlight, inFlight); release = () => { inFlight--; resolve(); }; }),
     });
     await c.advance(3000); expect(polls).toBe(1);
@@ -65,7 +58,7 @@ describe("startPoller", () => {
   test("a hidden tab does not poll — it keeps the clock ticking and polls again once visible", async () => {
     const c = clock();
     let visible = false, polls = 0;
-    const stop = startPoller({ busy: () => true, visible: () => visible, poll: async () => { polls++; }, schedule: c.schedule });
+    const stop = startPoller({ visible: () => visible, poll: async () => { polls++; }, schedule: c.schedule });
     await c.advance(12_000); expect(polls).toBe(0);
     visible = true;
     await c.advance(3000); expect(polls).toBe(1);
@@ -75,7 +68,7 @@ describe("startPoller", () => {
   test("a poll that throws does not stop the loop", async () => {
     const c = clock();
     let polls = 0;
-    const stop = startPoller({ busy: () => true, visible: () => true, poll: async () => { polls++; throw new Error("down"); }, schedule: c.schedule });
+    const stop = startPoller({ visible: () => true, poll: async () => { polls++; throw new Error("down"); }, schedule: c.schedule });
     await c.advance(9000); expect(polls).toBe(3);
     stop();
   });
@@ -83,7 +76,7 @@ describe("startPoller", () => {
   test("stop() cancels what is waiting, and nothing polls after it", async () => {
     const c = clock();
     let polls = 0;
-    const stop = startPoller({ busy: () => true, visible: () => true, poll: async () => { polls++; }, schedule: c.schedule });
+    const stop = startPoller({ visible: () => true, poll: async () => { polls++; }, schedule: c.schedule });
     await c.advance(3000); expect(polls).toBe(1);
     stop();
     expect(c.pending()).toBe(0);
@@ -93,7 +86,7 @@ describe("startPoller", () => {
   test("stop() while a poll is still running: when that poll finishes nothing is scheduled again", async () => {
     const c = clock();
     let polls = 0, release: () => void = () => {};
-    const stop = startPoller({ busy: () => true, visible: () => true, schedule: c.schedule, poll: () => new Promise<void>((resolve) => { polls++; release = resolve; }) });
+    const stop = startPoller({ visible: () => true, schedule: c.schedule, poll: () => new Promise<void>((resolve) => { polls++; release = resolve; }) });
     await c.advance(3000); expect(polls).toBe(1);
     stop();
     release(); await c.advance(0);

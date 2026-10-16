@@ -6,7 +6,7 @@
 // and the screen says the same words. Back to แบบสั่งทีละขั้น = set the mode only (the runner ends the open run).
 import { revalidatePath } from "next/cache";
 import { api } from "@/api";
-import { CawError, type Mode } from "@/api/caw";
+import { isCawError, type Mode } from "@/api/caw";
 import { ensureStartingTeam } from "@/lib/startingTeam";
 
 export type ModeResult = { ok: true } | { ok: false; code: string };
@@ -22,7 +22,7 @@ export async function switchMode(projectId: string, mode: Mode, hopBudget?: numb
     try {
       await api.startRun(projectId, budget);
     } catch (e) {
-      if (e instanceof CawError && e.code === "run_open") {
+      if (isCawError(e) && e.code === "run_open") {
         await api.setMode(projectId, before.mode, before.hopBudget); // put back what this action changed
         return { ok: false, code: "run_open" };
       }
@@ -30,7 +30,7 @@ export async function switchMode(projectId: string, mode: Mode, hopBudget?: numb
     }
     return { ok: true };
   } catch (e) {
-    return { ok: false, code: e instanceof CawError ? e.code : "unreachable" };
+    return { ok: false, code: isCawError(e) ? e.code : "unreachable" };
   } finally {
     revalidatePath(`/p/${projectId}`, "layout");
   }
@@ -45,8 +45,8 @@ export async function stopOpenRun(projectId: string): Promise<ModeResult> {
     await api.stopRun(latest.id);
     return { ok: true };
   } catch (e) {
-    if (e instanceof CawError && e.code === "already_finished") return { ok: true };
-    return { ok: false, code: e instanceof CawError ? e.code : "unreachable" };
+    if (isCawError(e) && e.code === "already_finished") return { ok: true };
+    return { ok: false, code: isCawError(e) ? e.code : "unreachable" };
   } finally {
     revalidatePath(`/p/${projectId}`, "layout");
   }
@@ -59,7 +59,19 @@ export async function useStartingTeam(projectId: string): Promise<ModeResult> {
     await ensureStartingTeam(api, projectId);
     return { ok: true };
   } catch (e) {
-    return { ok: false, code: e instanceof CawError ? e.code : "unreachable" };
+    return { ok: false, code: isCawError(e) ? e.code : "unreachable" };
+  } finally {
+    revalidatePath(`/p/${projectId}`, "layout");
+  }
+}
+
+/** ตามนั้น on the board's "waits on you" sheet (TASK-B-087 § 2): take a question card's proposed answer in one press. */
+export async function answerQuestion(projectId: string, cardId: string, answer: string): Promise<ModeResult> {
+  try {
+    await api.answer(cardId, answer);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, code: isCawError(e) ? e.code : "unreachable" };
   } finally {
     revalidatePath(`/p/${projectId}`, "layout");
   }

@@ -3,7 +3,8 @@
 // First steps (REQ-014 R1, SPEC-B-003 Decision 4 + STUDY-002 merge, comps B-066/B-068 2): one panel, three ordered steps — the team, the folders,
 // the first request — each done ✓ with its fact, the current one with its one action, and none locked (step 3 is open at once: the chat runs
 // without folders, SPEC A2). The head counts `พร้อมเริ่ม {done}/3`; at 3/3 the panel folds to that one line. The screen shows it until cards exist.
-import { Button, Input } from "antd";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useStartingTeam } from "@/app/p/[id]/actions";
@@ -63,15 +64,15 @@ export function FirstSteps({ projectId, teamSize, roots, hasChat }: { projectId:
           <p>{redesign.stepTeamText}</p>
           <p className={s.chain}>{redesign.startingChain}</p>
           <div className={s.row}>
-            <Button size="large" type={current === "team" ? "primary" : "default"} loading={pending} onClick={team}>{redesign.useStartingTeam}</Button>
+            <Button variant={current === "team" ? "default" : "outline"} className="min-h-11 px-5 text-[15px] font-semibold" disabled={pending} onClick={team}>{redesign.useStartingTeam}</Button>
             <a className={s.quiet} href={`/p/${projectId}/team`}>{redesign.ownTeam}</a>
           </div>
         </>)}
         {step("folder", 2, workspace.heading, <>
           <p>{workspace.hint}</p>
           <form className={s.row} onSubmit={(e) => { e.preventDefault(); add(); }}>
-            <Input size="large" value={draft} placeholder={workspace.hint} aria-label={workspace.heading} onChange={(e) => { setDraft(e.target.value); setRefused(null); }} />
-            <Button size="large" htmlType="submit" type={current === "folder" ? "primary" : "default"} loading={pending}>{workspace.add}</Button>
+            <Input className="h-11 min-w-0 flex-[1_1_260px] text-[15px]" value={draft} placeholder={workspace.hint} aria-label={workspace.heading} onChange={(e) => { setDraft(e.target.value); setRefused(null); }} />
+            <Button type="submit" variant={current === "folder" ? "default" : "outline"} className="min-h-11 px-5 text-[15px] font-semibold" disabled={pending}>{workspace.add}</Button>
           </form>
         </>)}
         {step("chat", 3, redesign.stepChatTitle, <p>{redesign.stepChatText}</p>)}
