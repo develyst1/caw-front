@@ -22,8 +22,8 @@ test("board: 12 cards — 1 question in the strip on top, 11 work cards in their
 test("board: choosing a worker narrows the board to their cards; choosing again shows everyone", async ({ page }) => {
   await page.goto(BOARD);
   const all = await page.locator("[data-column] [data-card]").count();
-  const chip = page.locator(".ant-tag-checkable").first();
-  const name = (await chip.textContent())!.slice(1); // the avatar initial, then the name
+  const chip = page.locator("[data-seat]").first(); // the crew strip's seats are the filter (TASK-B-074 C6)
+  const name = (await chip.getAttribute("data-seat"))!;
   await chip.click();
   const mine = await page.locator("[data-column] [data-card]").count();
   expect(mine).toBeGreaterThan(0);
@@ -42,8 +42,8 @@ test("board: Tab reaches the mode control, the filter and every card", async ({ 
     reached.add(await page.evaluate(() => {
       const a = document.activeElement as HTMLElement | null;
       if (!a) return "";
-      if (a.closest(".ant-segmented")) return "mode";
-      if (a.classList.contains("ant-tag-checkable")) return "filter";
+      if (a.closest("[data-mode-control]")) return "mode"; // TASK-B-085: ToggleGroup
+      if (a.hasAttribute("data-seat")) return "filter";
       return a.getAttribute("data-card") ?? "";
     }));
   }
@@ -62,4 +62,15 @@ test("board @390: the columns scroll sideways inside the board, never the page",
   });
   expect(r.page, "no sideways page scroll").toBeLessThanOrEqual(390);
   expect(r.row, "the columns row scrolls").toBeGreaterThan(r.rowBox);
+});
+
+// TASK-B-074 C6: the crew strip's seats are the filter — a pressed seat says so (aria-pressed), the chip row is gone
+test("board: a seat press filters and says so; a second press clears; no chip row", async ({ page }) => {
+  await page.goto(BOARD);
+  await expect(page.locator(".ant-tag-checkable")).toHaveCount(0);
+  const seat = page.locator("[data-seat]").first();
+  await seat.click();
+  await expect(seat).toHaveAttribute("aria-pressed", "true");
+  await seat.click();
+  await expect(seat).toHaveAttribute("aria-pressed", "false");
 });

@@ -1,6 +1,8 @@
-.nav { display: flex; gap: 4px; max-width: 1600px; margin: 0 auto; padding: 0 24px; }
-.link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-bottom: 3px solid transparent; color: var(--caw-ink2); font-size: 15px; font-weight: 600; text-decoration: none; }
-.link:hover { color: var(--caw-ink); }
-.link[aria-current="page"] { border-bottom-color: var(--caw-blue); color: var(--caw-blue); }
-.link:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: -3px; border-radius: 6px; }
-@media (max-width: 640px) { .nav { padding: 0 8px; } }
+/* the project's places (TASK-B-085, direction B): quiet tabs; the current one is a filled indigo-tint object, never only bold (D-084 — no grey fills) */
+.nav { display: flex; gap: 4px; min-width: 0; }
+.link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 8px; color: var(--gd-ink2); font-size: 15px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: background-color .15s, color .15s; }
+.link:hover { color: var(--gd-ink); background: var(--gd-accent-soft); }
+.link[aria-current="page"] { color: var(--gd-accent); background: var(--gd-accent-soft); font-weight: 600; }
+.count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--gd-accent); color: var(--gd-on-accent); font-size: 14px; font-weight: 600; line-height: 1; }
+@media (max-width: 767px) { .nav { overflow-x: auto; scrollbar-width: none; } .link { padding: 0 12px; } }
+@media (prefers-reduced-motion: reduce) { .link { transition: none; } }

@@ -85,7 +85,8 @@ export function CommentBox({ projectId, cardId }: { projectId: string; cardId: s
         placeholder={commentPlaceholder} aria-label={commentPlaceholder} />
       <div className={s.commentRow}>
         <Refused text={error} />
-        <Button size="large" type="primary" htmlType="submit" disabled={pending || !text.trim()}>{send}</Button>
+        {/* one primary per screen (STUDY-002 B7): the card's primary is the answer's ตามนั้น; the comment's ส่ง is secondary */}
+        <Button size="large" htmlType="submit" disabled={pending || !text.trim()}>{send}</Button>
       </div>
     </form>
   );

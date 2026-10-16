@@ -35,16 +35,19 @@ describe("createProject", () => {
     expect(e.details).toEqual({ id: PID });
   });
 
-  test("another confirmed version → a new empty project, in the list, and asking again says already_exists with its id", async () => {
+  test("v1.15: one project per Blueprint project — ANOTHER confirmed version of it is refused 409 already_exists with the existing project's id, and nothing is made", async () => {
     const { api } = await setup();
-    const p = await api.createProject({ blueprintProjectId: BP, version: 4 });
-    expect(p.id).not.toBe(PID);
-    expect([p.version, p.mode, p.workspace.roots]).toEqual([4, "manual", []]);
-    expect((await api.projects()).map((x) => x.id)).toEqual([PID, p.id]);
-    expect(await api.cards(p.id)).toEqual([]);
-    expect((await api.chain(p.id))!.members).toEqual([]);
-    const again = await expectRefusal(api.createProject({ blueprintProjectId: BP, version: 4 }), 409, "already_exists");
-    expect(again.details).toEqual({ id: p.id });
+    for (const version of [1, 2, 4]) {
+      const e = await expectRefusal(api.createProject({ blueprintProjectId: BP, version }), 409, "already_exists");
+      expect(e.details).toEqual({ id: PID });
+    }
+    expect((await api.projects()).map((x) => x.id)).toEqual([PID]);
+  });
+
+  test("the refusals keep their order: an unknown Blueprint project 404 and an unconfirmed version 409 version_not_confirmed come before already_exists", async () => {
+    const { api } = await setup();
+    await expectRefusal(api.createProject({ blueprintProjectId: BP, version: 99 }), 409, "version_not_confirmed");
+    await expectRefusal(api.createProject({ blueprintProjectId: "nope", version: 3 }), 404, "blueprint_project_not_found");
   });
 
   test("an unknown Blueprint project → 404 blueprint_project_not_found; an unconfirmed version → 409 version_not_confirmed", async () => {
@@ -185,3 +188,140 @@ describe("the chain", () => {
     await expectRefusal(api.addMember("nope", ploy.id), 404, "not_found");
   });
 });
+
+// ---- contract v1.14 / v1.15 (TASK-B-083) ----
+import { MOCK_NEW_PROJECT_ID } from "./mock";
+
+const byName = async (api: CawApi, name: string) => (await api.workers()).find((w) => w.name === name)!;
+/** a worker nobody uses: made, not in any chain */
+const spare = (api: CawApi, name: string) => api.createWorker({ name, roles: ["FE"], skills: ["x"] });
+
+describe("deleteWorker (v1.14): DELETE /v1/workers/{id}", () => {
+  test("a worker in no chain → resolves with nothing (204) and stays in the list with `deletedAt` set; the others have `deletedAt: null`", async () => {
+    const api = createMockApi();
+    const w = await spare(api, "ลาออก");
+    expect(w.deletedAt).toBeNull();
+    expect(await api.deleteWorker(w.id)).toBeUndefined();
+    const listed = (await api.workers()).find((x) => x.id === w.id)!;
+    expect(typeof listed.deletedAt).toBe("string");
+    expect(Number.isNaN(Date.parse(listed.deletedAt!))).toBe(false);
+    expect((await api.workers()).filter((x) => x.id !== w.id).every((x) => x.deletedAt === null)).toBe(true);
+  });
+
+  test("an unknown worker, and one already deleted → 404 not_found", async () => {
+    const api = createMockApi();
+    await expectRefusal(api.deleteWorker("w-nope"), 404, "not_found");
+    const w = await spare(api, "ซ้ำ");
+    await api.deleteWorker(w.id);
+    await expectRefusal(api.deleteWorker(w.id), 404, "not_found");
+  });
+
+  test("a member of a chain → 409 worker_in_chain with the ids of EVERY project whose chain has them; nothing is deleted; out of the chains, it goes", async () => {
+    const api = createMockApi({ state: "new-project" });
+    const fern = await byName(api, "ฝน");
+    await api.addMember(MOCK_NEW_PROJECT_ID, fern.id);
+    const e = await expectRefusal(api.deleteWorker(fern.id), 409, "worker_in_chain");
+    expect(e.details).toEqual({ projectIds: [PID, MOCK_NEW_PROJECT_ID] });
+    expect((await byName(api, "ฝน")).deletedAt).toBeNull();
+    await api.removeMember(MOCK_NEW_PROJECT_ID, fern.id);
+    expect(((await expectRefusal(api.deleteWorker(fern.id), 409, "worker_in_chain")).details as { projectIds: string[] }).projectIds).toEqual([PID]);
+  });
+
+  test("a deleted worker's name is free again: a new worker may take it, and a rename may too", async () => {
+    const api = createMockApi();
+    const old = await spare(api, "ชื่อซ้ำ");
+    await api.deleteWorker(old.id);
+    const again = await spare(api, "ชื่อซ้ำ");
+    expect(again.id).not.toBe(old.id);
+    const other = await spare(api, "อีกคน");
+    await api.deleteWorker((await spare(api, "ชื่อที่สอง")).id);
+    expect((await api.updateWorker(other.id, { name: "ชื่อที่สอง" })).name).toBe("ชื่อที่สอง");
+    await expectRefusal(spare(api, "ชื่อซ้ำ"), 409, "name_taken"); // …but a LIVE worker still holds its name
+  });
+});
+
+describe("a hop in the mock follows the core (v1.14)", () => {
+  /** the plain seed's one running hop (ฝน, card 3) is ended so the test starts its own */
+  const quiet = async () => {
+    const api = createMockApi();
+    const running = (await api.hops(PID)).find((h) => h.endedAt === null)!;
+    await api.finishHop(running.id);
+    return { api, running };
+  };
+
+  test("starting a hop on a `todo` card moves the card to `doing`; on a card that is already `doing` nothing else moves", async () => {
+    const { api } = await quiet();
+    const cards = await api.cards(PID);
+    const todo = cards.find((c) => c.status === "todo" && c.kind === "work")!;
+    const hop = await api.startHop(todo.id, todo.assigneeId!);
+    expect(hop).toMatchObject({ cardId: todo.id, endedAt: null, messageId: null });
+    expect(hop.lastActivityAt).toBe(hop.startedAt);
+    expect((await api.card(todo.id))!.status).toBe("doing");
+    await api.finishHop(hop.id);
+    expect((await api.card(todo.id))!.status).toBe("doing"); // finishing does not undo it
+    const doing = (await api.cards(PID)).find((c) => c.status === "doing" && c.assigneeId !== null)!;
+    await api.startHop(doing.id, doing.assigneeId!);
+    expect((await api.card(doing.id))!.status).toBe("doing");
+  });
+
+  test("a card in review / done / stuck keeps its status when a hop starts on it", async () => {
+    const { api } = await quiet();
+    for (const status of ["review", "done", "stuck"] as const) {
+      const c = (await api.cards(PID)).find((x) => x.status === status && x.assigneeId !== null)!;
+      const h = await api.startHop(c.id, c.assigneeId!);
+      expect((await api.card(c.id))!.status).toBe(status);
+      await api.finishHop(h.id);
+    }
+  });
+
+  test("a project has one running hop: starting a second → 409 hop_running with the running hop's id; an unknown card → 404", async () => {
+    const { api } = await quiet();
+    const [a, b] = (await api.cards(PID)).filter((c) => c.kind === "work" && c.assigneeId !== null);
+    const first = await api.startHop(a!.id, a!.assigneeId!);
+    const e = await expectRefusal(api.startHop(b!.id, b!.assigneeId!), 409, "hop_running");
+    expect(e.details).toEqual({ hopId: first.id });
+    await expectRefusal(api.startHop("c-nope", a!.assigneeId!), 404, "not_found");
+  });
+});
+
+describe("removeMember and `hop_running` (v1.14): the checks run in the order 404 → hop_running → is_entry → has_open_cards", () => {
+  test("a member with a running hop → 409 hop_running { hopId }, nothing removed — even when they also have open cards (hop_running comes before has_open_cards)", async () => {
+    const api = createMockApi();
+    const fern = await byName(api, "ฝน"); // the plain seed: ฝน has the running hop, and open cards
+    const running = (await api.hops(PID)).find((h) => h.endedAt === null)!;
+    expect(running.workerId).toBe(fern.id);
+    expect((await api.cards(PID)).some((c) => c.assigneeId === fern.id && c.status !== "done")).toBe(true);
+    const e = await expectRefusal(api.removeMember(PID, fern.id), 409, "hop_running");
+    expect(e.details).toEqual({ hopId: running.id });
+    expect((await api.chain(PID))!.members.map((m) => m.id)).toContain(fern.id);
+  });
+
+  test("…and before is_entry: the ENTRY worker with a running hop is refused hop_running, not is_entry", async () => {
+    const { api } = await (async () => {
+      const api = createMockApi();
+      await api.finishHop((await api.hops(PID)).find((h) => h.endedAt === null)!.id);
+      return { api };
+    })();
+    const ploy = await byName(api, "ปลา");
+    const card = (await api.cards(PID)).find((c) => c.kind === "work" && c.assigneeId === ploy.id)!;
+    const hop = await api.startHop(card.id, ploy.id);
+    expect((await expectRefusal(api.removeMember(PID, ploy.id), 409, "hop_running")).details).toEqual({ hopId: hop.id });
+    await api.finishHop(hop.id);
+    await expectRefusal(api.removeMember(PID, ploy.id), 409, "is_entry"); // the hop is over: the next check speaks
+  });
+
+  test("…and after 404: someone who is not in the chain is 404 even if they have a running hop", async () => {
+    const api = createMockApi({ state: "new-project" });
+    const fern = await byName(api, "ฝน");
+    await expectRefusal(api.removeMember(MOCK_NEW_PROJECT_ID, fern.id), 404, "not_found"); // ฝน's running hop is in the other project, and they are not a member here
+  });
+
+  test("without a running hop the old refusals are unchanged: has_open_cards with their card count", async () => {
+    const api = createMockApi();
+    await api.finishHop((await api.hops(PID)).find((h) => h.endedAt === null)!.id);
+    const bank = await byName(api, "แบงค์");
+    const e = await expectRefusal(api.removeMember(PID, bank.id), 409, "has_open_cards");
+    expect(e.details).toMatchObject({ count: expect.any(Number) });
+  });
+});
+

@@ -27,7 +27,7 @@ function HopRows({ projectId, hops, workers, cards }: { projectId: string; hops:
         return (
           <li key={h.id} className={s.hop} data-hop>
             <span className={s.time}>{clockOf(h.startedAt)}</span>
-            <span className={s.who}><Person name={w?.name ?? h.workerId} roles={w?.roles ?? []} size="sm" state={h.endedAt ? null : "working"} /></span>
+            <span className={s.who}><Person name={w?.name ?? h.workerId} avatar={w?.avatar ?? null} roles={w?.roles ?? []} size="sm" state={h.endedAt ? null : "working"} /></span>
             {c ? <a className={s.cardLink} href={`/p/${projectId}/c/${c.id}`}>{`#${c.number} ${c.title}`}</a> : <span>{h.cardId}</span>}
             <span className={`${s.chip} ${s.outcome}`}>{h.outcome ? hopOutcome[h.outcome] : runRunning}</span>
             <span className={s.cost}>

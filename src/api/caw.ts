@@ -30,6 +30,10 @@ export interface Project {
 /** `stuck` counts cards with status `stuck`, open question cards and cards with `specChangedVersion` set. */
 export interface ProjectSummary extends Project { cardsDone: number; cardsTotal: number; stuckCount: number }
 
+/** A worker's face (v1.12, REQ-014 R7): three short ids — each `^[a-z0-9-]{1,24}$`. The core checks the shape, not the list: the list of bodies, colours and
+ *  eyes is caw-front's (`lib/faces.ts`), so a stored id the list no longer has is drawn as the face derived from the name. */
+export interface Avatar { body: string; color: string; eyes: string }
+
 export interface Worker {
   id: string;
   name: string;
@@ -39,6 +43,8 @@ export interface Worker {
   model: ModelName;
   effort: Effort;
   combinedFrom: string[] | null;
+  avatar: Avatar | null;          // v1.12: `null` = not chosen — the screen derives a face from the name, nothing derived is stored
+  deletedAt: string | null;       // v1.14: set when the worker was deleted — `GET /v1/workers` still lists them; screens hide them from every picker
 }
 
 export interface Chain { members: Worker[]; edges: { from: string; to: string }[]; entryWorkerId: string | null }
@@ -96,8 +102,9 @@ export interface Hop {
   id: string;
   projectId: string;
   runId: string | null;           // null = a manual hop
+  messageId: string | null;       // v1.4: the chat message this hop answers (a chat hop); null for a card hop
   claimedBy: string | null;       // the runner instance
-  cardId: string;
+  cardId: string | null;          // null for a chat hop (it answers `messageId`, not a card)
   workerId: string;
   startedAt: string;
   endedAt: string | null;         // null while running
@@ -198,7 +205,7 @@ export interface CawApi {
   stopRun(runId: string): Promise<Run>;
 
   // ---- the operator's other writes (SPEC-A-008 § API v1; every one carries `X-CAW-Actor: operator` in the http implementation) ----
-  /** POST /v1/projects — 201, or 409 `already_exists` (`details.id` = the existing project), 404 `blueprint_project_not_found`, 409 `version_not_confirmed`, 502 `blueprint_unreachable`. */
+  /** POST /v1/projects — 201, or 409 `already_exists` (`details.id` = the existing project — v1.15: for the same Blueprint project at ANY version), 404 `blueprint_project_not_found`, 409 `version_not_confirmed`, 502 `blueprint_unreachable`. */
   createProject(input: { blueprintProjectId: string; version: number }): Promise<Project>;
   /** POST /v1/cards/{id}/comments */
   comment(cardId: string, text: string): Promise<Note>;
@@ -214,15 +221,19 @@ export interface CawApi {
   clearSpecChange(cardId: string): Promise<Card>;
   /** POST /v1/workers — 409 `name_taken`. v1.10: `roles` (≥ 1, distinct) or the old single `role` (read as `[role]`) — both or neither is a 400
    *  `validation`. `model` / `effort` default to the strongest of the picked roles'. `skills` is the client's list (see `lib/roles.ts`). */
-  createWorker(input: { name: string; skills: string[]; model?: ModelName; effort?: Effort } & ({ roles: WorkerRole[] } | { role: WorkerRole })): Promise<Worker>;
+  createWorker(input: { name: string; skills: string[]; model?: ModelName; effort?: Effort; avatar?: Avatar | null } & ({ roles: WorkerRole[] } | { role: WorkerRole })): Promise<Worker>;
   /** PATCH /v1/workers/{id} (v1.10) — sets only the fields sent (at least one, else 400 `validation`); changing `roles` leaves skills, model and effort alone.
    *  404 · 409 `name_taken`. */
-  updateWorker(workerId: string, patch: { name?: string; roles?: WorkerRole[]; skills?: string[]; model?: ModelName; effort?: Effort }): Promise<Worker>;
+  updateWorker(workerId: string, patch: { name?: string; roles?: WorkerRole[]; skills?: string[]; model?: ModelName; effort?: Effort; avatar?: Avatar | null }): Promise<Worker>;
+  /** DELETE /v1/workers/{id} (v1.14) — operator only. 204; 404 for an unknown or already-deleted worker; 409 `worker_in_chain` `{ projectIds }` while any chain has
+   *  them as a member. The worker stays in `workers()` with `deletedAt` set, and a new worker may take their name. */
+  deleteWorker(workerId: string): Promise<void>;
   /** POST /v1/workers/combine — skills = union, model = the stronger, effort = the higher, role `other`, `combinedFrom` = both; the two stay. */
   combineWorkers(name: string, workerIds: [string, string]): Promise<Worker>;
   /** POST /v1/projects/{id}/chain/members — 409 `already_member`. */
   addMember(projectId: string, workerId: string): Promise<Chain>;
-  /** DELETE /v1/projects/{id}/chain/members/{workerId} — 409 `has_open_cards` (no `reassignTo`), 409 `is_entry`. */
+  /** DELETE /v1/projects/{id}/chain/members/{workerId} — the checks run in this order: 404 → 409 `hop_running` `{ hopId }` (they have a running hop, v1.14) →
+   *  409 `is_entry` → 409 `has_open_cards` (no `reassignTo`). */
   removeMember(projectId: string, workerId: string, reassignTo?: string): Promise<Chain>;
   /** POST /v1/projects/{id}/chain/edges — 400 (not members / self), 409 `edge_exists`. */
   addEdge(projectId: string, from: string, to: string): Promise<Chain>;

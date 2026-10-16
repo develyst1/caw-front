@@ -13,7 +13,8 @@ test("/ lists the project: name, Blueprint version, mode, cards done of all, stu
   await expect(card).toContainText(projectCard.blueprintVersion(3));
   await expect(card).toContainText(mode.manual);
   await expect(card).toContainText(projectCard.done(3, 12));
-  await expect(card).toContainText(projectCard.stuck(4));
+  // C2 (TASK-B-074): the home's stuck number is the board's stuck column (was the core's stuckCount, 4) — the same-number check is in project-screen.spec
+  await expect(card).toContainText(/ติดอยู่ \d+/);
   const bar = card.getByRole("progressbar");
   expect([await bar.getAttribute("aria-valuenow"), await bar.getAttribute("aria-valuemax")]).toEqual(["3", "12"]);
   await card.click();
@@ -68,14 +69,13 @@ test("/start says why it cannot start, in words, with the way back — unknown B
   await expect(page).toHaveURL("/");
 });
 
-test("/start for a new confirmed version makes a second project, opens its (empty) board, and the list shows both", async ({ page }) => {
-  await page.goto(`/start?project=${BP}&version=4`);
-  await expect(page).toHaveURL(/\/p\/[0-9a-f-]{36}$/);
-  expect(page.url()).not.toContain(MOCK_PROJECT_ID);
+test("/start for ANOTHER version of a Blueprint project that already has a project goes to that project, and the list keeps one row (v1.15: one project per Blueprint project)", async ({ page }) => {
+  await page.goto(`/start?project=${BP}&version=4`); // a confirmed version, but not the one the project was made from
+  await expect(page).toHaveURL(`/p/${MOCK_PROJECT_ID}`);
   await page.goto("/");
-  await expect(page.locator("ul a")).toHaveCount(2);
-  await expect(page.locator("ul a").nth(1)).toContainText(projectCard.blueprintVersion(4));
-  await page.goto(`/start?project=${BP}&version=4`); // again: the same project, not a third
+  await expect(page.locator("ul a")).toHaveCount(1);
+  await page.goto(`/start?project=${BP}&version=4`); // again: the same project, never a second one
+  await expect(page).toHaveURL(`/p/${MOCK_PROJECT_ID}`);
   await page.goto("/");
-  await expect(page.locator("ul a")).toHaveCount(2);
+  await expect(page.locator("ul a")).toHaveCount(1);
 });

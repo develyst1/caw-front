@@ -1,4 +1,4 @@
-/* the person (REQ-014 direction § 1) — colours from --caw-* (theme/tokens.ts): green = working now only, amber = stuck only */
+/* the person (REQ-014 direction § 1, R7) — colours from --caw-* / --face-* (theme/tokens.ts): green = working now only, amber = stuck only */
 .person { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .p-sm .name { font-size: 14px; }
@@ -6,12 +6,13 @@
 .p-lg .name { font-size: 17px; font-weight: 700; }
 .role { flex: none; display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--caw-r-tag); background: var(--caw-canvas); color: var(--caw-ink2); font-size: 14px; font-weight: 700; letter-spacing: .02em; }
 
-.avatar { position: relative; flex: none; display: inline-grid; place-items: center; border-radius: 999px; background: var(--caw-canvas); color: var(--caw-ink); font-weight: 700; border: 2px solid var(--caw-paper); }
-.sm { width: 28px; height: 28px; font-size: 14px; }
-.md { width: 36px; height: 36px; font-size: 16px; }
-.lg { width: 52px; height: 52px; font-size: 21px; }
-.working { background: var(--caw-workSoft); color: var(--caw-work); box-shadow: 0 0 0 2px var(--caw-work); }
-.working::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 10px; height: 10px; border-radius: 999px; background: var(--caw-work); border: 2px solid var(--caw-paper); animation: breathe 2.4s ease-in-out infinite; }
-.stuck { background: var(--caw-stuckSoft); color: var(--caw-stuck); box-shadow: 0 0 0 2px var(--caw-stuck); }
+/* the round frame around the face: the state ring sits on it, never on the face */
+.frame { position: relative; flex: none; display: inline-grid; place-items: center; border-radius: 999px; }
+.sm { width: 28px; height: 28px; }
+.md { width: 36px; height: 36px; }
+.lg { width: 52px; height: 52px; }
+.working { box-shadow: 0 0 0 2px var(--caw-paper), 0 0 0 4px var(--caw-work); }
+.working::after { content: ""; position: absolute; right: -4px; bottom: -4px; width: 10px; height: 10px; border-radius: 999px; background: var(--caw-work); border: 2px solid var(--caw-paper); animation: breathe 2.4s ease-in-out infinite; }
+.stuck { box-shadow: 0 0 0 2px var(--caw-paper), 0 0 0 4px var(--caw-stuck); }
 @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .working::after { animation: none; } }

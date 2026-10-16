@@ -83,3 +83,18 @@ test("@390: the warning and the folder dialog fit the screen, nothing scrolls si
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   await page.keyboard.press("Escape");
 });
+
+// TASK-B-065 (A-P6, words PM 2026-10-16): removing a folder acts at once and offers เลิกทำ, which puts it back.
+test("removing a folder offers เลิกทำ, which puts it back", async ({ page }) => {
+  const { undo } = await import("../src/words");
+  await page.goto(BOARD);
+  const dialog = await open(page);
+  await dialog.getByRole("textbox").fill("/Users/me/repo");
+  await dialog.getByRole("button", { name: workspace.add }).click();
+  await expect(dialog.locator("[data-root]")).toHaveCount(1);
+  await dialog.locator("[data-root]").getByRole("button", { name: workspace.remove }).click();
+  await expect(dialog.locator("[data-root]")).toHaveCount(0);
+  await expect(dialog.locator("[data-undo-toast]")).toContainText(undo.folderRemoved("/Users/me/repo"));
+  await dialog.getByRole("button", { name: undo.button }).click();
+  await expect(dialog.locator("[data-root]")).toHaveCount(1);
+});

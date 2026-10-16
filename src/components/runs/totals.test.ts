@@ -3,7 +3,7 @@ import type { Hop, Run } from "@/api/caw";
 import { groupHops, hopWallMs, totalsOf } from "./totals";
 
 const hop = (id: string, runId: string | null, start: string, end: string | null, tokens: [number, number] | null): Hop => ({
-  id, projectId: "p", runId, claimedBy: runId ? "runner" : null, cardId: "c", workerId: "w", startedAt: start, endedAt: end, lastActivityAt: start,
+  id, projectId: "p", runId, claimedBy: runId ? "runner" : null, cardId: "c", workerId: "w", startedAt: start, endedAt: end, lastActivityAt: start, messageId: null,
   outcome: end ? "commented" : null, tokensIn: tokens?.[0] ?? null, tokensOut: tokens?.[1] ?? null, note: "",
 });
 const run = (id: string): Run => ({ id, projectId: "p", mode: "dispatcher", hopBudget: 3, startedAt: "2026-10-13T08:00:00+07:00", endedAt: null, stopReason: null, report: null, hopsUsed: 0 });

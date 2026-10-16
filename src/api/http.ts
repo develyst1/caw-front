@@ -86,6 +86,11 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     answer: (cardId, answer) => ok(client.POST("/v1/cards/{cardId}/answer", { params: { path: { cardId } }, body: { answer } })) as Promise<Card>,
     clearSpecChange: (cardId) => ok(client.POST("/v1/cards/{cardId}/spec-change/clear", { params: { path: { cardId } } })) as Promise<Card>,
     createWorker: (body) => ok(client.POST("/v1/workers", { body })) as Promise<Worker>,
+    // 204: nothing to read back; 404 (an unknown or already-deleted worker) and 409 `worker_in_chain` `{ projectIds }` are CawErrors
+    deleteWorker: async (id) => {
+      const r = await call(client.DELETE("/v1/workers/{id}", { params: { path: { id } } }) as Promise<Settled<unknown>>);
+      if (!r.response.ok) refusal(r);
+    },
     updateWorker: (id, patch) => ok(client.PATCH("/v1/workers/{id}", { params: { path: { id } }, body: patch })) as Promise<Worker>,
     combineWorkers: (name, workerIds) => ok(client.POST("/v1/workers/combine", { body: { name, workerIds } })) as Promise<Worker>,
     addMember: (id, workerId) => ok(client.POST("/v1/projects/{id}/chain/members", { params: { path: { id } }, body: { workerId } })) as Promise<Chain>,

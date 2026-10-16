@@ -255,3 +255,54 @@ describe("roles (SPEC-A-008 § v1.10)", () => {
   });
 });
 
+describe("avatar (SPEC-A-008 § v1.12)", () => {
+  const face = { body: "round", color: "sky", eyes: "dots" };
+  test("createWorker and updateWorker send `avatar` as given — an object, or null to clear — and nothing when it is not given", async () => {
+    const { api, log } = against(() => json(200, { id: "w9" }));
+    await api.createWorker({ name: "ก", roles: ["FE"], skills: ["x"], avatar: face });
+    await api.createWorker({ name: "ข", roles: ["FE"], skills: ["x"] });
+    await api.updateWorker("w9", { avatar: { body: "tall", color: "mint", eyes: "wide" } });
+    await api.updateWorker("w9", { avatar: null });
+    expect(log.map((s) => [s.method, s.path, s.body])).toEqual([
+      ["POST", "/v1/workers", { name: "ก", roles: ["FE"], skills: ["x"], avatar: face }],
+      ["POST", "/v1/workers", { name: "ข", roles: ["FE"], skills: ["x"] }],
+      ["PATCH", "/v1/workers/w9", { avatar: { body: "tall", color: "mint", eyes: "wide" } }],
+      ["PATCH", "/v1/workers/w9", { avatar: null }],
+    ]);
+  });
+  test("a partial avatar refused by the back end (400 validation) is a CawError", async () => {
+    const { api } = against(() => json(400, { error: { code: "validation", message: "avatar: all three or null" } }));
+    const e = (await api.updateWorker("w9", { avatar: { color: "mint" } as never }).then(() => null, (x: unknown) => x)) as CawError;
+    expect([e.status, e.code]).toEqual([400, "validation"]);
+  });
+  test("a worker's avatar passes through as the back end sent it, including null", async () => {
+    const w = (avatar: unknown) => ({ id: "w1", name: "ปลา", role: "PM", roles: ["PM"], skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null, avatar });
+    const { api } = against(() => json(200, { workers: [w(face), w(null)] }));
+    expect(await api.workers()).toEqual([w(face), w(null)] as never);
+  });
+});
+
+describe("deleteWorker (SPEC-A-008 § v1.14)", () => {
+  test("DELETE /v1/workers/{id} with the operator's actor and no body; 204 resolves to nothing", async () => {
+    const { api, log } = against(() => new Response(null, { status: 204 }));
+    expect(await api.deleteWorker("w9")).toBeUndefined();
+    expect(log).toEqual([{ method: "DELETE", path: "/v1/workers/w9", query: "", actor: "operator", body: undefined }]);
+  });
+  test("409 worker_in_chain keeps `projectIds`; 404 is an error, not null", async () => {
+    const chain = against(() => json(409, { error: { code: "worker_in_chain", message: "no", details: { projectIds: ["p1", "p2"] } } }));
+    const e = (await chain.api.deleteWorker("w9").then(() => null, (x: unknown) => x)) as CawError;
+    expect([e.status, e.code, e.details]).toEqual([409, "worker_in_chain", { projectIds: ["p1", "p2"] }]);
+    const gone = against(() => json(404, { error: { code: "not_found", message: "no" } }));
+    const n = (await gone.api.deleteWorker("w9").then(() => null, (x: unknown) => x)) as CawError;
+    expect([n.status, n.code]).toEqual([404, "not_found"]);
+  });
+  test("removeMember's 409 hop_running keeps `hopId`; a worker's `deletedAt` passes through, null too", async () => {
+    const { api } = against(() => json(409, { error: { code: "hop_running", message: "no", details: { hopId: "h7" } } }));
+    const e = (await api.removeMember("p1", "w9").then(() => null, (x: unknown) => x)) as CawError;
+    expect([e.status, e.code, e.details]).toEqual([409, "hop_running", { hopId: "h7" }]);
+    const w = (deletedAt: unknown) => ({ id: "w1", name: "ปลา", role: "PM", roles: ["PM"], skills: ["x"], model: "opus", effort: "high", combinedFrom: null, avatar: null, deletedAt });
+    const listed = against(() => json(200, { workers: [w(null), w("2026-10-16T09:00:00+07:00")] }));
+    expect(await listed.api.workers()).toEqual([w(null), w("2026-10-16T09:00:00+07:00")] as never);
+  });
+});
+

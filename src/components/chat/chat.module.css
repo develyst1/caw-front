@@ -56,6 +56,21 @@
 .composerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .hint { font-size: 14px; color: var(--caw-ink2); }
 
+/* the panel beside the board (TASK-B-064): sticky, its own scroll; the box always in view. At ≤ 760 px the thread is the แชต tab's job — only
+   the box shows, fixed to the bottom of the screen */
+.head { display: grid; gap: 4px; }
+.missing { margin: 0; font-size: 14px; color: var(--caw-ink2); }
+.missing a { display: inline-flex; align-items: center; min-height: 44px; color: var(--caw-blue); font-weight: 600; text-underline-offset: 3px; }
+.panel { position: sticky; top: calc(16px + var(--caw-sample-bar, 0px)); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px; height: calc(100vh - 340px - var(--caw-sample-bar, 0px)); min-height: 360px; /* the room below the header and the crew strip on first view, so the box (its last row) is on screen without scrolling */ padding: 14px; border-radius: var(--caw-r-panel); background: var(--caw-paper); border: 1px solid var(--caw-line); box-shadow: var(--caw-shadow-lifted); }
+.panel .thread { overflow: auto; align-content: start; padding: 4px 2px; }
+.panel .composer { position: static; box-shadow: none; }
+@media (max-width: 760px) {
+  .panel { position: static; min-height: 0; max-height: none; padding: 0; border: 0; box-shadow: none; background: transparent; }
+  .panel .head, .panel .thread, .panel .empty { display: none; }
+  .panel .composer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; border-radius: 0; border-width: 2px 0 0; box-shadow: var(--caw-shadow-lifted); }
+  /* A5: while the first steps show, the box sits in the page after them — pinned it covered step 1's button */
+  .unpinned .composer { position: static; border-radius: var(--caw-r-panel); border-width: 2px; box-shadow: none; }
+}
 @media (max-width: 640px) {
   .page { padding: 12px 16px 16px; }
   .bubble { max-width: 100%; }

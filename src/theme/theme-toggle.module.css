@@ -1,0 +1,11 @@
+/* the light / dark toggle (TASK-B-063): a 44 px icon button; the icon shows the scheme in effect */
+.toggle { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: var(--caw-r-card); border: 1px solid var(--caw-lineStrong); background: var(--caw-paper); color: var(--caw-ink); cursor: pointer; transition: background-color .15s, border-color .15s; }
+.toggle:hover { border-color: var(--caw-ink2); background: var(--caw-sunk); }
+.toggle:active { background: var(--caw-canvas); }
+.toggle:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: 2px; }
+.sun, .moon { width: 20px; height: 20px; }
+.moon { display: none; }
+@media (prefers-color-scheme: dark) { :global(:root:not([data-theme="light"])) .sun { display: none; } :global(:root:not([data-theme="light"])) .moon { display: block; } }
+:global(:root[data-theme="dark"]) .sun { display: none; }
+:global(:root[data-theme="dark"]) .moon { display: block; }
+@media (prefers-reduced-motion: reduce) { .toggle { transition: none; } }

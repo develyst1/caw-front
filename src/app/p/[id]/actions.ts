@@ -7,6 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { api } from "@/api";
 import { CawError, type Mode } from "@/api/caw";
+import { ensureStartingTeam } from "@/lib/startingTeam";
 
 export type ModeResult = { ok: true } | { ok: false; code: string };
 
@@ -45,6 +46,19 @@ export async function stopOpenRun(projectId: string): Promise<ModeResult> {
     return { ok: true };
   } catch (e) {
     if (e instanceof CawError && e.code === "already_finished") return { ok: true };
+    return { ok: false, code: e instanceof CawError ? e.code : "unreachable" };
+  } finally {
+    revalidatePath(`/p/${projectId}`, "layout");
+  }
+}
+
+/** ใช้ทีมเริ่มต้น (REQ-014 R2, SPEC-B-003 Decision 2, TASK-B-064): makes the five-seat starting team through Bob's idempotent `ensureStartingTeam` —
+ *  a second press, or a retry after a drop, finishes the team and changes nothing else. */
+export async function useStartingTeam(projectId: string): Promise<ModeResult> {
+  try {
+    await ensureStartingTeam(api, projectId);
+    return { ok: true };
+  } catch (e) {
     return { ok: false, code: e instanceof CawError ? e.code : "unreachable" };
   } finally {
     revalidatePath(`/p/${projectId}`, "layout");

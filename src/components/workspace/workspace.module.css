@@ -11,3 +11,7 @@
 .row > :first-child { flex: 1; min-width: 0; }
 .error { margin: 0; color: var(--caw-stuck); font-size: 14px; font-weight: 600; }
 @media (max-width: 480px) { .warn { padding: 10px 16px; } .row { flex-direction: column; } }
+/* the undo toast for a removed folder (TASK-B-065, A-P6) */
+.toast { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 6px 6px 6px 14px; border-radius: 12px; background: var(--caw-you); color: var(--caw-youInk); font-size: 15px; }
+.toastBtn { min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--caw-youInk); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.toastBtn:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: 2px; }

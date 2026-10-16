@@ -29,6 +29,8 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
     return byId.get(id)?.name ?? id;
   };
   const worker = card.assigneeId ? byId.get(card.assigneeId) : undefined;
+  // the worker behind a timeline actor (`worker:<id>`); the operator has no face here — the name `คุณ` says it
+  const actorWorker = (actor: string | null) => (actor?.startsWith("worker:") ? byId.get(actor.slice(7)) : undefined);
   const waiting = card.dependsOn.some((d) => openQuestions.includes(d));
   const part = spec.part;
   const blocked = deps.some((d) => d.status !== "done"); // the back end refuses กำลังทำ until every dependency is done
@@ -40,7 +42,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
         <h2 className={s.title}>{card.title}</h2>
         <div className={s.meta}>
           <Tag className={card.status === "stuck" ? s.tagStuck : s.tag}>{column[card.status]}</Tag>
-          {worker && <span className={s.worker}><Person name={worker.name} roles={worker.roles} size="sm" state={card.status === "stuck" ? "stuck" : null} /></span>}
+          {worker && <span className={s.worker}><Person name={worker.name} avatar={worker.avatar} roles={worker.roles} size="sm" state={card.status === "stuck" ? "stuck" : null} /></span>}
           {card.specChangedVersion !== null && <Tag className={s.markSpec} icon={<SyncOutlined aria-hidden />}>{cardMark.specChanged}</Tag>}
           {waiting && <Tag className={s.markWait} icon={<QuestionCircleOutlined aria-hidden />}>{cardMark.waitingAnswer}</Tag>}
         </div>
@@ -134,7 +136,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
               {notes.map((n) => (
                 <li key={n.id} className={n.type === "handoff" ? `${s.note} ${s.handoff}` : n.type === "handoff_refused" ? `${s.note} ${s.refusedNote}` : s.note} data-note={n.type}>
                   <div className={s.noteHead}>
-                    {n.type === "comment" && <Avatar name={nameOf(n.actor)} size="sm" />}
+                    {n.type === "comment" && actorWorker(n.actor) && <Avatar name={actorWorker(n.actor)!.name} avatar={actorWorker(n.actor)!.avatar} size="sm" />}
                     <span className={s.who}>{n.type === "handoff" ? handoffLine(nameOf(n.fromWorkerId), nameOf(n.toWorkerId))
                       : n.type === "handoff_refused" ? refusedHandoff(nameOf(n.toWorkerId), nameOf(n.fromWorkerId)) /* v1.3, D-051 */
                       : nameOf(n.actor)}</span>

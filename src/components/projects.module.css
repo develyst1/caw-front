@@ -39,3 +39,17 @@
   .grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { .project { transition: none; } }
+
+/* REQ-014 (TASK-B-064): the live row, the faces, the toggle, the empty state's one button */
+.spacer { flex: 1; }
+.chipAsk { background: var(--caw-blueSoft); color: var(--caw-blue); }
+.live { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.faces { display: inline-flex; gap: 6px; }
+.working { color: var(--caw-work); font-size: 14px; font-weight: 700; }
+.noTeam { font-size: 14px; color: var(--caw-ink2); }
+.empty { justify-items: center; text-align: center; }
+.cta { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: var(--caw-r-card); background: var(--caw-blue); color: var(--caw-onBlue); font-weight: 600; text-decoration: none; transition: background-color .15s; }
+.cta:hover { background: var(--caw-blueHover); }
+.cta:focus-visible { outline: 3px solid var(--caw-blue); outline-offset: 3px; }
+.title { font-size: var(--caw-t-page) !important; font-weight: 800 !important; letter-spacing: -0.015em; }
+@media (prefers-reduced-motion: reduce) { .cta { transition: none; } }

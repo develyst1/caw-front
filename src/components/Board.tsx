@@ -11,6 +11,8 @@ import {
 import { Tag } from "antd";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import type { Card, CardStatus, Worker } from "@/api/caw";
+import { CrewStrip, type SeatView } from "@/components/CrewStrip";
+import { Avatar } from "@/components/Person";
 import { group, kindGroup } from "@/theme/tokens";
 import { cardMark, column, columnOrder } from "@/words";
 import s from "./board.module.css";
@@ -35,8 +37,6 @@ function PartChip({ part }: { part: PartRef | undefined }) {
   );
 }
 
-function initial(name: string) { return [...name][0] ?? ""; }
-
 function WorkCard({ card, worker, part, waiting }: { card: Card; worker: Worker | undefined; part: PartRef | undefined; waiting: boolean }) {
   return (
     <li>
@@ -44,7 +44,7 @@ function WorkCard({ card, worker, part, waiting }: { card: Card; worker: Worker 
         <h3 id={`t-${card.id}`} className={s.title}>{card.title}</h3>
         <PartChip part={part} />
         <div className={s.foot}>
-          {worker && <span className={s.worker}><span className={s.avatar} aria-hidden>{initial(worker.name)}</span>{worker.name}</span>}
+          {worker && <span className={s.worker}><Avatar name={worker.name} avatar={worker.avatar} size="sm" />{worker.name}</span>}
           {(card.specChangedVersion !== null || waiting) && (
             <span className={s.marks}>
               {card.specChangedVersion !== null && <Tag className={s.markSpec} icon={<SyncOutlined aria-hidden />}>{cardMark.specChanged}</Tag>}
@@ -57,7 +57,7 @@ function WorkCard({ card, worker, part, waiting }: { card: Card; worker: Worker 
   );
 }
 
-export function Board({ cards, workers, parts }: { cards: Card[]; workers: Worker[]; parts: Record<string, PartRef> }) {
+export function Board({ cards, workers, parts, seats = [] }: { cards: Card[]; workers: Worker[]; parts: Record<string, PartRef>; seats?: SeatView[] }) {
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const byId = new Map(workers.map((w) => [w.id, w]));
   const openQuestions = new Set(cards.filter((c) => c.kind === "question" && c.answer === null).map((c) => c.id));
@@ -84,13 +84,8 @@ export function Board({ cards, workers, parts }: { cards: Card[]; workers: Worke
 
   return (
     <div className={s.board}>
-      <div className={s.filter}>
-        {workers.map((w) => (
-          <Tag.CheckableTag key={w.id} checked={chosen.has(w.id)} onChange={() => toggle(w.id)} className={s.chip}>
-            <span className={s.avatar} aria-hidden>{initial(w.name)}</span>{w.name}
-          </Tag.CheckableTag>
-        ))}
-      </div>
+      {/* the crew strip is the filter (C6): one row of people, not a second row of chips */}
+      {seats.length > 0 && <CrewStrip seats={seats} chosen={chosen} onToggle={toggle} />}
 
       {questions.length > 0 && (
         <ul className={s.questions}>

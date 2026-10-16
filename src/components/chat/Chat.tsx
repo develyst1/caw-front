@@ -24,7 +24,7 @@ export type PartRef = { kind: string; title: string };
 const when = (iso: string) => new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(iso));
 const refusal = (r: ChatResult) => (r.ok ? null : chatRefused[r.code] ?? chatRefused.other!);
 
-function ProposalCard({ projectId, p, nameOf, parts }: { projectId: string; p: Proposal; nameOf: (id: string) => string; parts: Record<string, PartRef> }) {
+function ProposalCard({ projectId, p, nameOf, parts, primary }: { projectId: string; p: Proposal; nameOf: (id: string) => string; parts: Record<string, PartRef>; primary: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ function ProposalCard({ projectId, p, nameOf, parts }: { projectId: string; p: P
       </ol>
       {p.status === "open" && (
         <div className={s.proposalFoot}>
-          <Button size="large" type="primary" onClick={create} loading={pending} data-create>{words.createCards}</Button>
+          <Button size="large" type={primary ? "primary" : "default"} onClick={create} loading={pending} data-create>{words.createCards}</Button>
           {error && <p className={s.refused} role="alert">{error}</p>}
         </div>
       )}
@@ -79,14 +79,19 @@ function FailedStep({ projectId, messageId }: { projectId: string; messageId: st
   );
 }
 
-export function Chat({ projectId, messages, proposals, workers, parts }: {
+/** `variant="panel"` (TASK-B-064, SPEC-B-003 Decision 3): the same thread and box beside the board — the chat is the front door. Its head may carry
+ *  the first missing thing as a link to its fix (`missing`, D-063); at ≤ 760 px only the box shows, fixed to the bottom of the screen. */
+export function Chat({ projectId, messages, proposals, workers, parts, variant = "page", missing, pinned = true }: {
   projectId: string; messages: ChatMessage[]; proposals: Proposal[]; workers: Worker[]; parts: Record<string, PartRef>;
+  variant?: "page" | "panel"; missing?: { text: string; fix: string; href: string } | null; pinned?: boolean;
 }) {
   const router = useRouter();
   const byId = new Map(workers.map((w) => [w.id, w]));
   const nameOf = (id: string) => byId.get(id)?.name ?? id;
   const author = (a: ChatMessage["author"]) => (a === "operator" ? operatorName : nameOf(a.slice("worker:".length)));
   // the proposals on each operator message, newest first; drawn under the worker's reply to that message
+  // one primary per screen (B7, B-064 review): only the newest open proposal's สร้างการ์ด is primary; older open ones are secondary
+  const newestOpen = [...proposals].filter((p) => p.status === "open").sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.id;
   const onMessage = (messageId: string) => proposals.filter((p) => p.messageId === messageId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const [text, setText] = useState("");
   const [pending, start] = useTransition();
@@ -100,8 +105,11 @@ export function Chat({ projectId, messages, proposals, workers, parts }: {
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); sendIt(); } };
 
   return (
-    <div className={s.page}>
-      <h2 className={s.h2}>{section.chat}</h2>
+    <div className={variant === "panel" ? `${s.panel} ${pinned ? "" : s.unpinned}` : s.page} data-chat-panel={variant === "panel" ? "" : undefined}>
+      <div className={s.head}>
+        <h2 className={s.h2}>{section.chat}</h2>
+        {missing && <p className={s.missing} data-missing>{missing.text} — <a href={missing.href}>{missing.fix}</a></p>}
+      </div>
       {messages.length === 0 ? <p className={s.empty}>{words.empty}</p> : (
         <ol className={s.thread}>
           {messages.map((m) => {
@@ -113,7 +121,7 @@ export function Chat({ projectId, messages, proposals, workers, parts }: {
                   <div className={s.msgHead}><span className={s.who}>{author(m.author)}</span><time className={s.at} dateTime={m.at}>{when(m.at)}</time></div>
                   <p className={s.text}>{m.text}</p>
                   {m.questions?.map((q, i) => (
-                    <div key={i} className={s.question} data-question>
+                    <div key={i} className={s.question} data-question={variant === "page" ? "" : undefined} data-chat-question>
                       <p className={s.qText}><QuestionCircleOutlined aria-hidden className={s.qIcon} />{q.text}</p>
                       <p className={s.label}>{proposedAnswer}</p>
                       <p className={s.qAnswer}>{q.proposedDefault}</p>
@@ -125,7 +133,7 @@ export function Chat({ projectId, messages, proposals, workers, parts }: {
                   )}
                 </div>
                 {failed && <FailedStep projectId={projectId} messageId={m.id} />}
-                {!mine && m.replyTo && onMessage(m.replyTo).map((p) => <ProposalCard key={p.id} projectId={projectId} p={p} nameOf={nameOf} parts={parts} />)}
+                {!mine && m.replyTo && onMessage(m.replyTo).map((p) => <ProposalCard key={p.id} projectId={projectId} p={p} nameOf={nameOf} parts={parts} primary={p.id === newestOpen} />)}
               </li>
             );
           })}
@@ -137,7 +145,8 @@ export function Chat({ projectId, messages, proposals, workers, parts }: {
         <div className={s.composerRow}>
           <span id={hint} className={s.hint}>{words.enterHint}</span>
           {error && <p className={s.refused} role="alert">{error}</p>}
-          <Button size="large" type="primary" htmlType="submit" disabled={pending || !text.trim()}>{send}</Button>
+          {/* one primary per screen (B7): beside the board the screen's primary is the step's or the proposal's; the box's ส่ง is secondary there */}
+          <Button size="large" type={variant === "panel" ? "default" : "primary"} htmlType="submit" disabled={pending || !text.trim()}>{send}</Button>
         </div>
       </form>
     </div>

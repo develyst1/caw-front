@@ -7,6 +7,7 @@ import { CawError } from "@/api/caw";
 import s from "@/components/projects.module.css";
 import st from "./start.module.css";
 import { CawRoot } from "@/theme/CawRoot";
+import { ThemeToggle } from "@/theme/ThemeToggle";
 import { sampleData, section, startRefused } from "@/words";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,8 @@ export default async function Start({ searchParams }: { searchParams: Promise<{ 
         <div className={s.headerIn}>
           <span className={s.mark}>CAW</span>
           <h1 className={s.title}>{section.projects}</h1>
+          <span className={st.spacer} />
+          <ThemeToggle />
         </div>
       </header>
       <main className={s.main}>

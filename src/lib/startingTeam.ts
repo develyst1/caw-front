@@ -2,6 +2,7 @@
 // Not atomic, so every step skips what is already there (`already_member` / `edge_exists` are fine, a worker with the name is reused): a second
 // call is a no-op and a retry after a drop finishes the team. The five names and the chain are `team-proposed`.
 import { CawError, type CawApi, type Chain, type WorkerRole } from "@/api/caw";
+import { STARTING_FACES } from "./faces";
 import { skillsFor } from "./roles";
 
 export const STARTING_TEAM: { name: string; role: WorkerRole }[] = [
@@ -23,7 +24,8 @@ export async function ensureStartingTeam(api: CawApi, projectId: string): Promis
   const seat = new Map<WorkerRole, string>();
   for (const { name, role } of STARTING_TEAM) {
     // workers are global: one with this name is reused, whatever it was made as; only a missing one is created
-    const worker = known.find((w) => w.name === name) ?? (await api.createWorker({ name, roles: [role], skills: skillsFor([role]) }));
+    // (a worker it creates gets its chosen face; one that exists is left exactly as it is — a face someone has is never overwritten)
+    const worker = known.find((w) => w.name === name) ?? (await api.createWorker({ name, roles: [role], skills: skillsFor([role]), avatar: STARTING_FACES[name] }));
     seat.set(role, worker.id);
     await idempotent(() => api.addMember(projectId, worker.id), "already_member");
   }

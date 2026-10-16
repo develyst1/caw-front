@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import type { Chain, Project, Worker, WorkerRole } from "@/api/caw";
 import { readiness, type ReadinessItem } from "./readiness";
 
-const W = (id: string, roles: WorkerRole[]): Worker => ({ id, name: id, role: roles[0]!, roles, skills: ["x"], model: "sonnet", effort: "medium", combinedFrom: null });
+const W = (id: string, roles: WorkerRole[]): Worker => ({ id, name: id, role: roles[0]!, roles, skills: ["x"], model: "sonnet", effort: "medium", combinedFrom: null, avatar: null, deletedAt: null });
 const project = (over: Partial<Project> = {}): Project => ({
   id: "p", name: "n", blueprintProjectId: "b", version: 1, latestSeenVersion: 1, mode: "manual", hopBudget: 0, hopsUsed: 0, entryWorkerId: null,
   workspace: { roots: ["/work/app"] }, createdAt: "", ...over,

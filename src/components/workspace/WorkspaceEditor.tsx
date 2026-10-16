@@ -4,8 +4,8 @@
 // เอาออก, and a field to add one. A path the rules refuse (relative, `..`, more than 20) answers with the field's own hint — no new word.
 import { Button, Input, Modal } from "antd";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { workspace } from "@/words";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { undo, workspace } from "@/words";
 import { saveRoots } from "./actions";
 import { canAdd } from "./roots";
 import s from "./workspace.module.css";
@@ -16,6 +16,10 @@ export function WorkspaceEditor({ projectId, roots }: { projectId: string; roots
   const [draft, setDraft] = useState("");
   const [refused, setRefused] = useState(false);
   const [pending, start] = useTransition();
+  // a removed folder: removed at once, `เลิกทำ` for 5 s puts it back (A-P6; words: PM 2026-10-16)
+  const [removed, setRemoved] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const save = (next: string[], then?: () => void) => start(async () => {
     const r = await saveRoots(projectId, next);
@@ -30,7 +34,7 @@ export function WorkspaceEditor({ projectId, roots }: { projectId: string; roots
 
   return (
     <>
-      <Button className={s.trigger} size="large" onClick={() => setOpen(true)}>{workspace.heading}{roots.length > 0 ? ` (${roots.length})` : ""}</Button>
+      <Button className={s.trigger} size="large" onClick={() => setOpen(true)} data-folders>{workspace.heading}{roots.length > 0 ? ` (${roots.length})` : ""}</Button>
       <Modal title={workspace.heading} open={open} onCancel={() => { setOpen(false); setRefused(false); }} footer={null} destroyOnHidden>
         <div className={s.body}>
           {roots.length > 0 && (
@@ -38,10 +42,20 @@ export function WorkspaceEditor({ projectId, roots }: { projectId: string; roots
               {roots.map((r) => (
                 <li key={r} className={s.root} data-root>
                   <span className={s.path}>{r}</span>
-                  <Button size="large" disabled={pending} onClick={() => save(roots.filter((x) => x !== r))}>{workspace.remove}</Button>
+                  <Button size="large" disabled={pending} onClick={() => save(roots.filter((x) => x !== r), () => {
+                    setRemoved(r);
+                    if (timer.current) clearTimeout(timer.current);
+                    timer.current = setTimeout(() => setRemoved(null), 5000);
+                  })}>{workspace.remove}</Button>
                 </li>
               ))}
             </ul>
+          )}
+          {removed && (
+            <div className={s.toast} role="status" data-undo-toast>
+              <span>{undo.folderRemoved(removed)}</span>
+              <button type="button" className={s.toastBtn} onClick={() => { const r = removed; setRemoved(null); save([...roots, r]); }}>{undo.button}</button>
+            </div>
           )}
           <form className={s.add} onSubmit={(e) => { e.preventDefault(); add(); }}>
             <div className={s.row}>

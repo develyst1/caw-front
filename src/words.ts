@@ -75,9 +75,6 @@ export const team = {
   roleOther: "อื่นๆ",                              // the `other` role
   effortLevel: { low: "น้อย", medium: "กลาง", high: "มาก" } as Record<string, string>,
   addWorker: "เพิ่มคนทำงาน",                       // the form's heading and its button
-  combine: "รวมสองคน",                            
-  combinePick: (n: number) => `คนที่ ${n}`,          // the two picks in combine (PM 2026-10-14)
-  combinedName: "ชื่อคนที่รวมแล้ว",                 
   combinedFrom: (a: string, b: string) => `รวมจาก ${a} กับ ${b}`,
   addToChain: "เพิ่มเข้าสายงาน",                   
   remove: "เอาออก",                                // carried-over (workspace.remove)
@@ -187,6 +184,68 @@ export const redesign = {
   seatFree: "ว่าง",                                                                    // REQ-014 (D-061) crew seat
   workingNow: column.doing,                                                             // carried-over word, new place (a tag)
   asks: (name: string, part: string) => `${name} ถาม · ${part}`,                        // REQ-014 (D-061) question card meta
+} as const;
+
+// ---- REQ-014 after STUDY-002 (D-063, D-064, D-065, D-066): as written in the REQ / B-066 § 3 / SPEC-B-003 answers. The readiness rules
+// `ทุกคนมีบทบาท` and `ตั้งงบไว้แล้ว` are NOT here: dropped by the review (SPEC-B-003 A3, A4) before the build ----
+/** The light / dark toggle's accessible name (D-063). */
+export const themeToggle = "สลับโหมดมืด / สว่าง";
+/** What is missing, as a link to its fix (D-063): the sentence, then the link words. Chat head + steps panel. */
+export const missing = {
+  team: { text: "ยังไม่มีทีม", fix: "จัดทีม" },
+  entry: { text: "ยังไม่มีคนรับงานคนแรก", fix: "เลือกที่หน้าทีม" },
+  folder: { text: "ยังไม่ได้กำหนดโฟลเดอร์", fix: "เพิ่มโฟลเดอร์" },
+} as const;
+/** The mode switch explains itself (D-063): one line for the mode in effect. */
+export const modeLine: Record<Mode, string> = {
+  manual: "แบบสั่งทีละขั้น — คุณกดให้แต่ละคนทำทีละก้าว",
+  dispatcher: "อัตโนมัติ — ทีมทำต่อกันเองจนครบงบที่คุณตั้ง",
+};
+export const live = {
+  readyCount: (done: number) => `พร้อมเริ่ม ${done}/3`,                 // D-063 first steps
+  quiet: (min: number) => `เงียบไป ${min} นาที`,                       // D-064 (only from Hop.lastActivityAt — SPEC-B-003 C7)
+  linkHere: "ต่อที่นี่",                                                   // D-064 chain picture
+  freeWithCards: (n: number) => `ว่าง · งานค้าง ${n}`,                   // D-066 crew seat
+  waitingOnYou: (n: number) => `รอคุณตอบ ${n}`,                         // D-066 home row
+  linkHint: "แตะจุดที่คนส่ง แล้วแตะ ต่อที่นี่ ที่คนรับ",                      // D-066 chain hint (≥ 768)
+  rolesNextJob: "มีผลตั้งแต่งานถัดไป",
+  answeringChat: "กำลังตอบแชต",                                               // REQ-014 2026-10-16 (C7, PM): a seat whose running step is a chat answer                                       // D-066 under the role picker while working
+  teamFact: (n: number) => `ทีม ${n} คน`,                               // D-065 step 1 fact
+  folderFact: (n: number) => `${n} โฟลเดอร์`,                            // D-065 step 2 fact
+  carryOn: "ทำต่อ",                                                        // D-065 home: a project not started yet
+  youLine: "สั่งงาน · ตอบคำถาม",                                            // D-065 the คุณ node
+} as const;
+/** The readiness checklist (D-065, minus A3 / A4): each rule's line, and its fix when it is not met. */
+export const readiness = {
+  heading: "ความพร้อม",
+  entry: { ok: "มีคนรับงานคนแรก" },                                        // fix = missing.entry
+  reachable: { ok: "ทุกคนอยู่ในสายงาน", fix: (names: string) => `ต่อ ${names} เข้ากับสายงาน` },
+  handOff: { ok: "FE และ BE ทุกคนส่งงานต่อได้", fix: (name: string, qa: string) => `ต่อเส้นจาก ${name} ไปหา ${qa}` },
+  qaNotBuilder: { ok: "QA ไม่ได้สร้างงานที่ตัวเองตรวจ", fix: (role: string, name: string) => `เอา ${role} ออกจาก ${name}` },
+  folder: { ok: "มีโฟลเดอร์ที่ทีมเขียนได้" },                                // fix = missing.folder
+} as const;
+/** The role picker (D-065): heading, hint, and one duty line per role (`other` has none — SPEC-B-003 A5). */
+export const rolePicker = {
+  heading: (name: string) => `บทบาทของ ${name}`,
+  hint: "เลือกได้หลายบทบาท",
+  details: "รายละเอียด",
+  duty: { other: "บทบาทที่สร้างไว้เอง — ดูสกิลในรายละเอียด", PM: "รับเรื่องจากคุณ แบ่งเป็นงาน", BA: "เขียนความต้องการให้ชัด", SA: "ออกแบบวิธีทำ ส่งงานให้ FE และ BE", FE: "ทำหน้าจอ", BE: "ทำระบบหลังบ้าน", QA: "ตรวจงานก่อนส่งถึงคุณ" } as Record<string, string>,
+} as const;
+/** Undo instead of a confirm (D-065): the toast's sentence and its button. */
+export const undo = {
+  button: "เลิกทำ",
+  cut: (from: string, to: string) => `ตัดเส้น ${from} → ${to} แล้ว`,
+  removed: (name: string) => `เอา ${name} ออกจากทีมแล้ว`,
+  folderRemoved: (path: string) => `เอาโฟลเดอร์ ${path} ออกแล้ว`,           // REQ-014 2026-10-16 (PM)
+  linkFailed: (from: string, to: string) => `ต่อ ${from} → ${to} ไม่สำเร็จ`,     // REQ-014 2026-10-16 (A7, PM): an undo's line that did not come back
+} as const;
+/** The face picker (D-071, TASK-B-070 § words as written): heading, its three rows, and every part's name (each option's accessible name). */
+export const faces = {
+  heading: (name: string) => `หน้าตาของ ${name}`,
+  rows: { body: "รูปร่าง", color: "สี", eyes: "ตา" },
+  body: { pebble: "ก้อนกลม", dome: "โดม", egg: "ไข่", gem: "เพชร", cape: "ผ้าคลุม", hex: "หกเหลี่ยม" } as Record<string, string>,
+  color: { violet: "ม่วง", plum: "ม่วงพลัม", magenta: "บานเย็น", rose: "กุหลาบ", olive: "มะกอก", teal: "เขียวหัวเป็ด", slate: "เทาฟ้า", ink: "หมึก" } as Record<string, string>,
+  eyes: { dots: "จุด", beans: "เมล็ดถั่ว", smile: "ยิ้ม", sleepy: "ง่วง", one: "ตาเดียว" } as Record<string, string>, // read as `ตา{name}`
 } as const;
 
 /** On sample data (CAW_API=mock), every page says so (REQ-011 l.59, D-058). */

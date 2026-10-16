@@ -7,8 +7,9 @@ import { mode, runRunning, runStillOpen, runStopped, stopReason } from "../src/w
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 type Page = import("@playwright/test").Page;
-const auto = (page: Page) => page.locator(".ant-segmented-item").filter({ hasText: mode.dispatcher });
-const manual = (page: Page) => page.locator(".ant-segmented-item").filter({ hasText: mode.manual });
+// TASK-B-085: the mode is a Radix ToggleGroup (one of two → role radio, aria-checked), no longer Ant's Segmented
+const auto = (page: Page) => page.locator("[data-mode-control]").getByRole("radio", { name: mode.dispatcher });
+const manual = (page: Page) => page.locator("[data-mode-control]").getByRole("radio", { name: mode.manual });
 const budgetBox = (page: Page) => page.locator(".ant-popover:visible input");
 const submitBudget = (page: Page) => page.getByRole("button", { name: mode.dispatcher, exact: true }).last().click();
 const budgetLine = async (page: Page) => /งบ \d+ ก้าว · ใช้ไป \d+/.exec((await page.locator("header").first().textContent())!)![0];
@@ -38,7 +39,7 @@ test("mode: a run opened elsewhere while the budget box is up — อัตโ�
   await submitBudget(page);
   await expect(page.getByRole("alert").filter({ hasText: runStillOpen })).toBeVisible(); // (Next's route announcer is a 2nd alert)
   await expect(page.locator("header").first()).toContainText(line);
-  await expect(auto(page)).toHaveClass(/ant-segmented-item-selected/);
+  await expect(auto(page)).toHaveAttribute("aria-checked", "true");
   await other.goto(`${BOARD}/runs`);
   await expect(other.locator("[data-run]")).toHaveCount(runs);
 });
@@ -49,7 +50,7 @@ test("mode: back to แบบสั่งทีละขั้น ends the open 
   await submitBudget(page);
   await expect(page.locator('[data-run-state="open"]')).toBeVisible();
   await manual(page).click();
-  await expect(manual(page)).toHaveClass(/ant-segmented-item-selected/);
+  await expect(manual(page)).toHaveAttribute("aria-checked", "true");
   await expect(page.locator('[data-run-state="open"]')).toHaveCount(0);
   await page.goto(`${BOARD}/runs`);
   await expect(page.locator("[data-run]").first().locator("[data-stop]")).toHaveText(stopReason.operator_stopped);
@@ -67,7 +68,7 @@ test.describe("D-052: a run that ended by itself", () => {
     await expect(header).toContainText(runStopped(stopReason.budget_spent));
     await expect(header).not.toContainText(runRunning);
     await expect(page.locator('[data-run-state="open"]')).toHaveCount(0);
-    await expect(auto(page)).toHaveClass(/ant-segmented-item-selected/); // the mode is still อัตโนมัติ
+    await expect(auto(page)).toHaveAttribute("aria-checked", "true"); // the mode is still อัตโนมัติ
     await page.locator('[data-run-state="stopped"]').getByRole("button", { name: mode.dispatcher }).click();
     await expect(budgetBox(page)).toHaveValue("40");
   });
@@ -88,7 +89,7 @@ test("mode: หยุดการรันนี้ stops the open run — the s
   await expect(page.locator('[data-run-state="stopped"]')).toContainText(runStopped(stopReason.operator_stopped));
   await expect(page.locator('[data-run-state="open"]')).toHaveCount(0);
   await expect(page.locator("header").first()).not.toContainText(runRunning);
-  await expect(auto(page)).toHaveClass(/ant-segmented-item-selected/); // the mode is not changed by stopping
+  await expect(auto(page)).toHaveAttribute("aria-checked", "true"); // the mode is not changed by stopping
   await page.locator('[data-run-state="stopped"]').getByRole("button", { name: mode.dispatcher }).click();
   await expect(budgetBox(page)).toBeVisible();
   await page.locator(".ant-popover:visible").getByRole("button", { name: mode.dispatcher }).click(); // the box's own button, not the stopped line's
@@ -103,14 +104,14 @@ test.describe("D-056: an open run in แบบสั่งทีละขั้�
 
   test("กำลังรัน + หยุดการรันนี้ show; pressing stops the run and the mode stays แบบสั่งทีละขั้น; อัตโนมัติ then opens the budget box with no refusal", async ({ page }) => {
     const { stopThisRun } = await import("../src/words");
-    const manual = page.locator(".ant-segmented-item").filter({ hasText: mode.manual });
+    const manual = page.locator("[data-mode-control]").getByRole("radio", { name: mode.manual }); // TASK-B-085
     await page.goto(BOARD);
-    await expect(manual).toHaveClass(/ant-segmented-item-selected/);
+    await expect(manual).toHaveAttribute("aria-checked", "true");
     await expect(page.locator('[data-run-state="open"]')).toHaveText(runRunning);
     await page.getByRole("button", { name: stopThisRun }).click();
     await expect(page.locator('[data-run-state="open"]')).toHaveCount(0);
     await expect(page.locator("header").first()).not.toContainText(runRunning);
-    await expect(manual).toHaveClass(/ant-segmented-item-selected/); // the mode is not changed by stopping
+    await expect(manual).toHaveAttribute("aria-checked", "true"); // the mode is not changed by stopping
     await auto(page).click();
     await expect(budgetBox(page)).toBeVisible();
     await page.locator(".ant-popover:visible").getByRole("button", { name: mode.dispatcher }).click();

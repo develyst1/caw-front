@@ -6,11 +6,13 @@
 // stopped does not look like it is running: the last stop reason shows, with how to start the next run (D-052). Choosing
 // แบบสั่งทีละขั้น switches at once. An open run, in either mode, has หยุดการรันนี้ beside กำลังรัน (D-056, B-056): it stops the run
 // and leaves the mode, so on อัตโนมัติ the stopped line above takes over. The page around it is never reset — only the header's state changes.
-import { Button, InputNumber, Popover, Segmented, Tag } from "antd";
+import { Button, InputNumber, Popover, Tag } from "antd";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Mode, StopReason } from "@/api/caw";
 import { stopOpenRun, switchMode } from "@/app/p/[id]/actions";
+import { modeLine } from "@/words";
 import { budget, cardRefused, mode as modeWord, runRunning, runStillOpen, runStopped, stopReason, stopThisRun } from "@/words";
 import s from "./board.module.css";
 
@@ -18,7 +20,7 @@ const DEFAULT_BUDGET = 10;
 // the field's label is the REQ's own `งบ {n} ก้าว` — the first half of the budget words, never a new word
 const budgetLabel = (n: number) => budget(n, 0).split(" · ")[0]!;
 
-export type LastRun = { open: boolean; stopReason: StopReason | null } | null;
+export type LastRun = { open: boolean; stopReason: StopReason | null; hopBudget: number; hopsUsed: number; mode: Mode } | null;
 
 export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
   projectId: string; mode: Mode; hopBudget: number; hopsUsed: number; lastRun: LastRun;
@@ -64,16 +66,30 @@ export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
           </form>
         }
       >
-        <Segmented<Mode>
-          size="large"
+        {/* TASK-B-085: the mode is a ToggleGroup (Radix, one of two — role radio). The chosen side is a filled indigo-tint object;
+            on อัตโนมัติ that has stopped it is outlined only, so the header does not look like it is running (D-052). */}
+        <ToggleGroup
+          type="single"
           value={mode}
           disabled={pending}
-          className={stopped ? s.modeStopped : undefined}
-          options={[{ value: "manual", label: modeWord.manual }, { value: "dispatcher", label: modeWord.dispatcher }]}
-          onChange={(next) => (next === "dispatcher" ? ask() : go("manual"))}
-        />
+          aria-label={`${modeWord.manual} / ${modeWord.dispatcher}`}
+          spacing={0}
+          variant="outline"
+          className="rounded-lg"
+          onValueChange={(next) => { if (next === "dispatcher") ask(); else if (next === "manual") go("manual"); }}
+          data-mode-control
+          data-stopped={stopped || undefined}
+        >
+          {(["manual", "dispatcher"] as const).map((m) => (
+            <ToggleGroupItem key={m} value={m}
+              className="min-h-11 px-4 text-[15px] text-ink2 data-[state=on]:bg-now-soft data-[state=on]:text-now data-[state=on]:font-semibold hover:bg-now-soft hover:text-ink group-data-[stopped]/toggle-group:data-[state=on]:bg-transparent group-data-[stopped]/toggle-group:data-[state=on]:text-ink2">
+              {modeWord[m]}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </Popover>
-      <span className={s.budget}>{budget(hopBudget, hopsUsed)}</span>
+      {/* A4 (TASK-B-074): the budget only while an automatic run is open — that run's own งบ / ใช้ไป; otherwise nothing */}
+      {running && lastRun!.mode === "dispatcher" && <span className={s.budget}>{budget(lastRun!.hopBudget, lastRun!.hopsUsed)}</span>}
       {running && <Tag className={s.runTag} data-run-state="open">{runRunning}</Tag>}
       {running && <Button size="large" onClick={stop} loading={pending} data-stop-run>{stopThisRun}</Button>}
       {stopped && lastRun?.stopReason && (
@@ -83,6 +99,8 @@ export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
           <Button size="large" onClick={ask} disabled={pending} aria-describedby="caw-run-stopped">{modeWord.dispatcher}</Button>
         </span>
       )}
+      {/* the mode switch explains itself (D-063, TASK-B-064): one line for the mode in effect */}
+      <span className={s.modeLine} data-mode-line>{modeLine[mode]}</span>
       {error && <p className={s.modeError} role="alert">{error}</p>}
     </div>
   );

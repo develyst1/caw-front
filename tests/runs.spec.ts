@@ -42,8 +42,7 @@ test("runs: the manual hops are their own group, and a hop links to its card", a
   await page.goto(RUNS);
   const manual = page.locator("[data-manual]");
   await expect(manual.getByRole("heading", { level: 3, name: mode.manual })).toBeVisible();
-  await expect(manual.locator("[data-hop]")).toHaveCount(1);
-  await expect(manual).toContainText("1 ก้าว");
+  await expect(manual.locator("[data-hop]")).toHaveCount(2); // the old finished one and the one running now (ฝน, TASK-B-073 C5)
   await manual.locator("a").first().click();
   await expect(page).toHaveURL(new RegExp(`/p/${MOCK_PROJECT_ID}/c/[0-9a-f-]{36}$`));
 });
@@ -70,9 +69,9 @@ for (const [vw, vh] of [[1440, 900], [390, 844]] as const) {
 test("a run that is still going reads กำลังรัน — switching to อัตโนมัติ opens one; switching back keeps it on screen", async ({ page }) => {
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
   await page.getByText(mode.dispatcher, { exact: true }).first().click();
-  await page.locator("form button[type=submit]").click(); // the budget question's submit — it starts at the project's budget (D-051)
+  await page.locator(".ant-popover form button[type=submit]").click(); // the budget question's submit (scoped: the board also has the chat box's submit, TASK-B-064) — it starts at the project's budget (D-051)
   const seeded = (await createMockApi().project(MOCK_PROJECT_ID))!.hopBudget; // read from the seed, not a number (TASK-B-047 Q2)
-  await expect(page.locator("header")).toContainText(budget(seeded, 6));
+  await expect(page.locator("header")).toContainText(budget(seeded, 0)); // A4 (TASK-B-074): the open run's own budget, not the project's total
   await page.goto(RUNS);
   const runs = page.locator("[data-run]");
   await expect(runs).toHaveCount(3);
@@ -82,7 +81,7 @@ test("a run that is still going reads กำลังรัน — switching to 
   await expect(newest).toContainText(budget(seeded, 0));
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
   await page.getByText(mode.manual, { exact: true }).first().click();
-  await expect(page.locator("header")).toContainText(budget(seeded, 6)); // nothing else moved
+  await expect(page.locator("header")).not.toContainText("ใช้ไป"); // A4: no run open → no budget line
 });
 
 // The desk's floors (REQ-011 AC-8, TASK-B-046): no text under 14 px, no target under 44 px tall — on the whole runs page, every run open.

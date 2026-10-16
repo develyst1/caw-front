@@ -162,7 +162,7 @@ describe("workers, chain", () => {
 });
 
 describe("runs and hops (v1.1)", () => {
-  test("two finished runs (3 + 2 hops) newest first, and one manual hop (no run, no runner)", async () => {
+  test("two finished runs (3 + 2 hops) newest first, and two manual hops (no run, no runner): one finished, one running — ฝน's (C5)", async () => {
     const api = createMockApi();
     const [runs, hops] = [await api.runs(PID), await api.hops(PID)];
     expect(runs).toHaveLength(2);
@@ -170,17 +170,20 @@ describe("runs and hops (v1.1)", () => {
     expect(newer.startedAt > older.startedAt).toBe(true);
     expect([newer.stopReason, newer.hopsUsed, older.stopReason, older.hopsUsed]).toEqual(["budget_spent", 3, "nothing_workable", 2]);
     expect(runs.every((r) => r.endedAt !== null)).toBe(true);
-    expect(hops).toHaveLength(6);
+    expect(hops).toHaveLength(7);
     expect(hops.filter((h) => h.runId === newer.id)).toHaveLength(3);
     expect(hops.filter((h) => h.runId === older.id)).toHaveLength(2);
     const manual = hops.filter((h) => h.runId === null);
-    expect(manual).toHaveLength(1);
-    expect(manual[0]!.claimedBy).toBeNull();
+    expect(manual).toHaveLength(2); // the old finished one and the one running now
+    expect(manual.every((h) => h.claimedBy === null)).toBe(true);
+    expect(manual.filter((h) => h.endedAt === null)).toHaveLength(1);
     expect(hops.map((h) => h.startedAt)).toEqual([...hops.map((h) => h.startedAt)].sort().reverse());
     expect((await api.hops(PID, { runId: newer.id })).length).toBe(3);
     expect(await api.hops(PID, { limit: 2 })).toHaveLength(2);
-    expect(hops.every((h) => h.tokensIn !== null && h.tokensOut !== null && h.endedAt !== null && h.outcome !== null)).toBe(true);
-    expect((await api.projects())[0]!.hopsUsed).toBe(6); // every hop, run or manual
+    const finished = hops.filter((h) => h.endedAt !== null);
+    expect(finished).toHaveLength(6);
+    expect(finished.every((h) => h.tokensIn !== null && h.tokensOut !== null && h.outcome !== null)).toBe(true);
+    expect((await api.projects())[0]!.hopsUsed).toBe(7); // every hop, run or manual, the running one too
   });
 
   test("startRun opens a run (mode at start, budget given); a second one while it is open is refused 409 run_open", async () => {
