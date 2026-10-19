@@ -251,7 +251,7 @@ export const faces = {
 /** On sample data (CAW_API=mock), every page says so (REQ-011 l.59, D-058). */
 export const sampleData = "ข้อมูลตัวอย่าง — ไม่ได้ต่อกับ CAW จริง";
 /** After the mark (REQ-011 l.60, TASK-B-060); the command part is shown as code. */
-export const sampleDataHint = "ใช้ข้อมูลจริง: bun run dev:http";
+export const sampleDataHint = "ใช้ข้อมูลจริง: bun run dev"; // D-089: plain dev is the real app (TASK-B-095, F-124)
 
 /** The start-project page, when it cannot start. `apiDown` is Blueprint's own sentence, so the two apps say it the same way. */
 export const startRefused = {
@@ -322,4 +322,11 @@ export const runPage = {
 } as const;
 export const cardPage = {
   noActivity: "ยังไม่มีความเคลื่อนไหว — ความเห็นและการส่งต่อจะขึ้นที่นี่", // team-proposed B-088 — an empty timeline
+} as const;
+
+/** caw-back is down (D-089, TASK-B-093). `team-proposed B-093` until the PM approves. */
+export const backendDown = {
+  text: "ยังต่อ caw-back ไม่ได้ — เปิด caw-back ก่อน แล้วกดลองอีกครั้ง",   // team-proposed B-093
+  command: "คำสั่งเปิด caw-back",                                            // team-proposed B-093 — the label above the command line
+  tried: (url: string) => `ลองต่อที่ ${url}`,                               // team-proposed B-093
 } as const;

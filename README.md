@@ -3,14 +3,15 @@
 ## Run
 
 Next.js 16.3.6 · React 19.3.0 · TypeScript 5.9.3 · Ant Design 6.6.5 · bun · Playwright 1.64.0 — the versions of `blueprint-front`.
-Every screen reads and writes through `src/api/caw.ts` (`CawApi`); the implementation is `src/api/mock.ts` (built-in sample data,
-`CAW_API=mock`, the default) or `src/api/http.ts` on caw-back's OpenAPI (`CAW_API=http`). Words live in `src/words.ts`.
+Every screen reads and writes through `src/api/caw.ts` (`CawApi`); the implementation is `src/api/http.ts` on caw-back's OpenAPI (`CAW_API=http`,
+the default — D-089) or `src/api/mock.ts` (built-in sample data, `CAW_API=mock`, for team checks and the e2e). Words live in `src/words.ts`.
 The app never touches a database.
 
 ```bash
 bun install
-bun run dev                              # http://127.0.0.1:3500 (PORT=… to change it) — the built-in sample data
-bun run dev:http                         # the same, talking to a running caw-back at CAW_API_URL (default http://127.0.0.1:4500)
+bun run dev                              # http://127.0.0.1:3500 (PORT=… to change it) — the real app, talking to caw-back at CAW_API_URL
+                                         # (default http://127.0.0.1:4500); if caw-back is down the screen says so, with the command to start it
+bun run dev:mock                         # the same on the built-in sample data (team checks; the e2e uses it too)
 NEXT_DIST_DIR=.next-b bun run build      # each person builds into their own folder (Bob .next-b, Fanta .next-f)
 PORT=3510 NEXT_DIST_DIR=.next-b bun run start   # a production run; the default port is 3500 too
 bun run typecheck
@@ -30,7 +31,7 @@ Each in its own terminal. `pglite:memory` is a throw-away database in memory (it
 | 1 | `blueprint-back` | `cd blueprint-back && DATABASE_URL=pglite:memory bun run dev` | 4200 |
 | 2 | `blueprint-front` | `cd blueprint-front && bun run dev` | 3100 |
 | 3 | `caw-back` | `cd caw-back && DATABASE_URL=pglite:memory bun run dev` | 4500 |
-| 4 | `caw-front` | `cd caw-front && bun run dev:http` | 3500 |
+| 4 | `caw-front` | `cd caw-front && bun run dev` | 3500 |
 
 Order matters: `caw-back` asks `blueprint-back` (4200) whether a project and its version exist when a CAW project is made, and
 `caw-front` asks `caw-back`. Blueprint's "ส่งไปสร้างที่ CAW" opens `http://127.0.0.1:3500/start?project=…&version=…`.

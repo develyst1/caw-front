@@ -192,8 +192,9 @@ test("@1440 no name part is broken across lines — nodes and drawer head", asyn
   expect(await broken()).toEqual([]);
 });
 
-// TASK-B-092 DEF-3: at 390 a first name wider than the drawer title ends in … (never cut), and the whole name is in the title
-test("@390 a too-long first name ends in … in the drawer title, with the whole name in its title", async ({ page }) => {
+// TASK-B-092 DEF-3 (rework, Q2 answer 2026-10-19): at 390 the drawer title shows the WHOLE name — a first name wider than the title wraps inside itself,
+// with no …; the whole name is also in the title attribute
+test("@390 a too-long first name is shown whole in the drawer title — every letter, no …", async ({ page }) => {
   const long = "มิ้นท์มณีรัตนาภรณ์ วงศ์สวัสดิ์";
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(TEAM);
@@ -205,7 +206,9 @@ test("@390 a too-long first name ends in … in the drawer title, with the whole
   await page.locator("[data-chain-tree] [data-node]").filter({ hasText: "วงศ์สวัสดิ์" }).click();
   const title = drawer(page).locator("h2[data-name]");
   await expect(title).toHaveAttribute("title", long);
-  const first = title.locator("[data-name-part]").first();
-  const m = await first.evaluate((e) => ({ cut: e.scrollWidth > e.clientWidth, ellipsis: getComputedStyle(e).textOverflow, inside: e.getBoundingClientRect().right <= innerWidth }));
-  expect(m).toEqual({ cut: true, ellipsis: "ellipsis", inside: true });
+  expect((await title.innerText()).replace(/\s+/g, " ").trim()).toBe(long);
+  const parts = await title.locator("[data-name-part]").evaluateAll((ps) => ps.map((p) => ({
+    ellipsis: getComputedStyle(p).textOverflow, clipped: p.scrollWidth > p.clientWidth + 1, inside: p.getBoundingClientRect().right <= innerWidth + 0.5,
+  })));
+  expect(parts).toEqual([{ ellipsis: "clip", clipped: false, inside: true }, { ellipsis: "clip", clipped: false, inside: true }]);
 });

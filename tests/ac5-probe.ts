@@ -7,7 +7,7 @@
 //   outside-clip    an element sits outside its nearest clipping ancestor, on an axis where that ancestor does NOT scroll (auto / scroll is fine)
 //   svg-stroke      an SVG shape's stroke reaches outside its svg
 //   svg-covered     the middle of an svg is under another node (one that is neither its ancestor nor inside it) — unless the svg is scrolled out of its own scroll box
-//   thai-broken     a name is split across two lines: for `[data-name]` any space-separated part of it (TASK-B-089); for the other name elements any Thai word (Intl.Segmenter('th'))
+//   thai-broken     a name is split across two lines: for `[data-name]` any space-separated part of it that would fit on one line (TASK-B-089; a part wider than its box may wrap inside itself, Q1 of B-091); for the other name elements any Thai word (Intl.Segmenter('th'))
 //   title-cut       (inside an open layer only) the layer's title is cut by an ellipsis or a line clamp — a drawer or dialog must show the whole of what it is about
 //   page-overflow-x the page scrolls sideways
 // Console errors and the stored-dark cold start are measured by the spec (they need the page's events, not its DOM).
@@ -129,6 +129,24 @@ export function probe(arg: string | [string, Element | null | undefined]): Failu
   // surname into dictionary words, so a browser wrapping inside the surname would pass): every part must stay on one line. The other name elements the selector
   // matches (the screens' `__name` class, no `data-name` yet) keep the word-by-word check with `Intl.Segmenter('th')`.
   const segmenter = new Intl.Segmenter("th", { granularity: "word" });
+  /** the width of `text` on ONE line, in `el`'s own font — measured with a throw-away nowrap span inside it */
+  const oneLineWidth = (el: Element, text: string) => {
+    const ruler = document.createElement("span");
+    ruler.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:0;top:0";
+    ruler.textContent = text;
+    el.appendChild(ruler);
+    const w = ruler.getBoundingClientRect().width;
+    ruler.remove();
+    return w;
+  };
+  /** the width the name's lines can use: the content box of the nearest block box (an inline wrapper has none of its own) */
+  const contentWidth = (el: Element) => {
+    let box: Element | null = el;
+    while (box && getComputedStyle(box).display === "inline") box = box.parentElement;
+    if (!box) return el.getBoundingClientRect().width;
+    const cs = getComputedStyle(box);
+    return box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  };
   /** the line boxes of a character range are on more than one line */
   const onTwoLines = (node: Node, start: number, end: number) => {
     const range = document.createRange();
@@ -145,7 +163,13 @@ export function probe(arg: string | [string, Element | null | undefined]): Failu
     for (let node = walker.nextNode(); node && !broken; node = walker.nextNode()) {
       const text = node.textContent ?? "";
       if (byPart) {
-        for (const part of text.matchAll(/\S+/g)) if (onTwoLines(node, part.index!, part.index! + part[0].length)) { broken = true; break; }
+        for (const part of text.matchAll(/\S+/g)) {
+          if (!onTwoLines(node, part.index!, part.index! + part[0].length)) continue;
+          // a part that is wider than the box even on ONE line cannot fit anywhere: it may wrap inside itself as a last resort (`overflow-wrap: anywhere`, polish-plan § 2.4).
+          // Every part that would fit on one line must not wrap.
+          if (oneLineWidth(el, part[0]) > contentWidth(el) + 0.5) continue;
+          broken = true; break;
+        }
       } else {
         for (const seg of segmenter.segment(text)) {
           if (!seg.isWordLike || !/[฀-๿]/.test(seg.segment)) continue;

@@ -16,7 +16,7 @@ test("the mark is on every page, exactly once", async ({ page }) => {
     await expect(page.locator("[data-sample-data]"), url).toContainText(sampleData);
     // B-060: the hint follows the mark, its command set as code — something to type
     await expect(page.locator("[data-sample-data]"), url).toContainText(sampleDataHint);
-    await expect(page.locator("[data-sample-data] code"), url).toHaveText("bun run dev:http");
+    await expect(page.locator("[data-sample-data] code"), url).toHaveText("bun run dev"); // TASK-B-095: D-089
   }
 });
 

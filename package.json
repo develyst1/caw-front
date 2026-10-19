@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p ${PORT:-3500}",
-    "dev:http": "CAW_API=http CAW_API_URL=${CAW_API_URL:-http://127.0.0.1:4500} next dev -p ${PORT:-3500}",
+    "dev:mock": "CAW_API=mock next dev -p ${PORT:-3500}",
     "build": "next build",
     "start": "next start -p ${PORT:-3500}",
     "typecheck": "tsc --noEmit",

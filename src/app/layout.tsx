@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
+import { connection } from "next/server";
+import { backendReachable, backendUrl, onSampleData } from "@/api";
+import { BackendDown } from "@/components/BackendDown";
 import { SampleDataMark } from "@/components/SampleDataMark";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -18,6 +21,10 @@ const theme = `try{var t=localStorage.getItem("caw-theme");if(t!=="dark"&&t!=="l
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // a stored pick also reaches the server (ThemeToggle writes the cookie), so the HTML itself arrives in that scheme
   const stored = (await cookies()).get("caw-theme")?.value;
+  // D-089: on the real back end, ask once whether caw-back answers — if not, every page shows BackendDown in place of its content (decided here, on
+  // the server: a production build hides a server error's message from the client, so error.tsx could not tell "down" from any other failure)
+  await connection();
+  const down = !onSampleData() && !(await backendReachable());
   return (
     <html lang="th" className={plex.variable} data-theme={stored === "dark" || stored === "light" ? stored : undefined} suppressHydrationWarning>
       <head>
@@ -25,7 +32,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         <SampleDataMark />
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>{down ? <BackendDown url={backendUrl()} /> : children}</TooltipProvider>
       </body>
     </html>
   );

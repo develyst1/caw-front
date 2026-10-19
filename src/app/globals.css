@@ -11,6 +11,7 @@
 :root {
   --gd-canvas: #F8F9FC;      /* the page behind the sheets — near-white, not grey */
   --gd-sheet: #FFFFFF;
+  --gd-panel: var(--gd-sheet); /* the layer between page and cards — in light it is the sheet, so light reads as before (D-091) */
   --gd-ink: #141826;
   --gd-ink2: #4E5568;        /* secondary text */
   --gd-ink3: #656C7E;        /* tertiary text (≥ 4.5 on sheet and canvas) */
@@ -45,19 +46,22 @@
   --radius: 0.625rem;
 }
 
+/* dark = V1 "Soft Graphite" (D-091; desk studies/REQ-014-dark/variants.css): a neutral, slightly cool grey whose three layers
+   step by lightness only — page --gd-canvas < panel --gd-panel < card --gd-sheet */
 [data-theme="dark"] {
-  --gd-canvas: #0D1017;
-  --gd-sheet: #151926;
-  --gd-ink: #ECEEF5;
-  --gd-ink2: #A8AEC0;
-  --gd-ink3: #8A90A3;
-  --gd-hair: #242A3A;
-  --gd-hair2: #313849;
-  --gd-accent: #A5B4FC;
-  --gd-accent-soft: #1E2140;
-  --gd-on-accent: #0D1017;
-  --gd-stuck: #F2B467;
-  --gd-stuck-soft: #2B2114;
+  --gd-canvas: #111317;
+  --gd-panel: #181B21;
+  --gd-sheet: #20242C;
+  --gd-ink: #EEF0F4;
+  --gd-ink2: #B7BCC7;
+  --gd-ink3: #9BA1AD;
+  --gd-hair: #2A2E37;
+  --gd-hair2: #3A3F4A;
+  --gd-accent: #AAB6FF;
+  --gd-accent-soft: #262B44;
+  --gd-on-accent: #111317;
+  --gd-stuck: #F5B76A;
+  --gd-stuck-soft: #2A2218;
   --gd-danger: #F97066;
   --gd-scrim: rgb(0 0 0 / 0.5);
   color-scheme: dark;
@@ -68,6 +72,7 @@
   --font-heading: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
   --color-canvas: var(--gd-canvas);
   --color-sheet: var(--gd-sheet);
+  --color-panel: var(--gd-panel);
   --color-ink: var(--gd-ink);
   --color-ink2: var(--gd-ink2);
   --color-ink3: var(--gd-ink3);
@@ -113,6 +118,26 @@
     outline-offset: 2px;
   }
 }
+
+/* ---- dark only (D-091, from variants.css): containers are panels, cards are sheets ---- */
+[data-theme="dark"] header:not(main header), /* the page's top bar only — a heading block inside a page (the card's) stays on the page */
+[data-theme="dark"] [data-crew-wrap],
+[data-theme="dark"] [data-columns],
+[data-theme="dark"] [data-asks] > li,
+[data-theme="dark"] [data-chat-panel],
+[data-theme="dark"] [data-first-steps] { background: var(--gd-panel); }
+[data-theme="dark"] [data-columns] [data-card],
+[data-theme="dark"] [data-composer] textarea { background: var(--gd-sheet); }
+[data-theme="dark"] [data-crew-fade] { --tw-gradient-from: var(--gd-panel); }
+
+/* ---- no slabs: the folded first steps and the notes are tints or hairlines ---- */
+[data-theme="dark"] [data-first-steps][data-folded] { background: transparent; border: 1px solid var(--gd-hair); color: var(--gd-ink2); }
+[data-theme="dark"] [data-amendment] { background: transparent; border: 1px solid color-mix(in oklab, var(--gd-stuck) 35%, transparent); }
+
+/* ---- no box inside a box in the chat: the worker's reply sits on the panel with its face; its question is set off by a hairline, not a frame ---- */
+[data-theme="dark"] [data-message="worker"] [data-bubble] { border-color: transparent; background: transparent; padding-left: 0; padding-right: 0; }
+[data-theme="dark"] [data-chat-question] { border: 0; border-top: 1px solid var(--gd-hair); border-radius: 0; background: transparent; padding-left: 0; padding-right: 0; }
+[data-theme="dark"] [data-message="operator"] [data-bubble] { background: var(--gd-accent-soft); }
 
 @layer utilities {
   /* a person's or a card's name on one line: full words, ellipsis at the end (the full text goes in `title`) */

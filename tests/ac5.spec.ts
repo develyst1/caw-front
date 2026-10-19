@@ -143,7 +143,7 @@ test.describe("AC-5 on every open layer, operator-like seed", () => {
 test.describe("the AC-5 probe proves itself", () => {
   const BAD = `<!doctype html><meta charset="utf-8"><body style="margin:0;font:16px sans-serif">
     <div style="width:40px;white-space:nowrap">ข้อความที่ยาวกว่ากล่องมากมาย</div>
-    <div data-name style="width:30px;word-break:break-all">สมศักดิ์ศรีประเสริฐวงศ์</div>
+    <div data-name style="width:150px">ณัฐธิดา วิริยะกุลพัฒนาเลิศ</div>
     <script>console.error("a console error the probe must see")</script>`;
   const CLEAN = `<!doctype html><meta charset="utf-8"><body style="margin:0;font:16px sans-serif">
     <div style="width:200px">ข้อความสั้น</div>
@@ -246,6 +246,28 @@ test.describe("the AC-5 probe proves itself", () => {
   test("@ac5 [data-name]: the name's SECOND text node is measured too (a name made of several elements): a break inside the surname there is caught", async ({ page }) => {
     const out = await run(page, `<!doctype html><meta charset="utf-8"><body style="margin:0;font:16px sans-serif"><span data-name style="display:block;width:150px"><b>ณัฐธิดา</b> <i>วิริยะกุลพัฒนาเลิศ</i></span>`);
     expect(rulesOf(out)).toEqual(["thai-broken"]);
+  });
+
+  // a part wider than its box on ONE line cannot fit anywhere: it may wrap inside itself as a last resort (polish-plan § 2.4, overflow-wrap:anywhere) — TASK-B-091 Q1.
+  // Every part that WOULD fit on one line still must not wrap (the 150 px / 16 px "ณัฐธิดา วิริยะกุลพัฒนาเลิศ" test above: the surname is ~124 px wide on one line).
+  test("@ac5 [data-name]: a part WIDER than the box on one line wraps inside itself — allowed (last resort), 0 failures", async ({ page }) => {
+    const out = await run(page, `<!doctype html><meta charset="utf-8"><body style="margin:0;font:22px sans-serif"><span data-name style="display:block;width:150px;overflow-wrap:anywhere">มิ้นท์มณีรัตนาภรณ์ วงศ์สวัสดิ์</span>`);
+    expect(out).toEqual([]);
+    const m = await page.evaluate(() => {
+      const el = document.querySelector("[data-name]")!, text = el.firstChild as Text;
+      const first = document.createRange(); first.setStart(text, 0); first.setEnd(text, "มิ้นท์มณีรัตนาภรณ์".length);
+      const ruler = document.createElement("span"); ruler.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap"; ruler.textContent = "มิ้นท์มณีรัตนาภรณ์"; el.appendChild(ruler);
+      const oneLine = ruler.getBoundingClientRect().width; ruler.remove();
+      return { lines: new Set([...first.getClientRects()].map((r) => Math.round(r.top))).size, oneLine };
+    });
+    expect(m.oneLine, "the first part must really be wider than the 150px box").toBeGreaterThan(150);
+    expect(m.lines, "…and must really wrap inside itself").toBeGreaterThan(1);
+  });
+
+  test("@ac5 [data-name]: the exemption is PER PART — a long part wrapping inside itself does not excuse another part that would fit one line and is broken", async ({ page }) => {
+    // the first part is wider than the box (exempt); the 2nd fits on one line in a 150px box but is held in a 40px box so it breaks inside itself
+    const out = await run(page, `<!doctype html><meta charset="utf-8"><body style="margin:0;font:22px sans-serif"><span data-name style="display:block;width:150px;overflow-wrap:anywhere">มิ้นท์มณีรัตนาภรณ์ วงศ์สวัสดิ์</span>`.replace("วงศ์สวัสดิ์</span>", "<span style=\"display:inline-block;width:40px;overflow-wrap:anywhere\">วงศ์สวัสดิ์</span></span>"));
+    expect(out.map((f) => f.split(" · ")[3])).toEqual(["thai-broken"]);
   });
 
   test("@ac5 a name element WITHOUT data-name (the screens' `__name` class) is still measured word by word with Intl.Segmenter: a word cut mid-way is caught", async ({ page }) => {

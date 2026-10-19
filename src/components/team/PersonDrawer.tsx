@@ -100,7 +100,7 @@ export function PersonDrawer({ person, chain, workers, working, focus, busy, err
               </button>
               <div className="grid min-w-0 flex-1 gap-0.5">
                 {/* the whole name, wrapping at spaces only; a part too wide ends in … (DEF-3) — no line clamp here, so no part is ever clipped by it (B-091 drawer layer) */}
-                <SheetTitle className="m-0 min-w-0 text-[22px] font-semibold leading-snug text-ink" data-name title={p.name}><NameParts name={p.name} /></SheetTitle>
+                <SheetTitle className="m-0 min-w-0 text-[22px] font-semibold leading-snug text-ink" data-name title={p.name}><NameParts name={p.name} mode="wrap" /></SheetTitle>
                 <SheetDescription className="m-0 text-sm text-ink3">{p.roles.map(roleWord).join(" · ")}{isEntry ? ` · ${words.entry}` : ""}</SheetDescription>
               </div>
               <Button variant="ghost" className="min-h-11" onClick={onClose}>{teamPage.close}</Button>
