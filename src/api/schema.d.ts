@@ -95,7 +95,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -113,7 +113,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -179,7 +179,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -246,7 +246,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -373,7 +373,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -391,7 +391,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -455,7 +455,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -510,7 +510,7 @@ export interface paths {
                         "application/json": components["schemas"]["Card"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -586,7 +586,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -604,7 +604,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -658,7 +658,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -740,7 +740,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -758,7 +758,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -813,7 +813,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -831,7 +831,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -912,7 +912,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -965,7 +965,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -983,7 +983,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1159,7 +1159,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1177,7 +1177,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1295,7 +1295,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1428,7 +1428,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1564,7 +1564,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1582,7 +1582,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1630,7 +1630,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1699,7 +1699,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1771,7 +1771,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1789,7 +1789,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1848,7 +1848,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1866,7 +1866,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1971,7 +1971,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1982,6 +1982,139 @@ export interface paths {
                 };
                 /** @description not_found · blueprint_project_not_found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}/code-map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description the setup step's result — written by the entry worker from its running chat hop */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CodeMapInput"];
+                };
+            };
+            responses: {
+                /** @description the code map (confirmedAt null) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CodeMap"];
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}/code-map/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description the code map with confirmedAt */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CodeMap"];
+                    };
+                };
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2159,7 +2292,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2221,7 +2354,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2307,7 +2440,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2490,7 +2623,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2682,7 +2815,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2721,10 +2854,11 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            /** @description the folders a worker may work in (replaces the list) */
+            /** @description the folders a worker may work in (replaces the list); readOnly ⊆ roots, default [] = all writable */
             requestBody: {
                 content: {
                     "application/json": {
+                        readOnly?: string[];
                         roots: string[];
                     };
                 };
@@ -2748,7 +2882,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2810,7 +2944,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2828,7 +2962,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2848,6 +2982,65 @@ export interface paths {
                 };
                 /** @description blueprint_unreachable */
                 502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/runner/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description `running` while it works, `stopping` once on a clean stop */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        state: "running" | "stopping";
+                    };
+                };
+            };
+            responses: {
+                /** @description noted — the name is the runner's actor, the time is the core's clock; only `state` is read from the body */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2923,7 +3116,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2934,6 +3127,41 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/v1/team-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description is the runner alive? */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamStatus"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/workers": {
@@ -2977,7 +3205,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        avatar?: components["schemas"]["Avatar"];
+                        avatar?: components["schemas"]["Avatar"] | null;
                         /** @enum {string} */
                         effort?: "low" | "medium" | "high";
                         /** @enum {string} */
@@ -3013,7 +3241,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -3022,7 +3250,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3087,7 +3315,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -3105,7 +3333,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3159,7 +3387,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -3177,7 +3405,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3203,7 +3431,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        avatar?: components["schemas"]["Avatar"];
+                        avatar?: components["schemas"]["Avatar"] | null;
                         /** @enum {string} */
                         effort?: "low" | "medium" | "high";
                         /** @enum {string} */
@@ -3234,7 +3462,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description operator_only · not_your_card · not_your_message */
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -3252,7 +3480,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3274,7 +3502,7 @@ export interface components {
             body: string;
             color: string;
             eyes: string;
-        } | null;
+        };
         Card: {
             anchor: {
                 key: string;
@@ -3304,6 +3532,8 @@ export interface components {
         };
         CardContext: {
             card: components["schemas"]["Card"];
+            /** @description the project's code map (v1.16) — null until the entry worker saves one; every card hop knows the folders */
+            codeMap: components["schemas"]["CodeMap"] | null;
             decisions: {
                 answer: string;
                 cardId: string;
@@ -3350,6 +3580,33 @@ export interface components {
             /** @description set when the operator asked for a retry; cleared when the next hop starts on the message */
             retryRequestedAt: string | null;
             text: string;
+        };
+        CodeMap: components["schemas"]["CodeMapInput"] & {
+            /** @description set by the operator's confirm; cleared by every new save */
+            confirmedAt: string | null;
+            updatedAt: string;
+            /** @description the worker who saved it */
+            updatedBy: string;
+        };
+        CodeMapInput: {
+            commands: {
+                run: string[];
+                test: string[];
+            };
+            folders: {
+                /** @enum {string} */
+                kind: "fe" | "be" | "other";
+                name: string;
+                note?: string;
+            }[];
+            notes?: string;
+            questions: {
+                proposedDefault: string;
+                text: string;
+            }[];
+            /** @description may be empty — the screen shows ไม่มี */
+            rules: string[];
+            stack: string[];
         };
         Error: {
             error: {
@@ -3402,6 +3659,8 @@ export interface components {
         };
         Project: {
             blueprintProjectId: string;
+            /** @description null until the entry worker saves one (v1.16) */
+            codeMap: components["schemas"]["CodeMap"] | null;
             createdAt: string;
             entryWorkerId: string | null;
             hopBudget: number;
@@ -3413,6 +3672,8 @@ export interface components {
             name: string;
             version: number;
             workspace: {
+                /** @description ⊆ roots; workers read every root and write only the others (D-100) */
+                readOnly: string[];
                 roots: string[];
             };
         };
@@ -3462,8 +3723,20 @@ export interface components {
             /** @enum {string|null} */
             stopReason: "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error" | null;
         };
+        TeamStatus: {
+            /** @description the last check-in, kept after the team goes quiet */
+            lastSeenAt: string | null;
+            runnerName: string | null;
+            /** @description the last check-in said `running` and is at most 45 s old (a `stopping` check-in makes it false at once) */
+            running: boolean;
+            /**
+             * @description what the screen tells the operator to run when running is false
+             * @enum {string}
+             */
+            startCommand: "cd caw-back && bun run dev";
+        };
         Worker: {
-            avatar: components["schemas"]["Avatar"];
+            avatar: components["schemas"]["Avatar"] | null;
             combinedFrom: string[] | null;
             /** @description set when the operator deleted the worker (v1.14); the list still shows them so history can name them — screens hide them from every picker */
             deletedAt: string | null;

@@ -3,7 +3,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
-import { chat, chatWaits, live, mode, modeLine, redesign, runRunning, section, themeToggle, workspace } from "../src/words";
+import { agreeStart, chat, chatWaits, live, mode, modeLine, redesign, runRunning, section, themeToggle, workspace } from "../src/words";
 
 const NEW = `/p/${MOCK_NEW_PROJECT_ID}`;
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
@@ -99,7 +99,8 @@ for (const [vw, vh] of [[1440, 900], [390, 844]] as const) {
 test("the newest chat message is the team's, with no question → the notice; ไปที่แชต lands on the chat", async ({ page }) => {
   await page.goto(BOARD); // the plain seed: Paul's reply is the newest message and asks nothing
   const notice = page.locator("[data-chat-waits]");
-  await expect(notice).toContainText(chatWaits.line("").trim()); // `{entry} รอคุณอยู่ในแชต`, whoever the entry person is
+  // the plain seed's newest reply also carries an open proposal, so since D-105 P2 (TASK-B-120) the line says it waits for his agreement
+  await expect(notice).toContainText(agreeStart.waiting("").trim()); // `{entry} เสนองานไว้ รอคุณตกลง`, whoever the entry person is
   await expect(notice.locator("svg[data-face]")).toHaveCount(1);
   await notice.getByRole("link", { name: chatWaits.go }).click();
   await expect(page).toHaveURL(new RegExp(`${BOARD}/chat$`));

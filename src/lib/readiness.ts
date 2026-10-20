@@ -35,6 +35,7 @@ export function readiness(project: Project, chain: Chain, workers: Worker[]): Re
     item("reachable", seats.filter((w) => !reached.has(w.id)).map((w) => w.id), true),
     item("handoff", seats.filter((w) => isBuilder(w) && !handsOff.has(w.id)).map((w) => w.id), true),
     qaBuilders.length > 0 ? { rule: "qaNotBuilder", state: "bad", who: qaBuilders } : { rule: "qaNotBuilder", state: "ok" },
-    project.workspace.roots.length > 0 ? { rule: "folder", state: "ok" } : { rule: "folder", state: "todo" },
+    // ok needs a folder the team can write: only read-only roots stop every hop (SPEC-A-009 Revision 2, D-100, TASK-B-113)
+    project.workspace.roots.some((r) => !project.workspace.readOnly.includes(r)) ? { rule: "folder", state: "ok" } : { rule: "folder", state: "todo" },
   ];
 }

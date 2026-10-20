@@ -38,3 +38,5 @@ export async function deleteWorker(projectId: string, workerId: string) { return
 export async function createMember(projectId: string, input: { name: string; roles: WorkerRole[]; skills: string[]; avatar?: Avatar | null }) {
   return run(projectId, async () => { const w = await api.createWorker(input); await api.addMember(projectId, w.id); });
 }
+/** The operator confirms the code map as it stands (REQ-015 R2, SPEC-A-009 § 2c, TASK-B-106). Corrections go through the chat, not here. */
+export async function confirmCodeMap(projectId: string) { return run(projectId, () => api.confirmCodeMap(projectId)); }

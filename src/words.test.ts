@@ -1,6 +1,6 @@
 // REQ-011's wording table, row by row: each word is here, verbatim.
 import { describe, expect, test } from "bun:test";
-import { blueprintBuild, budget, card, cardMark, chatWaits, distill, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, section, startRefused, stopReason, workspace } from "./words";
+import { agreeStart, chatRefused, redesign, blueprintBuild, budget, card, cardMark, chatWaits, codeMapWords, distill, folderKind, oneAnswer, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, section, startRefused, stopReason, workspace } from "./words";
 
 describe("REQ-011 wording table", () => {
   test("columns, in the order they are drawn", () => {
@@ -32,7 +32,7 @@ describe("REQ-011 wording table", () => {
   });
   test("workspace folders: heading, add, remove, field hint, and the warning when there are none", () => {
     expect(workspace).toEqual({
-      heading: "โฟลเดอร์ที่ทีมเขียนได้", add: "เพิ่มโฟลเดอร์", remove: "เอาออก", hint: "ใส่ path เต็ม เช่น /Users/…/my-repo",
+      heading: "โฟลเดอร์ของทีม", add: "เพิ่มโฟลเดอร์", remove: "เอาออก", hint: "ใส่ path เต็ม เช่น /Users/…/my-repo",
       none: "ยังไม่ได้กำหนดโฟลเดอร์ — ทีมจะยังเริ่มทำงานไม่ได้",
     });
   });
@@ -70,5 +70,46 @@ describe("D-094 — the distill's other words, as approved (TASK-B-100)", () => 
     expect(distill.tellEntry("Paul")).toBe("เล่างานให้ Paul ในแชต");
     expect(distill.placeholder("Paul")).toBe("เล่างานให้ Paul…");
     expect([distill.chainReady, distill.answer, distill.backToProjects]).toEqual(["สายงานพร้อม", "ตอบ", "กลับไปที่โปรเจกต์"]);
+  });
+});
+
+describe("the code map's words (TASK-B-106, team-proposed until the PM's table)", () => {
+  test("kinds, the empty list, confirm and the chat link", () => {
+    expect(codeMapWords.kind).toEqual({ fe: "FE", be: "BE", other: "ไม่ใช่ของเรา" });
+    expect([codeMapWords.none, codeMapWords.confirm, codeMapWords.fixInChat, codeMapWords.see]).toEqual(["ไม่มี", "ยืนยัน", "แก้ผ่านแชต", "ดูผังโค้ด"]);
+    expect(codeMapWords.confirmed("20 ต.ค. 2569")).toBe("ยืนยันแล้ว 20 ต.ค. 2569");
+  });
+});
+
+describe("folder kinds (TASK-B-108, team-proposed until the PM's table)", () => {
+  test("เขียนได้ · อ่านได้อย่างเดียว · the help line", () => {
+    expect([folderKind.writable, folderKind.readOnly]).toEqual(["เขียนได้", "อ่านได้อย่างเดียว"]);
+    expect(folderKind.help).toBe('ทีมอ่านได้ทุกโฟลเดอร์ เขียนได้เฉพาะที่ "เขียนได้"');
+  });
+});
+
+describe("D-105 P1 — one answer pair (TASK-B-119)", () => {
+  test("ตามนั้นทุกข้อ · ตามนั้น — {answer} · {entry} ถาม {n} ข้อ · ตอบแล้ว (· {answer})", () => {
+    expect(oneAnswer.acceptAll).toBe("ตามนั้นทุกข้อ");
+    expect(oneAnswer.posted("ไม่นับ")).toBe("ตามนั้น — ไม่นับ");
+    expect(oneAnswer.asks("Paul", 2)).toBe("Paul ถาม 2 ข้อ");
+    expect([oneAnswer.answered("ไม่นับ"), oneAnswer.answered(null)]).toEqual(["ตอบแล้ว · ไม่นับ", "ตอบแล้ว"]);
+  });
+});
+
+describe("D-105 P2 / D-106 — agree and start (TASK-B-120)", () => {
+  test("ตกลง เริ่มงาน · the reason · the two mode lines · the board's line · the empty board", () => {
+    expect(agreeStart.agree).toBe("ตกลง เริ่มงาน");
+    expect(agreeStart.answerFirst("Paul")).toBe("ตอบคำถามของ Paul ก่อน");
+    expect([agreeStart.manual(3), agreeStart.dispatcher(3)]).toEqual(["จะได้ 3 การ์ดบนบอร์ด แล้วคุณกดให้ทีละขั้น", "ทีมจะเริ่มทำ 3 การ์ดเองจนครบงบ"]);
+    expect(agreeStart.waiting("Paul")).toBe("Paul เสนองานไว้ รอคุณตกลง");
+    expect(redesign.emptyBoard).toBe("บอร์ดยังว่าง — การ์ดจะขึ้นที่นี่เมื่อคุณกดตกลง เริ่มงานในแชต");
+  });
+});
+
+describe("D-110 — a refused proposal follows D-105's rename (TASK-B-121)", () => {
+  test("anchor_not_in_version ends — เริ่มงานไม่ได้", () => {
+    expect(chatRefused.anchor_not_in_version).toMatch(/— เริ่มงานไม่ได้$/);
+    expect(chatRefused.anchor_not_in_version).not.toContain("สร้างการ์ด");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { canAdd, isValidRoot, MAX_ROOT_LENGTH, MAX_ROOTS } from "./roots";
+import { canAdd, folderName, isValidRoot, keepReadOnly, MAX_ROOT_LENGTH, MAX_ROOTS, setKind, withoutRoot } from "./roots";
 
 describe("isValidRoot", () => {
   test("absolute paths pass (POSIX and a Windows drive)", () => {
@@ -22,5 +22,37 @@ describe("canAdd", () => {
     const full = Array.from({ length: MAX_ROOTS }, (_, i) => `/r${i}`);
     expect(canAdd(full, "/one-more")).toBe(false);
     expect(canAdd(full.slice(1), "/one-more")).toBe(true);
+  });
+});
+
+// D-098 (TASK-B-104): a folder is named by its last path segment; two with the same last segment add their parent
+describe("folderName", () => {
+  test("the last segment — a trailing slash and Windows separators too", () => {
+    expect(folderName("/Users/me/Develyst/usb-oda", ["/Users/me/Develyst/usb-oda"])).toBe("usb-oda");
+    expect(folderName("/Users/me/repo/", ["/Users/me/repo/"])).toBe("repo");
+    expect(folderName("C:\\work\\caw-front", ["C:\\work\\caw-front"])).toBe("caw-front");
+  });
+  test("two roots ending the same way → parent/last for both; a third, different one stays short", () => {
+    const all = ["/a/corp-ais/usb-oda", "/b/mine/usb-oda", "/c/caw-front"];
+    expect(all.map((r) => folderName(r, all))).toEqual(["corp-ais/usb-oda", "mine/usb-oda", "caw-front"]);
+  });
+  test("the root itself has no segment — it is shown as it is", () => {
+    expect(folderName("/", ["/"])).toBe("/");
+  });
+});
+
+// D-099 / D-100 (TASK-B-108): readOnly ⊆ roots — every change keeps it so
+describe("folder kinds", () => {
+  const roots = ["/a/web", "/a/spec", "/a/api"];
+  test("setKind marks or unmarks one folder, keeping the roots' order and never a duplicate", () => {
+    expect(setKind(roots, [], "/a/spec", true)).toEqual(["/a/spec"]);
+    expect(setKind(roots, ["/a/spec"], "/a/spec", true)).toEqual(["/a/spec"]);
+    expect(setKind(roots, ["/a/api", "/a/spec"], "/a/web", true)).toEqual(["/a/web", "/a/spec", "/a/api"]);
+    expect(setKind(roots, ["/a/spec"], "/a/spec", false)).toEqual([]);
+  });
+  test("withoutRoot shortens both lists together; keepReadOnly drops what is no longer a root", () => {
+    expect(withoutRoot(roots, ["/a/spec"], "/a/spec")).toEqual({ roots: ["/a/web", "/a/api"], readOnly: [] });
+    expect(withoutRoot(roots, ["/a/spec"], "/a/web")).toEqual({ roots: ["/a/spec", "/a/api"], readOnly: ["/a/spec"] });
+    expect(keepReadOnly(["/a/web"], ["/a/spec", "/a/web"])).toEqual(["/a/web"]);
   });
 });

@@ -10,15 +10,16 @@
 //  · an operator message the team failed to answer (D-057) says so under it, with ลองอีกครั้ง.
 // The แชต tab is its only place (D-093: no panel beside the board). The box stays at the bottom while the thread scrolls;
 // the thread keeps room under its last message so the box never covers it (AC-5). Writes are server actions; a refusal shows in words.
-import { CircleHelp } from "lucide-react";
+import { ArrowUp, CircleHelp } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
-import type { ChatMessage, Proposal, Worker } from "@/api/caw";
+import { useEffect, useId, useRef, useState, useTransition, type KeyboardEvent } from "react";
+import type { ChatMessage, CodeMap, Mode, Proposal, Worker } from "@/api/caw";
 import { acceptProposal, postMessage, retryMessage, type ChatResult } from "@/app/p/[id]/chat/actions";
 import { Part } from "@/components/card/Part";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
-import { chatHead, chat as words, chatRefused, distill, operatorName, proposedAnswer, section, send } from "@/words";
+import { acceptText, answeredWith } from "@/lib/crew";
+import { acceptAnswer, agreeStart, answerOwn, chatHead, chat as words, chatRefused, codeMapWords, distill, live, oneAnswer, operatorName, proposedAnswer, section, send, teamDown as downWords } from "@/words";
 
 export type PartRef = { kind: string; title: string };
 
@@ -34,7 +35,12 @@ const when = (iso: string) => new Intl.DateTimeFormat("th-TH", { dateStyle: "med
 const refusal = (r: ChatResult) => (r.ok ? null : chatRefused[r.code] ?? chatRefused.other!);
 const Refused = ({ text }: { text: string | null }) => (text ? <p className="m-0 rounded-md bg-stuck-soft px-3 py-2 text-sm font-semibold text-stuck" role="alert">{text}</p> : null);
 
-function ProposalCard({ projectId, p, byId, parts, primary }: { projectId: string; p: Proposal; byId: Map<string, Worker>; parts: Record<string, PartRef>; primary: boolean }) {
+/** The proposal is the agreement (D-105 P2, TASK-B-120): `ตกลง เริ่มงาน` accepts it, after one line saying what happens in the project's mode; while the entry
+ *  person still has a question open (`waitFor` = their name) it is off, and says why. */
+function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor }: {
+  projectId: string; p: Proposal; byId: Map<string, Worker>; parts: Record<string, PartRef>; primary: boolean; mode: Mode | null; waitFor: string | null;
+}) {
+  const reason = useId();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -67,9 +73,14 @@ function ProposalCard({ projectId, p, byId, parts, primary }: { projectId: strin
         })}
       </ol>
       {p.status === "open" && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant={primary ? "default" : "outline"} className="min-h-11 px-5 font-semibold" onClick={create} disabled={pending} data-create>{words.createCards}</Button>
-          <Refused text={error} />
+        <div className="grid gap-2 border-t border-hair pt-3" data-agree>
+          {mode && <p className="m-0 text-sm text-ink2" data-agree-what>{mode === "dispatcher" ? agreeStart.dispatcher(p.items.length) : agreeStart.manual(p.items.length)}</p>}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Button variant={primary && !waitFor ? "default" : "outline"} className="min-h-11 px-5 font-semibold" onClick={create} disabled={pending || !!waitFor}
+              aria-describedby={waitFor ? reason : undefined} data-create>{agreeStart.agree}</Button>
+            {waitFor && <span id={reason} className="text-sm font-semibold text-stuck" data-agree-why>{agreeStart.answerFirst(waitFor)}</span>}
+            <Refused text={error} />
+          </div>
         </div>
       )}
     </section>
@@ -91,16 +102,26 @@ function FailedStep({ projectId, messageId }: { projectId: string; messageId: st
   );
 }
 
-export function Chat({ projectId, messages, proposals, workers, parts, entry, draft = "" }: {
-  projectId: string; messages: ChatMessage[]; proposals: Proposal[]; workers: Worker[]; parts: Record<string, PartRef>; entry: Worker | null; draft?: string;
+/** `teamDown`: the team is not running (TASK-B-104) — sending still works, and one line under the box says the message waits.
+ *  `answering`: the entry worker has an open chat hop (TASK-B-114, D-103) — one quiet line under the thread says so, live for screen readers.
+ *  `codeMap`: the project's code map (TASK-B-106) — while it is not confirmed, the newest worker reply saved at or after it links to it on ทีม. */
+/** `openId`: the entry worker's reply whose questions are still open (crew.ts `entryQuestions`) — they carry the same `ตามนั้น` / `ตอบเอง…` pair as the
+ *  board (D-105 P1, TASK-B-119); questions on any other reply read `ตอบแล้ว`. `focusBox`: arrived by the board's `ตอบเอง…` — the empty box is focused. */
+export function Chat({ projectId, messages, proposals, workers, parts, entry, teamDown = false, codeMap = null, answering = false, openId = null, focusBox = false, mode = null }: {
+  projectId: string; messages: ChatMessage[]; proposals: Proposal[]; workers: Worker[]; parts: Record<string, PartRef>; entry: Worker | null; teamDown?: boolean;
+  codeMap?: CodeMap | null; answering?: boolean; openId?: string | null; focusBox?: boolean; mode?: Mode | null;
 }) {
   const router = useRouter();
   const byId = new Map(workers.map((w) => [w.id, w]));
   const workerOf = (a: ChatMessage["author"]) => (a === "operator" ? undefined : byId.get(a.slice("worker:".length)));
   // one primary per screen (B7): only the newest open proposal's สร้างการ์ด is primary
   const newestOpen = [...proposals].filter((p) => p.status === "open").sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.id;
+  // the core sends no "this reply delivered a map" flag: the setup step saves the map, then replies — so the newest worker reply at or after the map's time
+  // is the one that delivered it (interpreted in TASK-B-106)
+  const newestWorker = messages.findLast((m) => m.author !== "operator");
+  const mapReply = codeMap && codeMap.confirmedAt === null && newestWorker && Date.parse(newestWorker.at) >= Date.parse(codeMap.updatedAt) ? newestWorker.id : null;
   const onMessage = (messageId: string) => proposals.filter((p) => p.messageId === messageId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const [text, setText] = useState(draft); // `ตอบเอง…` on the board arrives with the question as the draft
+  const [text, setText] = useState("");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const sendIt = () => {
@@ -110,21 +131,33 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, dr
   };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); sendIt(); } };
   const placeholder = entry ? distill.placeholder(entry.name) : words.placeholder; // C-1: names who you write to
-  // the thread scrolls in its own box, the box below it — it opens at the newest message, and comes back there when one arrives
-  const thread = useRef<HTMLOListElement>(null);
-  useEffect(() => { const el = thread.current; if (el) el.scrollTop = el.scrollHeight; }, [messages.length]);
+  // P3 (D-105, TASK-B-118): the PAGE scrolls (its bar at the window's edge) — it opens at the newest message, and comes back there when one arrives
+  // …except on arrival with `#m-{id}` (the board's `ตามนั้น` lands on his own message): that message is brought into view instead, once
+  const landed = useRef(false);
+  useEffect(() => {
+    const target = !landed.current && location.hash.startsWith("#m-") ? document.getElementById(location.hash.slice(1)) : null;
+    landed.current = true;
+    if (target) target.scrollIntoView({ block: "center" }); else window.scrollTo({ top: document.documentElement.scrollHeight });
+  }, [messages.length]);
+  // the open questions' own answer: `ตามนั้น` posts `ตามนั้น — {answer}` (the board's text); `ตอบเอง…` focuses the box
+  const accept = (answer: string) => start(async () => { const r = await postMessage(projectId, acceptText([answer])); setError(refusal(r)); router.refresh(); });
+  useEffect(() => { if (focusBox) box.current?.focus(); }, [focusBox]);
+  // the box grows with the text up to about 6 lines (its CSS max-height), then scrolls inside itself — no resize grip
+  const box = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { const el = box.current; if (!el) return; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }, [text]);
 
   return (
-    // C-4: one column that fills the screen under the header (73 px at ≥ 768, 109 px with the tabs' own row below it); the box pins to the bottom
-    <div className="mx-auto grid h-[calc(100dvh-74px-var(--caw-sample-bar,0px))] min-h-[420px] w-full max-w-[880px] grid-rows-[auto_minmax(0,1fr)_auto] gap-4 px-6 pt-6 max-md:h-[calc(100dvh-110px-var(--caw-sample-bar,0px))] max-md:gap-3 max-md:px-4 max-md:pt-4" data-chat>
+    // P3 (TASK-B-118): one column in the page's own flow, at least a screen tall (so a short thread still has the box at the bottom); the page scrolls,
+    // and the box is sticky at the bottom of the window
+    <div className="mx-auto grid min-h-[calc(100dvh-74px-var(--caw-sample-bar,0px))] w-full max-w-[880px] grid-rows-[auto_1fr_auto] content-start gap-4 px-6 pt-6 max-md:min-h-[calc(100dvh-110px-var(--caw-sample-bar,0px))] max-md:gap-3 max-md:px-4 max-md:pt-4" data-chat>
       <h2 className="m-0 text-[17px] font-semibold" data-chat-title>{entry ? chatHead.title(entry.name) : section.chat}</h2>
       {messages.length === 0 ? <p className="m-0 rounded-[10px] border border-dashed border-hair2 bg-sheet p-6 text-center text-ink2">{words.empty}</p> : (
-        <ol ref={thread} className="m-0 grid list-none content-start gap-5 overflow-y-auto p-0 pr-1" data-thread>
+        <ol className="m-0 grid list-none content-start gap-5 p-0" data-thread>
           {messages.map((m) => {
             const mine = m.author === "operator", w = workerOf(m.author);
             const failed = mine && m.replyHopId === null && !!m.chatHop?.endedAt && m.retryRequestedAt === null;
             return (
-              <li key={m.id} className={`grid gap-2.5 ${mine ? "justify-items-end" : "justify-items-start"}`} data-message={mine ? "operator" : "worker"}>
+              <li key={m.id} id={`m-${m.id}`} className={`grid gap-2.5 ${mine ? "justify-items-end" : "justify-items-start"}`} data-message={mine ? "operator" : "worker"}>
                 <div className={`grid max-w-[min(640px,92%)] gap-1.5 rounded-xl px-4 py-3 ${mine ? "bg-now-soft" : "border border-hair bg-sheet"}`} data-bubble>
                   <div className="flex min-w-0 items-center gap-2 text-sm">
                     {w && <Avatar name={w.name} avatar={w.avatar} size="sm" />}
@@ -136,9 +169,18 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, dr
                     // C-3: no frame — an indent, with the ? icon hanging in it
                     <div key={i} className="mt-1.5 grid gap-1 pl-6" data-question data-chat-question>
                       <p className="m-0 -ml-6 flex items-start gap-2 font-semibold leading-normal"><CircleHelp className="mt-1 size-4 shrink-0 text-now" aria-hidden />{q.text}</p>
-                      <p className="m-0 mt-1 text-sm text-ink2">{proposedAnswer}</p>
-                      <p className="m-0 font-semibold">{q.proposedDefault}</p>
-                      {q.cases.length > 0 && <ul className="m-0 mt-0.5 grid gap-0.5 pl-5 text-ink2">{q.cases.map((c) => <li key={c}>{c}</li>)}</ul>}
+                      {m.id === openId ? (<>
+                        <p className="m-0 mt-1 text-sm text-ink2">{proposedAnswer}</p>
+                        <p className="m-0 font-semibold">{q.proposedDefault}</p>
+                        {q.cases.length > 0 && <ul className="m-0 mt-0.5 grid gap-0.5 pl-5 text-ink2">{q.cases.map((c) => <li key={c}>{c}</li>)}</ul>}
+                        {/* the board's pair, here too (D-105 P1): the first open question's ตามนั้น is the screen's one filled button */}
+                        <span className="mt-2 flex flex-wrap gap-2" data-chat-answer>
+                          <Button variant={i === 0 ? "default" : "outline"} className="min-h-11 px-5 font-semibold" disabled={pending} onClick={() => accept(q.proposedDefault)} data-accept>{acceptAnswer}</Button>
+                          <Button variant="outline" className="min-h-11" onClick={() => box.current?.focus()} data-answer-own>{answerOwn}</Button>
+                        </span>
+                      </>) : (
+                        <p className="m-0 text-sm text-ink2" data-answered>{oneAnswer.answered(answeredWith(messages, m, q))}</p>
+                      )}
                     </div>
                   ))}
                   {m.amendment && (
@@ -146,20 +188,41 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, dr
                   )}
                 </div>
                 {failed && <FailedStep projectId={projectId} messageId={m.id} />}
-                {!mine && m.replyTo && onMessage(m.replyTo).map((p) => <ProposalCard key={p.id} projectId={projectId} p={p} byId={byId} parts={parts} primary={p.id === newestOpen} />)}
+                {m.id === mapReply && <a href={`/p/${projectId}/team#code-map`} className="inline-flex min-h-11 items-center text-sm font-semibold text-now underline underline-offset-4" data-see-code-map>{codeMapWords.see}</a>}
+                {!mine && m.replyTo && onMessage(m.replyTo).map((p) => <ProposalCard key={p.id} projectId={projectId} p={p} byId={byId} parts={parts} primary={p.id === newestOpen && !openId}
+                  mode={mode} waitFor={openId ? entry?.name ?? null : null} />)}
               </li>
             );
           })}
         </ol>
       )}
-      {/* C-1: no Enter hint (Enter sends, as in any chat; the button is beside it). C-4: no frame of its own — a top hairline */}
-      <form onSubmit={(e) => { e.preventDefault(); sendIt(); }} className="grid gap-2 border-t border-hair py-3" data-composer>
-        <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} placeholder={placeholder} aria-label={placeholder}
-          className="min-h-[72px] w-full resize-y rounded-md border border-hair2 bg-sheet px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink3" />
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Refused text={error} />
-          <Button type="submit" className="min-h-11 px-5" disabled={pending || !text.trim()}>{send}</Button>
+      {/* C-1: no Enter hint (Enter sends, as in any chat). P3: pinned to the bottom of the window, on the page's own colour, with a hairline on top */}
+      <form onSubmit={(e) => { e.preventDefault(); sendIt(); }} className="sticky bottom-0 z-10 -mx-6 grid gap-2 border-t border-hair bg-canvas px-6 pb-4 pt-3 max-md:-mx-4 max-md:px-4" data-composer>
+        {/* D-103 (TASK-B-114): the entry worker is answering — the region is always there so a screen reader hears it come and go; no animation */}
+        <p className="m-0 empty:hidden" aria-live="polite">
+          {answering && entry && (
+            <span className="flex items-center gap-2 text-sm font-medium text-now" data-answering>
+              <Avatar name={entry.name} avatar={entry.avatar} size="sm" state="working" />
+              <b className="name font-semibold" data-name title={entry.name}>{entry.name}</b>
+              <span className="shrink-0">{live.answeringChat}</span>
+            </span>
+          )}
+        </p>
+        {/* one box with send inside it, bottom right (P3): send is quiet, and off until there is text — the page's one filled button is the proposal's */}
+        <div className="relative rounded-[14px] border border-hair2 bg-sheet transition-colors focus-within:border-now motion-reduce:transition-none" data-box>
+          <textarea ref={box} rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} placeholder={placeholder} aria-label={placeholder}
+            className="block max-h-[calc(1.6em*6+28px)] min-h-[52px] w-full resize-none overflow-y-auto rounded-[14px] bg-transparent py-3.5 pl-4 pr-16 text-[15px] leading-[1.6] text-ink outline-none placeholder:text-ink3" />
+          <button type="submit" aria-label={send} disabled={pending || !text.trim()} data-send
+            className="absolute bottom-1.5 right-1.5 grid size-11 place-items-center rounded-[10px] text-ink3 transition-colors enabled:bg-now-soft enabled:text-now enabled:hover:brightness-110 disabled:cursor-not-allowed motion-reduce:transition-none">
+            <ArrowUp className="size-5" aria-hidden />
+          </button>
         </div>
+        {(teamDown || error) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {teamDown && <span className="mr-auto text-sm text-ink2" data-team-waits>{downWords.waits}</span>}
+            <Refused text={error} />
+          </div>
+        )}
       </form>
     </div>
   );

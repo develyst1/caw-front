@@ -15,9 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { readiness, type ReadinessItem } from "@/lib/readiness";
 import { skillsFor } from "@/lib/roles";
+import { folderName } from "@/components/workspace/roots";
 import { WorkspaceEditor } from "@/components/workspace/WorkspaceEditor";
-import { distill, missing, readiness as rw, section, team as words, teamPage, teamRefused, undo, workspace } from "@/words";
+import { distill, folderKind, missing, readiness as rw, section, team as words, teamPage, teamRefused, undo, workspace } from "@/words";
 import { AddPersonModal } from "./AddPersonModal";
+import { CodeMap } from "./CodeMap";
 import { Bench } from "./Bench";
 import { ChainPicture, type NodeState } from "./ChainPicture";
 import { PersonDrawer, type DrawerFocus } from "./PersonDrawer";
@@ -173,9 +175,17 @@ export function Team({ projectId, project, workers, chain, openCards, states, pr
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-hair px-6 py-2 text-sm max-md:px-4 md:flex md:flex-wrap" data-folders-row>
           <span className="font-semibold text-ink">{workspace.heading}</span>
           {project.workspace.roots.length > 0
-            ? <ul className="m-0 flex min-w-0 flex-1 list-none flex-wrap gap-x-4 gap-y-0.5 p-0 text-ink2 max-md:col-span-2 max-md:row-start-2">{project.workspace.roots.map((r) => <li key={r} className="[overflow-wrap:anywhere]" data-folder-path>{r}</li>)}</ul>
+            ? <ul className="m-0 flex min-w-0 flex-1 list-none flex-wrap gap-x-4 gap-y-0.5 p-0 text-ink2 max-md:col-span-2 max-md:row-start-2">{project.workspace.roots.map((r) => (
+                <li key={r} className="inline-flex items-baseline gap-1.5 [overflow-wrap:anywhere]">
+                  <span title={r} data-folder-path>{folderName(r, project.workspace.roots) /* D-098: the name, the path in title */}</span>
+                  {/* D-099 / D-100 (TASK-B-108): a small quiet tag for the kind */}
+                  <span className="text-sm font-semibold text-ink3" data-folder-kind={project.workspace.readOnly.includes(r) ? "read-only" : "writable"}>
+                    {project.workspace.readOnly.includes(r) ? folderKind.readOnly : folderKind.writable}
+                  </span>
+                </li>
+              ))}</ul>
             : <span className="min-w-0 flex-1 text-ink3 max-md:col-span-2 max-md:row-start-2">{workspace.none}</span>}
-          <WorkspaceEditor projectId={projectId} roots={project.workspace.roots} open={folders} onOpenChange={setFolders} />
+          <WorkspaceEditor projectId={projectId} roots={project.workspace.roots} readOnly={project.workspace.readOnly} open={folders} onOpenChange={setFolders} />
         </div>
         <div className="px-6 py-5 max-md:px-4 max-md:py-2">
           <ChainPicture members={members} edges={chain.edges} entryId={chain.entryWorkerId} states={states} selected={open?.id ?? null} onOpen={(id) => setOpen({ id, focus: null })} />
@@ -184,6 +194,9 @@ export function Team({ projectId, project, workers, chain, openCards, states, pr
         </div>
         {errors.chain && <p className="m-0 px-6 pb-4 text-sm font-semibold text-stuck" role="alert">{errors.chain}</p>}
       </section>
+
+      {/* the code map (REQ-015 R2, TASK-B-106): its own section right after the chain + folders, never a box inside that one */}
+      {project.codeMap && <CodeMap projectId={projectId} map={project.codeMap} />}
 
       <Bench people={bench} busy={busy} errors={benchErrors}
         onAdd={(id) => benchAct(id, () => addMember(projectId, id))} onDelete={(id) => benchAct(id, () => deleteWorker(projectId, id))} />

@@ -5,7 +5,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { card, faces, rolePicker, section, team as words, teamPage, undo, workspace } from "../src/words";
+import { card, codeMapWords, faces, folderKind, rolePicker, section, team as words, teamPage, undo, workspace } from "../src/words";
 
 const TEAM = `/p/${MOCK_PROJECT_ID}/team`;
 const W = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -230,4 +230,58 @@ test("@390 the folders row: its label and แก้ on one line, the folders und
   expect(Math.abs((label.y + label.height / 2) - (edit.y + edit.height / 2))).toBeLessThanOrEqual(6);
   const under = (await row.locator("[data-folder-path], span").last().boundingBox())!;
   expect(under.y).toBeGreaterThan(edit.y + edit.height - 2);
+});
+
+// D-098 (TASK-B-104): the folders row names each folder by its last segment; the full path is in title, never on screen
+test("the folders row shows folder names, not /Users/ paths", async ({ page }) => {
+  await page.goto(TEAM);
+  const paths = page.locator("[data-folder-path]");
+  await expect(paths.first()).toBeVisible();
+  for (const t of await paths.allTextContents()) expect(t).not.toContain("/Users/");
+  await expect(paths.first()).toHaveAttribute("title", /^\//);
+});
+
+// REQ-015 R2 (TASK-B-106): the code map on ทีม — every field, empty rules read ไม่มี, one-look ยืนยัน that survives a reload, no /Users/ anywhere
+test.describe("the code map", () => {
+  test.use({ seedState: "code-map" });
+  test("every field shows; empty rules read ไม่มี; no rendered text has /Users/", async ({ page }) => {
+    await page.goto(TEAM);
+    const map = page.locator("#code-map");
+    await expect(map.locator("[data-code-map-folder]")).toHaveCount(3);
+    await expect(map.locator("[data-code-map-folder]").first()).toContainText("booking-web");
+    await expect(map.locator('[data-kind="other"]')).toHaveText(codeMapWords.kind.other);
+    await expect(map.locator("[data-code-map-stack]")).toHaveText("TypeScript · Next.js · PostgreSQL");
+    await expect(map.locator('[data-code-map-command="run"]')).toHaveText(["bun run dev", "bun run dev:api"]);
+    await expect(map.locator('[data-code-map-command="test"]')).toHaveText(["bun test", "bunx playwright test"]);
+    await expect(map.locator('[data-code-map-rules="none"]')).toHaveText(codeMapWords.none);
+    await expect(map.locator("[data-code-map-question]")).toHaveCount(2);
+    await expect(map.locator("[data-code-map-fix]")).toHaveAttribute("href", /\/chat$/);
+    expect(await page.locator("body").innerText()).not.toContain("/Users/");
+  });
+  test("ยืนยัน → ยืนยันแล้ว, no button; it stays after a reload", async ({ page }) => {
+    await page.goto(TEAM);
+    await page.locator("[data-code-map-confirm]").click();
+    await expect(page.locator("[data-code-map-confirmed]")).toContainText("ยืนยันแล้ว");
+    await expect(page.locator("[data-code-map-confirm]")).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator("[data-code-map-confirmed]")).toContainText("ยืนยันแล้ว");
+  });
+});
+
+// D-100 (TASK-B-108): operator-like's spec folder is read-only; the others are writable
+test("the folders row tags mychannel-mc2-spec as read-only", async ({ page }) => {
+  await page.goto(TEAM);
+  const spec = page.locator("[data-folders-row] li").filter({ hasText: "mychannel-mc2-spec" });
+  await expect(spec.locator("[data-folder-kind]")).toHaveText(folderKind.readOnly);
+  await expect(page.locator('[data-folders-row] [data-folder-kind="writable"]').first()).toHaveText(folderKind.writable);
+});
+
+// B-106's live code map (TASK-B-108, Bob's B-110 door): a map saved while ทีม is open appears by itself
+test("a code map saved while ทีม is open appears within 4 s, no reload", async ({ page, request }) => {
+  await page.goto(TEAM);
+  await expect(page.locator("#code-map")).toHaveCount(0);
+  await page.evaluate(() => { (window as unknown as { stay: number }).stay = 1; });
+  expect((await request.post("/test-reset?codeMap=save")).status()).toBe(204);
+  await expect(page.locator("#code-map")).toBeVisible({ timeout: 4_000 });
+  expect(await page.evaluate(() => (window as unknown as { stay?: number }).stay)).toBe(1);
 });

@@ -73,8 +73,15 @@ describe("operator-like", () => {
 
   test("a long folder path", async () => {
     const { project } = await load();
-    expect(project.workspace.roots).toHaveLength(1);
+    expect(project.workspace.roots).toHaveLength(2); // the long one, and (REQ-015 R4a, TASK-B-107) one read-only folder
     expect(project.workspace.roots[0]!.length).toBeGreaterThan(80);
+  });
+
+  test("one read-only folder, `mychannel-mc2-spec`, that is one of the roots (TASK-B-107)", async () => {
+    const { project } = await load();
+    expect(project.workspace.readOnly).toHaveLength(1);
+    expect(project.workspace.readOnly[0]!.endsWith("/mychannel-mc2-spec")).toBe(true);
+    expect(project.workspace.roots).toContain(project.workspace.readOnly[0]!);
   });
 
   test("the crew reads as the screens need: Beta working, the entry waiting on you, the QA stuck on their card", async () => {

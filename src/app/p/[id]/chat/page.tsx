@@ -4,16 +4,18 @@
 // reload, as the board does (D-095, TASK-B-102): a reply shows within one 3 s poll; the box's draft is client state, so a refresh keeps it.
 import { notFound } from "next/navigation";
 import { api } from "@/api";
+import { TeamDown } from "@/components/Board";
 import { Chat, type PartRef } from "@/components/chat/Chat";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { entryAnswering, entryQuestions } from "@/lib/crew";
 import { lastSeq } from "@/lib/eventSeq";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChatPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ draft?: string }> }) {
+export default async function ChatPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ answer?: string }> }) {
   const { id } = await params;
-  const { draft } = await searchParams; // `ตอบเอง…` on the board's "waits on you" sheet arrives with the question as the box's draft (TASK-B-087)
-  const [project, messages, proposals, workers, chain, seq] = await Promise.all([api.project(id), api.chat(id, { limit: 200 }), api.proposals(id), api.workers(), api.chain(id), lastSeq(api, id)]);
+  const { answer } = await searchParams; // `ตอบเอง…` on the board arrives with `?answer=1`: the empty box is focused (D-105 P1, TASK-B-119 — no longer the question as a draft)
+  const [project, messages, proposals, workers, chain, seq, team, hops] = await Promise.all([api.project(id), api.chat(id, { limit: 200 }), api.proposals(id), api.workers(), api.chain(id), lastSeq(api, id), api.teamStatus(), api.hops(id, { limit: 20 })]);
   if (!project) notFound();
   // a proposed item's spec part, by key — one read per distinct (key, version) the items anchor on (v1.7), so a part no card holds yet has
   // its name too; a part that cannot be read stays out and the item shows its key
@@ -24,7 +26,10 @@ export default async function ChatPage({ params, searchParams }: { params: Promi
   return (
     <main>
       <LiveRefresh projectId={id} after={seq} />
-      <Chat projectId={id} messages={messages} proposals={proposals} workers={workers} parts={parts} draft={draft ?? ""}
+      {/* REQ-015 R1 (TASK-B-104): the team is not running — the line, and the box says a message waits */}
+      {!team.running && <div className="mx-auto max-w-[880px] px-6 pt-6 max-md:px-4 max-md:pt-4"><TeamDown startCommand={team.startCommand} /></div>}
+      <Chat teamDown={!team.running} answering={chain ? entryAnswering(chain, hops) : false} /* D-103 (TASK-B-114): the entry worker is answering */ codeMap={project.codeMap} projectId={id} messages={messages} proposals={proposals} workers={workers} parts={parts} focusBox={answer === "1"} mode={project.mode} /* the agreement line says what happens in this mode (TASK-B-120) */
+        openId={chain ? entryQuestions(chain, messages)?.message.id ?? null : null} /* the reply whose questions are still open: they carry the pair */
         entry={chain?.entryWorkerId ? workers.find((w) => w.id === chain.entryWorkerId) ?? null : null} />
     </main>
   );

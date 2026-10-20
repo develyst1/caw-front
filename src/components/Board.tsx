@@ -11,16 +11,29 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
-import type { Card, CardStatus, ChatQuestion, Worker } from "@/api/caw";
-import { answerQuestion } from "@/app/p/[id]/actions";
-import { postMessage } from "@/app/p/[id]/chat/actions";
+import type { Card, CardStatus, ChatQuestion, Hop, Mode, Worker } from "@/api/caw";
+import { answerQuestion, startStep } from "@/app/p/[id]/actions";
+import { postMessageFor } from "@/app/p/[id]/chat/actions";
+import { acceptText, canCarryOn } from "@/lib/crew";
 import { CrewStrip, type SeatView } from "@/components/CrewStrip";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
 import { group, kindGroup } from "@/theme/tokens";
-import { acceptAnswer, answerOwn, cardMark, chatWaits as waitsWords, distill, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
+import { acceptAnswer, agreeStart, answerOwn, cardMark, live, chatWaits as waitsWords, distill, oneAnswer, teamDown as downWords, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
 
 export type PartRef = { kind: string; title: string };
+
+/** The team is not running (REQ-015 R1, SPEC-A-009 § 1b, TASK-B-104): one line in the stuck tone with the start command the back end gives
+ *  (`TeamStatus.startCommand`, never written here). Not BackendDown — caw-back answered, only the team is down. It appears and leaves through the
+ *  page's LiveRefresh, which watches the team's running too (TASK-B-109). */
+export function TeamDown({ startCommand }: { startCommand: string }) {
+  return (
+    <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[10px] bg-stuck-soft px-6 py-3 text-[15px] font-semibold text-stuck max-md:px-4" role="status" data-team-down>
+      <span>{downWords.line}</span>
+      <code className="select-all rounded-md bg-sheet px-2.5 py-1 font-mono text-sm font-normal text-ink [overflow-wrap:anywhere]" data-start-command>{startCommand}</code>
+    </p>
+  );
+}
 /** The entry worker's open chat questions (crew.ts `entryQuestions`), for the "waits on you" sheet. */
 export type ChatAsk = { entry: Worker; questions: ChatQuestion[] } | null;
 
@@ -43,9 +56,14 @@ function PartChip({ part }: { part: PartRef | undefined }) {
   );
 }
 
-function WorkCard({ card, worker, part, waiting }: { card: Card; worker: Worker | undefined; part: PartRef | undefined; waiting: boolean }) {
+/** `carry`: this card's step can be started from here (crew.ts `canCarryOn`, D-105, TASK-B-121) — a `ทำต่อ` under the card's link, in the same item but never
+ *  inside the link; `primary` makes it the board's one filled button. */
+function WorkCard({ card, worker, part, waiting, carry = null }: {
+  card: Card; worker: Worker | undefined; part: PartRef | undefined; waiting: boolean;
+  carry?: { primary: boolean; pending: boolean; onPress: () => void; error: string | null } | null;
+}) {
   return (
-    <li>
+    <li className="grid gap-2">
       <a href={`/p/${card.projectId}/c/${card.id}`} aria-labelledby={`t-${card.id}`} data-card={card.id}
         className={`grid gap-2.5 rounded-md border bg-sheet p-3.5 text-ink no-underline transition-colors hover:border-ink3 ${card.status === "stuck" ? "border-stuck" : "border-hair"}`}>
         <h3 id={`t-${card.id}`} className="clamp-2 m-0 text-[15px] font-semibold leading-snug" title={card.title}>{card.title}</h3>
@@ -63,13 +81,20 @@ function WorkCard({ card, worker, part, waiting }: { card: Card; worker: Worker 
           </span>
         )}
       </a>
+      {carry && (
+        <>
+          <Button variant={carry.primary ? "default" : "outline"} className="min-h-11 w-full font-semibold" disabled={carry.pending} onClick={carry.onPress} data-carry-on>{live.carryOn /* D-065 word, D-105 place */}</Button>
+          {carry.error && <p className="m-0 rounded-md bg-stuck-soft px-3 py-2 text-sm font-semibold text-stuck" role="alert">{carry.error}</p>}
+        </>
+      )}
     </li>
   );
 }
 
 /** One thing that waits on you, in its own sheet: who asks about what, the question, the proposed answer, and the two ways to answer. */
-function AskSheet({ meta, text, proposed, face, onAccept, ownHref, cardId, pending, error }: {
-  meta: string; text: string; proposed: string; face?: Worker; onAccept: () => void; ownHref: string; cardId?: string; pending: boolean; error: string | null;
+/** `primary`: this sheet's `ตามนั้น` is the board's one filled button (B7) — otherwise it is outline (D-105 P1, TASK-B-119). */
+function AskSheet({ meta, text, proposed, face, onAccept, ownHref, cardId, pending, error, primary }: {
+  meta: string; text: string; proposed: string; face?: Worker; onAccept: () => void; ownHref: string; cardId?: string; pending: boolean; error: string | null; primary: boolean;
 }) {
   return (
     <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 rounded-[10px] border border-hair bg-sheet px-6 py-4 max-md:grid-cols-[auto_minmax(0,1fr)] max-md:px-4"
@@ -82,7 +107,7 @@ function AskSheet({ meta, text, proposed, face, onAccept, ownHref, cardId, pendi
       </h2>
       <p className="col-start-2 m-0 text-sm text-ink2">{proposedAnswer} <b className="font-semibold text-ink">{proposed}</b></p>
       <span className="col-start-3 row-span-3 row-start-1 flex flex-wrap items-center gap-2 max-md:col-span-2 max-md:col-start-1 max-md:row-auto max-md:mt-2">
-        <Button className="min-h-11 px-5 font-semibold" disabled={pending} onClick={onAccept} data-accept>{acceptAnswer}</Button>
+        <Button variant={primary ? "default" : "outline"} className="min-h-11 px-5 font-semibold" disabled={pending} onClick={onAccept} data-accept>{acceptAnswer}</Button>
         <Button asChild variant="outline" className="min-h-11"><a href={ownHref} data-answer-own>{answerOwn}</a></Button>
       </span>
       {error && <p className="col-span-full m-0 mt-2 rounded-md bg-stuck-soft px-3 py-2 text-sm font-semibold text-stuck" role="alert">{error}</p>}
@@ -92,11 +117,14 @@ function AskSheet({ meta, text, proposed, face, onAccept, ownHref, cardId, pendi
 
 /** `chatWaits`: the entry worker, while the newest chat message is theirs and has no questions (crew.ts `entryWaitsInChat`) — else null.
  *  `modeControl`: the project's mode, run state and stop — drawn right above the columns, where the run is watched (TASK-B-099, D-094 H-1).
+ *  `proposalWaits`: the entry worker's newest reply carries an open proposal (crew.ts `proposalWaits`) — the notice says it waits for his agreement.
+ *  `mode` / `hops`: in แบบสั่งทีละขั้น with nothing running, each workable card gets `ทำต่อ` (TASK-B-121).
+ *  `teamDown`: the start command while the team is not running (TASK-B-104) — else null.
  *  `entry`: who takes work first — names the empty board's one button (TASK-B-100, B-2); `tellPrimary`: that button is the screen's primary
  *  unless an earlier first step (the folder) still holds it (B7: one primary per screen). */
-export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = null, chatWaits = null, modeControl = null, entry = null, tellPrimary = true }: {
+export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = null, chatWaits = null, modeControl = null, entry = null, tellPrimary = true, teamDown = null, proposalWaits = false, mode = "dispatcher", hops = [] }: {
   projectId: string; cards: Card[]; workers: Worker[]; parts: Record<string, PartRef>; seats?: SeatView[]; chatAsk?: ChatAsk; chatWaits?: Worker | null; modeControl?: ReactNode;
-  entry?: Worker | null; tellPrimary?: boolean;
+  entry?: Worker | null; tellPrimary?: boolean; teamDown?: string | null; proposalWaits?: boolean; mode?: Mode; hops?: Hop[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -114,30 +142,65 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
     if (!r.ok) setErrors((e) => ({ ...e, [key]: cardRefused[(r as { code: string }).code] ?? cardRefused.other! }));
     router.refresh();
   });
+  // D-105 P1: the entry person's questions are answered IN the chat — the post lands him there, on his own message (`/chat#m-{id}`), with Paul answering under it
+  const acceptInChat = (key: string, answers: string[]) => start(async () => {
+    setErrors((e) => ({ ...e, [key]: null }));
+    const r = await postMessageFor(projectId, acceptText(answers));
+    if (!r.ok) { setErrors((e) => ({ ...e, [key]: cardRefused[(r as { code: string }).code] ?? cardRefused.other! })); router.refresh(); return; }
+    router.push(`/p/${projectId}/chat${r.id ? `#m-${r.id}` : ""}`);
+  });
+  // one filled button on the board (B7): with 2+ questions from the entry person, `ตามนั้นทุกข้อ` holds it; otherwise the first sheet's `ตามนั้น`
+  const askAll = (chatAsk?.questions.length ?? 0) >= 2;
+  const anyAsk = questions.length > 0 || !!chatAsk;
+  // ทำต่อ (D-105, TASK-B-121): with no question open, the workable card with the lowest number holds the board's one filled button
+  const carryIds = new Set(work.filter((c) => canCarryOn(c, mode, hops)).map((c) => c.id));
+  const firstCarry = anyAsk ? null : [...work].filter((c) => carryIds.has(c.id)).sort((a, b) => a.number - b.number)[0]?.id ?? null;
+  const carry = (c: Card) => !carryIds.has(c.id) ? null : {
+    primary: c.id === firstCarry, pending, error: errors[`carry-${c.id}`] ?? null,
+    onPress: () => start(async () => {
+      setErrors((e) => ({ ...e, [`carry-${c.id}`]: null }));
+      const r = await startStep(projectId, c.id, c.assigneeId!);
+      // the state moved on (someone started a hop, or the card is no longer workable): the refresh shows it — nothing to say
+      if (!r.ok && r.code !== "hop_running" && r.code !== "not_workable") setErrors((e) => ({ ...e, [`carry-${c.id}`]: cardRefused[r.code] ?? cardRefused.other! }));
+      router.refresh();
+    }),
+  };
 
   return (
     <div className="grid min-w-0 gap-6" data-board>
+      {teamDown !== null && <TeamDown startCommand={teamDown} />}
       {chatWaits && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" data-chat-waits>
           <Avatar name={chatWaits.name} avatar={chatWaits.avatar} size="md" />
-          <p className="m-0 min-w-0 flex-1 text-[15px] font-semibold">{waitsWords.line(chatWaits.name)}</p>
+          {/* D-105 P2 (TASK-B-120): when what waits is his proposal, the line says so — he agrees in the chat */}
+          <p className="m-0 min-w-0 flex-1 text-[15px] font-semibold" data-chat-waits-line>{proposalWaits ? agreeStart.waiting(chatWaits.name) : waitsWords.line(chatWaits.name)}</p>
           {/* the board's one primary (B7) unless a card question already holds it */}
-          <Button asChild variant={questions.length > 0 ? "outline" : "default"} className="min-h-11 px-5 font-semibold"><a href={`/p/${projectId}/chat`}>{waitsWords.go}</a></Button>
+          <Button asChild variant={questions.length > 0 || firstCarry ? "outline" : "default"} className="min-h-11 px-5 font-semibold"><a href={`/p/${projectId}/chat`}>{waitsWords.go}</a></Button>
         </div>
       )}
       {seats.length > 0 && <CrewStrip seats={seats} chosen={chosen} onToggle={toggle} />}
 
-      {(questions.length > 0 || chatAsk) && (
+      {askAll && chatAsk && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" data-ask-all>
+          <Avatar name={chatAsk.entry.name} avatar={chatAsk.entry.avatar} size="md" />
+          <p className="m-0 min-w-0 flex-1 text-[15px] font-semibold">{oneAnswer.asks(chatAsk.entry.name, chatAsk.questions.length)}</p>
+          <Button className="min-h-11 px-5 font-semibold" disabled={pending} onClick={() => acceptInChat("chat-all", chatAsk.questions.map((q) => q.proposedDefault))} data-accept-all>{oneAnswer.acceptAll}</Button>
+          {errors["chat-all"] && <p className="m-0 basis-full rounded-md bg-stuck-soft px-3 py-2 text-sm font-semibold text-stuck" role="alert">{errors["chat-all"]}</p>}
+        </div>
+      )}
+      {anyAsk && (
         <ul className="m-0 grid list-none gap-3 p-0" aria-label={redesign.seatWaiting} data-asks>
-          {questions.map((q) => (
+          {questions.map((q, i) => (
             <AskSheet key={q.id} cardId={q.id} meta={parts[q.anchor.key] ? `${partKind[parts[q.anchor.key]!.kind] ?? ""} · ${parts[q.anchor.key]!.title}` : q.title}
               text={q.question?.text ?? q.title} proposed={q.question?.proposedDefault ?? ""} ownHref={`/p/${q.projectId}/c/${q.id}`}
-              onAccept={() => answer(q.id, () => answerQuestion(projectId, q.id, q.question?.proposedDefault ?? ""))} pending={pending} error={errors[q.id] ?? null} />
+              onAccept={() => answer(q.id, () => answerQuestion(projectId, q.id, q.question?.proposedDefault ?? ""))} pending={pending} error={errors[q.id] ?? null}
+              primary={!askAll && i === 0} />
           ))}
           {chatAsk?.questions.map((q, i) => (
             <AskSheet key={`chat-${i}`} face={chatAsk.entry} meta={redesign.asks(chatAsk.entry.name, section.chat)} text={q.text} proposed={q.proposedDefault}
-              ownHref={`/p/${projectId}/chat?draft=${encodeURIComponent(q.text)}`}
-              onAccept={() => answer(`chat-${i}`, () => postMessage(projectId, q.proposedDefault))} pending={pending} error={errors[`chat-${i}`] ?? null} />
+              ownHref={`/p/${projectId}/chat?answer=1`} /* an EMPTY box, focused, under the question — not the question as his draft (D-105) */
+              onAccept={() => acceptInChat(`chat-${i}`, [q.proposedDefault])} pending={pending} error={errors[`chat-${i}`] ?? null}
+              primary={!askAll && questions.length === 0 && i === 0} />
           ))}
         </ul>
       )}
@@ -147,7 +210,7 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
       {cards.length === 0 ? (
         <div className="grid justify-items-center gap-4 rounded-[10px] border border-hair bg-sheet px-6 py-10 text-center max-md:px-4" data-board-empty>
           <p className="m-0 max-w-[48ch] text-[15px] text-ink2">{redesign.emptyBoard}</p>
-          {entry && !chatWaits && <Button asChild variant={tellPrimary ? "default" : "outline"} className="min-h-11 px-5 font-semibold"><a href={`/p/${projectId}/chat`} data-tell-entry>{distill.tellEntry(entry.name)}</a></Button>}
+          {entry && !chatWaits && <Button asChild variant={tellPrimary && !anyAsk ? "default" : "outline"} className="min-h-11 px-5 font-semibold"><a href={`/p/${projectId}/chat`} data-tell-entry>{distill.tellEntry(entry.name)}</a></Button>}
         </div>
       ) : (
       <div className="grid grid-cols-5 overflow-hidden rounded-[10px] border border-hair bg-sheet max-md:flex max-md:snap-x max-md:snap-mandatory max-md:overflow-x-auto" data-columns>
@@ -163,7 +226,7 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
               <ul className="m-0 grid list-none gap-2.5 p-0">
                 {list.map((c) => (
                   <WorkCard key={c.id} card={c} worker={c.assigneeId ? byId.get(c.assigneeId) : undefined} part={parts[c.anchor.key]}
-                    waiting={c.dependsOn.some((d) => openQuestions.has(d))} />
+                    waiting={c.dependsOn.some((d) => openQuestions.has(d))} carry={carry(c)} />
                 ))}
               </ul>
             </section>

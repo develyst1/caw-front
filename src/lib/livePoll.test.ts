@@ -94,3 +94,18 @@ describe("startPoller", () => {
     await c.advance(60_000); expect(polls).toBe(1);
   });
 });
+
+// TASK-B-109 (REQ-015 AC-1): a runner's check-in writes no event, so LiveRefresh also refreshes when the team's running flips
+import { needsRefresh } from "@/components/LiveRefresh";
+describe("needsRefresh", () => {
+  test("a newer seq refreshes; so does the team flipping, with no new seq", () => {
+    expect(needsRefresh({ seq: 5, running: true }, { seq: 6, running: true })).toBe(true);
+    expect(needsRefresh({ seq: 5, running: true }, { seq: 5, running: false })).toBe(true);
+    expect(needsRefresh({ seq: 5, running: false }, { seq: 5, running: true })).toBe(true);
+  });
+  test("no new seq and no flip does not; an unknown running (the call failed) is no flip", () => {
+    expect(needsRefresh({ seq: 5, running: true }, { seq: 5, running: true })).toBe(false);
+    expect(needsRefresh({ seq: 5, running: true }, { seq: 5, running: null })).toBe(false);
+    expect(needsRefresh({ seq: 5, running: null }, { seq: 5, running: false })).toBe(false); // the first answer only sets what was seen
+  });
+});

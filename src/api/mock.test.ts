@@ -16,7 +16,7 @@ describe("projects", () => {
     const [p] = await createMockApi().projects();
     expect(p!.name).toBe("จองห้องประชุม");
     expect(p!.mode).toBe("manual");
-    expect(p!.workspace).toEqual({ roots: [] });
+    expect(p!.workspace).toEqual({ roots: [], readOnly: [] }); // (Revision 2: B-107)
     expect(p!.entryWorkerId).not.toBeNull();
     expect(p!.latestSeenVersion).toBeGreaterThanOrEqual(p!.version);
   });
@@ -211,5 +211,175 @@ describe("seed variants (POST /test-reset?state=…)", () => {
   test("the plain seed is unchanged: manual, and no state means the same as before", async () => {
     expect((await createMockApi().project(PID))!.mode).toBe("manual");
     expect((await createMockApi({}).project(PID))!.mode).toBe("manual");
+  });
+});
+
+describe("team status (REQ-015 R1, contract v1.16)", () => {
+  test("the mock team is running by default; `team-down` is not, with a last-seen time ten minutes ago; the start command is the same", async () => {
+    const up = await createMockApi().teamStatus();
+    expect(up).toEqual({ running: true, runnerName: "mock", lastSeenAt: expect.any(String), startCommand: "cd caw-back && bun run dev" });
+    const down = await createMockApi({ state: "team-down" }).teamStatus();
+    expect([down.running, down.runnerName, down.startCommand]).toEqual([false, null, "cd caw-back && bun run dev"]);
+    const ago = Date.now() - Date.parse(down.lastSeenAt!);
+    expect(ago).toBeGreaterThan(9.9 * 60_000);
+    expect(ago).toBeLessThan(10.5 * 60_000);
+  });
+  test("the runner flips it without a reset: down then up, and nothing else in the project changes", async () => {
+    const api = createMockApi();
+    const before = JSON.stringify(await api.projects());
+    await api.setTeamRunning(false);
+    expect((await api.teamStatus()).running).toBe(false);
+    expect((await api.teamStatus()).runnerName).toBeNull();
+    await api.setTeamRunning(true);
+    expect(await api.teamStatus()).toMatchObject({ running: true, runnerName: "mock" });
+    expect(JSON.stringify(await api.projects())).toBe(before);
+  });
+  test("it is a read: the event log does not move", async () => {
+    const api = createMockApi();
+    await api.setTeamRunning(false);
+    await api.teamStatus();
+    expect(await api.events(PID)).toEqual([]);
+  });
+});
+
+describe("POST /test-reset?team=… (TASK-B-103; the door of the reply door's gate)", () => {
+  const saved = { api: process.env.CAW_API, gate: process.env.CAW_TEST_RESET };
+  const restore = () => { for (const [k, v] of [["CAW_API", saved.api], ["CAW_TEST_RESET", saved.gate]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } };
+  const post = async (query: string) => (await import("../app/test-reset/route")).POST(new Request(`http://x/test-reset${query}`, { method: "POST" }));
+  test("?team=up|down flips the mock team behind the same gate; anything else → 400; gate off → 404 and nothing changes", async () => {
+    try {
+      process.env.CAW_API = "mock"; process.env.CAW_TEST_RESET = "1";
+      expect((await post("")).status).toBe(204);
+      const { api } = await import("./index");
+      expect((await api.teamStatus()).running).toBe(true);
+      expect((await post("?team=down")).status).toBe(204);
+      expect((await api.teamStatus()).running).toBe(false);
+      expect((await post("?team=up")).status).toBe(204);
+      expect((await api.teamStatus()).running).toBe(true);
+      expect((await post("?team=sideways")).status).toBe(400);
+      expect((await post("?team=")).status).toBe(400);
+      delete process.env.CAW_TEST_RESET;
+      expect((await post("?team=down")).status).toBe(404);
+      process.env.CAW_TEST_RESET = "1"; process.env.CAW_API = "http";
+      expect((await post("?team=down")).status).toBe(404);
+      process.env.CAW_API = "mock";
+      expect((await api.teamStatus()).running).toBe(true); // the refused calls changed nothing
+      expect((await post("")).status).toBe(204);
+    } finally { restore(); }
+  });
+});
+
+describe("code map (REQ-015 R2, SPEC-A-009 Revision 1 A3)", () => {
+  test("every project starts with no code map: the seed, `operator-like`, and a second project", async () => {
+    expect((await createMockApi().project(PID))!.codeMap).toBeNull();
+    expect((await createMockApi({ state: "operator-like" }).project(PID))!.codeMap).toBeNull();
+    expect((await createMockApi({ state: "new-project" }).projects()).map((x) => x.codeMap)).toEqual([null, null]); // the second project too
+  });
+  test("`code-map` is a known state: the `operator-like` project plus a filled, unconfirmed map (FE + BE + other folder, a stack, 2 run and 2 test commands, no rules, 2 questions with a default)", async () => {
+    const api = createMockApi({ state: "code-map" });
+    const p = (await api.project(PID))!;
+    const m = p.codeMap!;
+    expect(m.folders.map((f) => f.kind).sort()).toEqual(["be", "fe", "other"]);
+    expect(m.folders.every((f) => f.name.length > 0)).toBe(true);
+    expect(m.stack.length).toBeGreaterThan(0);
+    expect([m.commands.run.length, m.commands.test.length, m.rules.length]).toEqual([2, 2, 0]);
+    expect(m.questions).toHaveLength(2);
+    expect(m.questions.every((q) => q.text.length > 0 && q.proposedDefault.length > 0)).toBe(true);
+    expect([m.confirmedAt, typeof m.updatedAt, typeof m.updatedBy]).toEqual([null, "string", "string"]);
+    // the rest is the operator-like seed
+    const like = createMockApi({ state: "operator-like" });
+    expect(await api.chain(PID)).toEqual(await like.chain(PID));
+    expect((await api.cards(PID)).length).toBe((await like.cards(PID)).length);
+    expect({ ...p, codeMap: null }).toEqual((await like.project(PID))! as never);
+  });
+  test("confirm sets confirmedAt, returns the map, writes `project.code_map_confirmed` (lastSeq moves); the project reads it back", async () => {
+    const api = createMockApi({ state: "code-map" });
+    const seq0 = (await api.events(PID)).at(-1)?.seq ?? 0;
+    const confirmed = await api.confirmCodeMap(PID);
+    expect(confirmed.confirmedAt).not.toBeNull();
+    expect(Math.abs(Date.now() - Date.parse(confirmed.confirmedAt!))).toBeLessThan(5000);
+    expect((await api.project(PID))!.codeMap).toEqual(confirmed);
+    const evs = await api.events(PID, { after: seq0 });
+    expect(evs.map((e) => e.type)).toEqual(["project.code_map_confirmed"]);
+    expect(evs[0]!.seq).toBe(seq0 + 1);
+  });
+  test("confirming again keeps the first time (and still answers 200)", async () => {
+    const api = createMockApi({ state: "code-map" });
+    const first = await api.confirmCodeMap(PID);
+    await Bun.sleep(5);
+    expect((await api.confirmCodeMap(PID)).confirmedAt).toBe(first.confirmedAt);
+  });
+  test("confirm with no map → 409 no_code_map and no event; an unknown project → 404", async () => {
+    const api = createMockApi();
+    await expectRefusal(api.confirmCodeMap(PID), 409, "no_code_map");
+    await expectRefusal(api.confirmCodeMap("p-nope"), 404, "not_found");
+    expect(await api.events(PID)).toEqual([]);
+  });
+});
+
+describe("saving a code map, the way the setup step does (TASK-B-110, REQ-015 R2)", () => {
+  test("with no map given it saves the `code-map` sample on a project that had none: updatedBy is the entry worker, unconfirmed, and `project.code_map_saved` is written", async () => {
+    const api = createMockApi();
+    const entry = (await api.project(PID))!.entryWorkerId!;
+    const seq0 = (await api.events(PID)).at(-1)?.seq ?? 0;
+    await api.saveCodeMap(PID);
+    const m = (await api.project(PID))!.codeMap!;
+    expect(m.updatedBy).toBe(`worker:${entry}`);
+    expect(m.confirmedAt).toBeNull();
+    expect(Math.abs(Date.now() - Date.parse(m.updatedAt))).toBeLessThan(5000);
+    expect(m.folders.map((f) => f.kind).sort()).toEqual(["be", "fe", "other"]);
+    const evs = await api.events(PID, { after: seq0 });
+    expect(evs.map((e) => e.type)).toEqual(["project.code_map_saved"]);
+    expect(evs[0]!.seq).toBe(seq0 + 1);
+  });
+  test("saving again replaces the map and clears `confirmedAt`; a given map is the one saved", async () => {
+    const api = createMockApi({ state: "code-map" });
+    await api.confirmCodeMap(PID);
+    expect((await api.project(PID))!.codeMap!.confirmedAt).not.toBeNull();
+    await api.saveCodeMap(PID);
+    expect((await api.project(PID))!.codeMap!.confirmedAt).toBeNull();
+    const mine = { folders: [{ name: "x", kind: "be" as const }], stack: ["Bun"], commands: { run: ["a"], test: ["b"] }, rules: ["r"], questions: [], confirmedAt: "2020-01-01T00:00:00.000Z" };
+    await api.saveCodeMap(PID, mine);
+    const m = (await api.project(PID))!.codeMap!;
+    expect([m.folders, m.stack, m.rules, m.confirmedAt]).toEqual([mine.folders, ["Bun"], ["r"], null]); // even a `confirmedAt` in the map given does not survive a save
+    expect((await api.events(PID)).filter((e) => e.type === "project.code_map_saved")).toHaveLength(2);
+  });
+  test("an unknown project → 404 and no event", async () => {
+    const api = createMockApi();
+    await expectRefusal(api.saveCodeMap("p-nope"), 404, "not_found");
+    expect(await api.events(PID)).toEqual([]);
+  });
+  test("a project with no entry worker has nobody to save it: 409 no_entry_worker", async () => {
+    const api = createMockApi({ state: "new-project" });
+    const NEW = (await api.projects()).find((p) => p.id !== PID)!.id;
+    await expectRefusal(api.saveCodeMap(NEW), 409, "no_entry_worker");
+    expect((await api.project(NEW))!.codeMap).toBeNull();
+  });
+});
+
+describe("POST /test-reset?codeMap=save (TASK-B-110)", () => {
+  const saved = { api: process.env.CAW_API, gate: process.env.CAW_TEST_RESET };
+  const restore = () => { for (const [k, v] of [["CAW_API", saved.api], ["CAW_TEST_RESET", saved.gate]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } };
+  const post = async (query: string) => (await import("../app/test-reset/route")).POST(new Request(`http://x/test-reset${query}`, { method: "POST" }));
+  test("gate on → 204 and the first project carries a map, unconfirmed; anything but `save` → 400; gate off → 404 and nothing changes", async () => {
+    try {
+      process.env.CAW_API = "mock"; process.env.CAW_TEST_RESET = "1";
+      expect((await post("")).status).toBe(204);
+      const { api } = await import("./index");
+      expect((await api.project(PID))!.codeMap).toBeNull();
+      expect((await post("?codeMap=other")).status).toBe(400);
+      expect((await post("?codeMap=")).status).toBe(400);
+      expect((await api.project(PID))!.codeMap).toBeNull();
+      expect((await post("?codeMap=save")).status).toBe(204);
+      expect((await api.project(PID))!.codeMap!.confirmedAt).toBeNull();
+      expect((await post("")).status).toBe(204); // a reset brings the none back
+      delete process.env.CAW_TEST_RESET;
+      expect((await post("?codeMap=save")).status).toBe(404);
+      process.env.CAW_TEST_RESET = "1"; process.env.CAW_API = "http";
+      expect((await post("?codeMap=save")).status).toBe(404);
+      process.env.CAW_API = "mock";
+      expect((await api.project(PID))!.codeMap).toBeNull(); // the refused calls changed nothing
+      expect((await post("")).status).toBe(204);
+    } finally { restore(); }
   });
 });

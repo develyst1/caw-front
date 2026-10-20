@@ -20,6 +20,12 @@ async function run(projectId: string, fn: () => Promise<unknown>): Promise<ChatR
 }
 
 export async function postMessage(projectId: string, text: string) { return run(projectId, () => api.postChat(projectId, text)); }
+/** The same post, also returning the new message's id — the board's `ตามนั้น` lands on it in the chat (`/chat#m-{id}`, D-105 P1, TASK-B-119). */
+export async function postMessageFor(projectId: string, text: string): Promise<ChatResult & { id?: string }> {
+  let id: string | undefined;
+  const r = await run(projectId, async () => { id = (await api.postChat(projectId, text)).id; });
+  return r.ok ? { ...r, id } : r;
+}
 // ลองอีกครั้ง (D-057, TASK-B-058): ask the runner to answer this message again. `already_answered` / `hop_running` mean the state moved on —
 // nothing to tell the operator, the refresh shows it.
 export async function retryMessage(projectId: string, messageId: string): Promise<ChatResult> {

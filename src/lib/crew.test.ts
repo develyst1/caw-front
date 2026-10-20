@@ -1,6 +1,6 @@
 // Who is doing what, at a glance (REQ-014 R4): per seat in chain order, entry first — working > stuck > waiting on you > free.
 import { describe, expect, test } from "bun:test";
-import type { Card, ChatMessage, Chain, Hop, Worker } from "@/api/caw";
+import type { Card, ChatMessage, Chain, Hop, Proposal, Worker } from "@/api/caw";
 import { crewState } from "./crew";
 
 const W = (n: number, name: string): Worker => ({ id: `w${n}`, name, role: "FE", roles: ["FE"], skills: ["x"], model: "sonnet", effort: "medium", combinedFrom: null, avatar: null, deletedAt: null });
@@ -94,7 +94,7 @@ describe("crewState", () => {
 // ---- the home's one line per project: who is working, how many seats are stuck, how many wait on you (D-066 C4) ----
 import type { CawApi, ProjectSummary } from "@/api/caw";
 import { createMockApi, MOCK_PROJECT_ID } from "@/api/mock";
-import { crewSummary, entryAsked, entryQuestions, entryWaitsInChat, homeSummaries } from "./crew";
+import { acceptText, answeredWith, canCarryOn, crewSummary, entryAnswering, proposalWaits, entryAsked, entryQuestions, entryWaitsInChat, homeSummaries } from "./crew";
 
 describe("crewSummary", () => {
   test("working = the name of the first working seat in chain order (null when nobody), stuck and waitingOnYou are counts of seats", () => {
@@ -315,3 +315,67 @@ describe("the home's waiting count is items (A2): open question cards, assigned 
   });
 });
 
+
+// TASK-B-114 (D-103, REQ-015 AC-1): the แชต page shows กำลังตอบแชต while the entry worker answers
+describe("entryAnswering", () => {
+  const chatHop = (workerId: string, endedAt: string | null): Hop => ({ ...hop(9, workerId, "", endedAt), cardId: null, messageId: "m1" });
+  test("an open chat hop of the entry worker → true", () => {
+    expect(entryAnswering(chain(), [chatHop("w1", null)])).toBe(true);
+  });
+  test("an open card hop, an ended chat hop, another worker's chat hop, or no entry worker → false", () => {
+    expect(entryAnswering(chain(), [hop(1, "w1", "c1", null)])).toBe(false);
+    expect(entryAnswering(chain(), [chatHop("w1", "2026-10-14T09:01:00+07:00")])).toBe(false);
+    expect(entryAnswering(chain(), [chatHop("w2", null)])).toBe(false);
+    expect(entryAnswering(chain(null), [chatHop("w1", null)])).toBe(false);
+  });
+});
+
+// D-105 P1 (TASK-B-119): one answer pair — the text `ตามนั้น` posts, and what an answered question shows
+describe("acceptText / answeredWith", () => {
+  test("one answer → one line; several → one line each, in question order, joined by a newline", () => {
+    expect(acceptText(["เกิน 10 คน"])).toBe("ตามนั้น — เกิน 10 คน");
+    expect(acceptText(["เกิน 10 คน", "ไม่นับ"])).toBe("ตามนั้น — เกิน 10 คน\nตามนั้น — ไม่นับ");
+  });
+  const q = (text: string, proposedDefault: string) => ({ text, proposedDefault, cases: [] });
+  test("an answered question shows its answer only when the operator's next message has the line `ตามนั้น — {answer}`", () => {
+    const chat = [msg(1, "worker:w1", { questions: [q("ห้องใหญ่?", "เกิน 10 คน"), q("นับยกเลิก?", "ไม่นับ")] }), msg(2, "operator", { text: "ตามนั้น — เกิน 10 คน\nอีกเรื่องหนึ่ง" })];
+    expect(answeredWith(chat, chat[0]!, chat[0]!.questions![0]!)).toBe("เกิน 10 คน");
+    expect(answeredWith(chat, chat[0]!, chat[0]!.questions![1]!)).toBeNull(); // he answered that one in his own words
+  });
+  test("no operator message after it → null", () => {
+    const chat = [msg(1, "worker:w1", { questions: [q("ห้องใหญ่?", "เกิน 10 คน")] })];
+    expect(answeredWith(chat, chat[0]!, chat[0]!.questions![0]!)).toBeNull();
+  });
+});
+
+// D-105 P2 (TASK-B-120): the board says Paul's proposal waits for his agreement — the newest message is the entry worker's reply carrying an OPEN proposal,
+// and no question is open
+describe("proposalWaits", () => {
+  const prop = (id: string, messageId: string, status: "open" | "accepted" | "superseded") =>
+    ({ id, projectId: "p", messageId, version: 1, items: [], status, cardIds: null, hopsTotal: 0, createdAt: "" }) as unknown as Proposal;
+  const reply = (over: Partial<ChatMessage> = {}) => msg(2, "worker:w1", { replyTo: "m1", ...over });
+  test("the entry worker's newest reply carries an open proposal → true", () => {
+    expect(proposalWaits(chain(), [msg(1, "operator"), reply()], [prop("q1", "m1", "open")])).toBe(true);
+  });
+  test("accepted or superseded, an open question, a newer operator message, or no entry worker → false", () => {
+    expect(proposalWaits(chain(), [msg(1, "operator"), reply()], [prop("q1", "m1", "accepted")])).toBe(false);
+    expect(proposalWaits(chain(), [msg(1, "operator"), reply({ questions: [{ text: "?", proposedDefault: "a", cases: [] }] })], [prop("q1", "m1", "open")])).toBe(false);
+    expect(proposalWaits(chain(), [msg(1, "operator"), reply(), msg(3, "operator")], [prop("q1", "m1", "open")])).toBe(false);
+    expect(proposalWaits(chain(null), [msg(1, "operator"), reply()], [prop("q1", "m1", "open")])).toBe(false);
+  });
+});
+
+// D-105 (TASK-B-121, SPEC-B-005 Q-1): in แบบสั่งทีละขั้น a card that can be worked gets ทำต่อ
+describe("canCarryOn", () => {
+  const ready = card(1, { assigneeId: "w2", workable: true });
+  test("manual + workable + assigned + no hop running → true", () => {
+    expect(canCarryOn(ready, "manual", [])).toBe(true);
+    expect(canCarryOn(ready, "manual", [hop(1, "w2", "c1", "2026-10-14T09:01:00+07:00")])).toBe(true); // an ENDED hop is not running
+  });
+  test("อัตโนมัติ, not workable, nobody assigned, or any hop running → false", () => {
+    expect(canCarryOn(ready, "dispatcher", [])).toBe(false);
+    expect(canCarryOn({ ...ready, workable: false }, "manual", [])).toBe(false);
+    expect(canCarryOn({ ...ready, assigneeId: null }, "manual", [])).toBe(false);
+    expect(canCarryOn(ready, "manual", [hop(2, "w3", "c9", null)])).toBe(false); // someone else's running hop also blocks: one hop at a time
+  });
+});

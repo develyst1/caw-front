@@ -121,7 +121,6 @@ export const runStopped = (reason: string) => `การรันหยุดแ
 // ---- the chat panel (TASK-B-050): REQ-013's table; carried-over from Blueprint: `กด Enter เพื่อส่ง` (its chat), plus `send`,
 // `proposedAnswer`, `operatorName`, `partKind` above; the rest REQ-013 "Chat page" rows (PM 2026-10-14, TASK-B-050 Q1) ----
 export const chat = {
-  createCards: "สร้างการ์ด",                                                  // REQ-013
   failed: "ทีมยังตอบข้อความนี้ไม่ได้",                                          // REQ-013 (D-057)
   retry: "ลองอีกครั้ง",                                                       // REQ-013 (D-057)
   estimate: (n: number, h: number) => `${n} งาน ใช้ประมาณ ${h} ก้าว`,           // REQ-013
@@ -136,7 +135,7 @@ export const chat = {
 /** A chat write the back end refused — REQ-013 (PM 2026-10-14); `other` = cardRefused.other. */
 export const chatRefused: Record<string, string> = {
   not_open: "ข้อเสนอนี้ปิดไปแล้ว",
-  anchor_not_in_version: "บางงานในข้อเสนอนี้ไม่มีใน spec เวอร์ชันนี้แล้ว — สร้างการ์ดไม่ได้",
+  anchor_not_in_version: "บางงานในข้อเสนอนี้ไม่มีใน spec เวอร์ชันนี้แล้ว — เริ่มงานไม่ได้",  // D-110 (was — สร้างการ์ดไม่ได้; follows D-105's rename)
   validation: "ข้อความยาวเกินไป หรือยังว่างอยู่",
   unreachable: "ต่อระบบไม่ได้ตอนนี้",
   other: "ทำไม่สำเร็จ ลองอีกครั้ง",
@@ -144,7 +143,7 @@ export const chatRefused: Record<string, string> = {
 
 /** The project's workspace folders (`workspace.roots`) — the folders the team may write in. */
 export const workspace = {
-  heading: "โฟลเดอร์ที่ทีมเขียนได้",
+  heading: "โฟลเดอร์ของทีม",                                                   // PM 2026-10-20 (TASK-B-113): it lists read-only folders too since D-100
   add: "เพิ่มโฟลเดอร์",
   remove: "เอาออก",
   hint: "ใส่ path เต็ม เช่น /Users/…/my-repo",
@@ -173,7 +172,7 @@ export const redesign = {
   startingChain: "PM → SA → FE และ BE → QA → PM",                                      // REQ-014 (D-061)
   stepChatTitle: "เล่างานแรกให้ทีมฟัง",                                                  // REQ-014 (D-061)
   stepChatText: "พิมพ์ในแชต ทีมจะเสนอการ์ดให้คุณกดสร้าง",                                  // REQ-014 (D-061)
-  emptyBoard: "บอร์ดยังว่าง — การ์ดจะขึ้นที่นี่เมื่อคุณกดสร้างการ์ดจากแชต",                     // REQ-014 (D-061)
+  emptyBoard: "บอร์ดยังว่าง — การ์ดจะขึ้นที่นี่เมื่อคุณกดตกลง เริ่มงานในแชต",          // D-106 (PM 2026-10-20, approved as written)
   teamIncomplete: "ทีมยังไม่ครบ",                                                       // REQ-014 (D-061) chat head
   entryLine: (name: string, role: string) => `${name} · ${role} ${team.entry}`,          // REQ-014 (D-061) chat head
   seatWorking: (card: string) => `${column.doing}: ${card}`,                           // REQ-014 (D-061) crew seat
@@ -326,7 +325,7 @@ export const chatWaits = {
   go: "ไปที่แชต",                                                            // D-094 § 0
 } as const;
 
-/** The folders row on ทีม (TASK-B-099, D-094 H-3 / T-4 — approved as written): `โฟลเดอร์ที่ทีมเขียนได้` (workspace.heading), the paths, and this button. */
+/** The folders row on ทีม (TASK-B-099, D-094 H-3 / T-4 — approved as written): `โฟลเดอร์ของทีม` (workspace.heading, renamed TASK-B-113), the paths, and this button. */
 export const folderEdit = "แก้";                                               // D-094 H-3
 
 /** The distill's other new words (TASK-B-100, D-094 — approved as written in studies/REQ-014-distill-PM.md). */
@@ -336,4 +335,52 @@ export const distill = {
   chainReady: "สายงานพร้อม",                                                   // D-094 T-1 — shown after a ✓ when every check passes
   answer: "ตอบ",                                                              // D-094 K-4 — the question card's own-answer button
   backToProjects: "กลับไปที่โปรเจกต์",                                          // D-094 S-1 — the start page's one button
+} as const;
+
+/** The team is not running (REQ-015 R1, SPEC-A-009 § 1b, TASK-B-104). `team-proposed B-104` until the PM approves — the PM's table. */
+export const teamDown = {
+  line: "ทีมยังไม่ได้ทำงาน — เปิดด้วยคำสั่งนี้",                                  // team-proposed B-104 — board + chat, before the start command
+  waits: "ข้อความนี้จะรอจนทีมเริ่มทำงาน",                                         // team-proposed B-104 — under the chat box while the team is down
+} as const;
+
+/** The code map on ทีม (REQ-015 R2, SPEC-A-009 § 2c, TASK-B-106). `team-proposed B-106` until the PM approves — the PM's table. */
+export const codeMapWords = {
+  heading: "ผังโค้ด",                                                            // team-proposed B-106 — the section's h2 (#code-map)
+  folders: "โฟลเดอร์",                                                          // team-proposed B-106
+  kind: { fe: "FE", be: "BE", other: "ไม่ใช่ของเรา" },                          // team-proposed B-106 (TASK's own words)
+  stack: "เทคโนโลยี",                                                           // team-proposed B-106
+  run: "คำสั่งรัน",                                                              // team-proposed B-106
+  test: "คำสั่งทดสอบ",                                                          // team-proposed B-106
+  rules: "กฎของโค้ด",                                                           // team-proposed B-106
+  none: "ไม่มี",                                                                // team-proposed B-106 (TASK's own word) — an empty list
+  questions: "คำถามที่ยังเปิด",                                                  // team-proposed B-106
+  notes: "บันทึก",                                                              // team-proposed B-106
+  confirm: "ยืนยัน",                                                            // team-proposed B-106 (SPEC-A-009 § 2c)
+  confirmed: (date: string) => `ยืนยันแล้ว ${date}`,                             // team-proposed B-106 (TASK's own words)
+  fixInChat: "แก้ผ่านแชต",                                                       // team-proposed B-106 (TASK's own words)
+  see: "ดูผังโค้ด",                                                              // team-proposed B-106 (TASK's own words) — under the chat reply
+} as const;
+
+/** Folder kinds (REQ-015 R4a, D-099 / D-100, TASK-B-108). `team-proposed B-108` until the PM approves — the PM's table. */
+export const folderKind = {
+  writable: "เขียนได้",                                                          // team-proposed B-108 (TASK's own word)
+  readOnly: "อ่านได้อย่างเดียว",                                                  // team-proposed B-108 (TASK's own word)
+  help: 'ทีมอ่านได้ทุกโฟลเดอร์ เขียนได้เฉพาะที่ "เขียนได้"',                         // team-proposed B-108 (TASK's own words) — the dialog's one help line
+} as const;
+
+/** One question, one way to answer (REQ-016 P1, TASK-B-119) — approved by D-105. */
+export const oneAnswer = {
+  acceptAll: "ตามนั้นทุกข้อ",                                                    // D-105 — the board's primary when the entry person asks 2+
+  posted: (answer: string) => `ตามนั้น — ${answer}`,                            // D-105 — the line ตามนั้น posts for him
+  asks: (entry: string, n: number) => `${entry} ถาม ${n} ข้อ`,                   // D-105 — the board's header row over 2+ questions
+  answered: (answer: string | null) => (answer ? `ตอบแล้ว · ${answer}` : "ตอบแล้ว"), // D-105 — an answered question in the chat
+} as const;
+
+/** One clear moment the work starts (REQ-016 P2, TASK-B-120) — approved by D-105. */
+export const agreeStart = {
+  agree: "ตกลง เริ่มงาน",                                                         // D-105 — the proposal's button (was สร้างการ์ด)
+  answerFirst: (entry: string) => `ตอบคำถามของ ${entry} ก่อน`,                     // D-105 — beside the button while a question is open
+  manual: (n: number) => `จะได้ ${n} การ์ดบนบอร์ด แล้วคุณกดให้ทีละขั้น`,             // D-105 — above the button, mode แบบสั่งทีละขั้น
+  dispatcher: (n: number) => `ทีมจะเริ่มทำ ${n} การ์ดเองจนครบงบ`,                   // D-105 — above the button, mode อัตโนมัติ
+  waiting: (entry: string) => `${entry} เสนองานไว้ รอคุณตกลง`,                     // D-105 — the board's line while the proposal waits
 } as const;

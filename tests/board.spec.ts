@@ -2,7 +2,7 @@
 // narrows; plus the 390 sideways columns and the keyboard path.
 import { expect, test } from "./fixtures";
 import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
-import { acceptAnswer, column, distill, section } from "../src/words";
+import { acceptAnswer, agreeStart, column, distill, oneAnswer, section, teamDown } from "../src/words";
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 
@@ -101,11 +101,13 @@ test.describe("on operator-like", () => {
     await expect(page.locator('[data-column="doing"] [data-card]').filter({ hasText: "ทำ API ขออนุมัติการจองห้องประชุมขนาดใหญ่" })).toHaveCount(1);
     await expect(page.locator('[data-ask="chat"]')).toContainText("ห้องใหญ่คือห้องที่จุกี่คนขึ้นไป");
   });
-  test("ตอบเอง… on the chat question opens the chat with the question in the box", async ({ page }) => {
+  // D-105 P1 (TASK-B-119): ตอบเอง… opens the chat with an EMPTY box, focused — no longer the question as his draft
+  test("ตอบเอง… on the chat question opens the chat with the box empty and focused", async ({ page }) => {
     await page.goto(BOARD);
     await page.locator('[data-ask="chat"] [data-answer-own]').click();
-    await expect(page.getByLabel(distill.placeholder("Paul"))).toHaveValue( // C-1 (TASK-B-100): the box names operator-like's entry person
-      /ห้องใหญ่คือห้องที่จุกี่คนขึ้นไป/);
+    const box = page.getByLabel(distill.placeholder("Paul")); // C-1 (TASK-B-100): the box names operator-like's entry person
+    await expect(box).toHaveValue("");
+    await expect(box).toBeFocused();
   });
 });
 
@@ -148,4 +150,135 @@ test.describe("a project with no cards", () => {
     await tell.click();
     await expect(page).toHaveURL(new RegExp(`/p/${MOCK_NEW_PROJECT_ID}/chat$`));
   });
+});
+
+// REQ-015 R1 (TASK-B-104): the team is not running → one line with the start command the back end gives; it leaves by itself when the team checks in
+test.describe("the team is not running", () => {
+  test.use({ seedState: "team-down" });
+  test("the board says so with the start command, and the line leaves within 4 s of the team coming up — no reload", async ({ page, request }) => {
+    await page.goto(BOARD);
+    const line = page.locator("[data-team-down]");
+    await expect(line).toContainText(teamDown.line);
+    await expect(line.locator("[data-start-command]")).toHaveText("cd caw-back && bun run dev"); // the mock's TeamStatus.startCommand
+    await page.evaluate(() => { (window as unknown as { stay: number }).stay = 1; });
+    expect((await request.post("/test-reset?team=up")).status()).toBe(204);
+    await expect(line).toHaveCount(0, { timeout: 4_000 });
+    expect(await page.evaluate(() => (window as unknown as { stay?: number }).stay)).toBe(1);
+  });
+});
+
+// TASK-B-109 (REQ-015 AC-1): the team stopping while the board is open writes no event — LiveRefresh watches the team too, so the line appears by itself
+test("the team stops while the board is open → the line appears within 4 s, no reload", async ({ page, request }) => {
+  await page.goto(BOARD);
+  await expect(page.locator("[data-team-down]")).toHaveCount(0);
+  await page.evaluate(() => { (window as unknown as { stay: number }).stay = 1; });
+  expect((await request.post("/test-reset?team=down")).status()).toBe(204);
+  await expect(page.locator("[data-team-down]")).toContainText(teamDown.line, { timeout: 4_000 });
+  expect(await page.evaluate(() => (window as unknown as { stay?: number }).stay)).toBe(1);
+});
+
+// D-105 P1 (TASK-B-119): one question, one way to answer — the board's ตามนั้น lands in the chat on his own message
+test.describe("one answer pair · entry-asked", () => {
+  test.use({ seedState: "entry-asked" });
+  test("the board's ตามนั้น on Paul's question → the chat, at his message ตามนั้น — …, in view; the box empty", async ({ page }) => {
+    await page.goto(BOARD);
+    const sheet = page.locator('[data-ask="chat"]');
+    const proposed = (await sheet.locator("b").first().textContent())!.trim();
+    await sheet.locator("[data-accept]").click();
+    await expect(page).toHaveURL(/\/chat#m-/);
+    const id = new URL(page.url()).hash.slice(1);
+    const mine = page.locator(`#${id}`);
+    await expect(mine).toHaveAttribute("data-message", "operator");
+    await expect(mine).toContainText(oneAnswer.posted(proposed));
+    await expect(mine).toBeInViewport();
+    await expect(page.locator("[data-box] textarea")).toHaveValue("");
+  });
+  for (const [w, h] of [[1440, 900], [390, 844]] as const) {
+    test(`@${w}: one filled button on the board and one in the chat`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto(BOARD);
+      await expect(page.locator('[data-slot="button"][data-variant="default"]:visible')).toHaveCount(1);
+      await page.goto(`${BOARD}/chat`);
+      await expect(page.locator('[data-slot="button"][data-variant="default"]:visible')).toHaveCount(1);
+    });
+  }
+});
+test.describe("one answer pair · two open questions", () => {
+  test.use({ seedState: "entry-asked-two" });
+  test("the board reads {entry} ถาม 2 ข้อ; ตามนั้นทุกข้อ posts ONE message with both lines", async ({ page }) => {
+    await page.goto(BOARD);
+    const all = page.locator("[data-ask-all]");
+    await expect(all).toContainText(oneAnswer.asks("ปลา", 2));
+    const answers = await page.locator('[data-ask="chat"] b').allTextContents();
+    expect(answers).toHaveLength(2);
+    await all.locator("[data-accept-all]").click();
+    await expect(page).toHaveURL(/\/chat#m-/);
+    const mine = page.locator(`#${new URL(page.url()).hash.slice(1)}`);
+    await expect(mine.locator("p").last()).toHaveText(answers.map((a) => oneAnswer.posted(a.trim())).join("\n"));
+  });
+});
+
+// D-105 P2 (TASK-B-120): while Paul's proposal waits for his agreement, the board says so — and each screen keeps one filled button
+test("the board's line: {entry} เสนองานไว้ รอคุณตกลง → ไปที่แชต", async ({ page }) => {
+  await page.goto(BOARD);
+  const line = page.locator("[data-chat-waits]");
+  await expect(line.locator("[data-chat-waits-line]")).toHaveText(agreeStart.waiting("ปลา"));
+  await expect(line.getByRole("link")).toHaveAttribute("href", /\/chat$/);
+});
+for (const [w, h] of [[1440, 900], [390, 844]] as const) {
+  test(`@${w}: one filled button on the board and on the chat while the proposal waits`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto(BOARD);
+    await expect(page.locator('[data-slot="button"][data-variant="default"]:visible')).toHaveCount(1);
+    await page.goto(`${BOARD}/chat`);
+    await expect(page.locator('[data-slot="button"][data-variant="default"]:visible')).toHaveCount(1);
+  });
+}
+
+// D-105 (TASK-B-121, SPEC-B-005 Q-1): in แบบสั่งทีละขั้น each workable card gets ทำต่อ — it starts that card's step
+test.describe("ทำต่อ · manual-idle", () => {
+  test.use({ seedState: "manual-idle" });
+  // the seed keeps the plain seed's open card question: while it is open its ตามนั้น holds the board's one filled button, and every ทำต่อ is outline
+  const answerTheQuestion = async (page: import("@playwright/test").Page) => {
+    await expect(page.locator('[data-slot="button"][data-variant="default"]:visible')).toHaveCount(1);
+    await expect(page.locator('[data-carry-on][data-variant="default"]')).toHaveCount(0);
+    await page.locator('[data-ask="card"] [data-accept]').click();
+    await expect(page.locator("[data-ask]")).toHaveCount(0);
+  };
+  test("each workable card shows ทำต่อ; with no question open exactly one is filled; pressing it starts the step: within 4 s, no reload, no ทำต่อ left and the worker's seat is working", async ({ page }) => {
+    await page.goto(BOARD);
+    const buttons = page.locator("[data-carry-on]");
+    expect(await buttons.count()).toBeGreaterThan(0);
+    await answerTheQuestion(page);
+    await expect(page.locator('[data-carry-on][data-variant="default"]')).toHaveCount(1);
+    const first = page.locator('[data-carry-on][data-variant="default"]');
+    const who = (await first.locator("xpath=preceding-sibling::a[1]").locator("[data-name]").textContent())!.trim();
+    await page.evaluate(() => { (window as unknown as { stay: number }).stay = 1; });
+    await first.click();
+    await expect(buttons).toHaveCount(0, { timeout: 4_000 });
+    await expect(page.locator(`[data-seat="${who}"]`)).toHaveAttribute("data-state", "working");
+    expect(await page.evaluate(() => (window as unknown as { stay?: number }).stay)).toBe(1);
+  });
+  test("keyboard: Tab from a card's link reaches its ทำต่อ, and Enter presses it", async ({ page }) => {
+    await page.goto(BOARD);
+    await answerTheQuestion(page);
+    const first = page.locator('[data-carry-on][data-variant="default"]');
+    await first.locator("xpath=preceding-sibling::a[1]").focus();
+    await page.keyboard.press("Tab");
+    await expect(first).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("[data-carry-on]")).toHaveCount(0, { timeout: 4_000 });
+  });
+  test("อัตโนมัติ: no ทำต่อ (the team starts the cards itself)", async ({ page }) => {
+    await page.goto(BOARD);
+    await expect(page.locator("[data-carry-on]").first()).toBeVisible();
+    await page.locator("[data-mode-control]").getByRole("radio", { name: "อัตโนมัติ" }).click();
+    await page.locator("[data-budget-ask] form button[type=submit]").click();
+    await expect(page.locator("[data-carry-on]")).toHaveCount(0);
+  });
+});
+test("ทำต่อ · plain seed (a hop is running): no ทำต่อ", async ({ page }) => {
+  await page.goto(BOARD);
+  await expect(page.locator("[data-column] [data-card]").first()).toBeVisible();
+  await expect(page.locator("[data-carry-on]")).toHaveCount(0);
 });

@@ -8,15 +8,15 @@ import type { SeatView } from "@/components/CrewStrip";
 import { FirstSteps } from "@/components/FirstSteps";
 import { ModeControl } from "@/components/ModeControl";
 import { LiveRefresh } from "@/components/LiveRefresh";
-import { crewState, entryQuestions, entryWaitsInChat } from "@/lib/crew";
+import { crewState, entryQuestions, entryWaitsInChat, proposalWaits } from "@/lib/crew";
 import { lastSeq } from "@/lib/eventSeq";
 
 export const dynamic = "force-dynamic";
 
 export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [project, cards, workers, chain, hops, messages, [latest], seq] = await Promise.all([
-    api.project(id), api.cards(id), api.workers(), api.chain(id), api.hops(id, { limit: 20 }), api.chat(id, { limit: 200 }), api.runs(id, 1), lastSeq(api, id),
+  const [project, cards, workers, chain, hops, messages, [latest], seq, team_, proposals] = await Promise.all([
+    api.project(id), api.cards(id), api.workers(), api.chain(id), api.hops(id, { limit: 20 }), api.chat(id, { limit: 200 }), api.runs(id, 1), lastSeq(api, id), api.teamStatus(), api.proposals(id),
   ]);
   if (!project) notFound();
   const contexts = await Promise.all(cards.map((c) => api.cardContext(c.id)));
@@ -39,6 +39,9 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
       {cards.length === 0 && <FirstSteps projectId={id} teamSize={team.members.length} roots={project.workspace.roots} hasChat={messages.length > 0} />}
       <Board projectId={id} cards={cards} workers={workers} parts={parts} seats={seats} chatAsk={entry && asked ? { entry, questions: asked.questions } : null}
         chatWaits={entry && entryWaitsInChat(team, messages) ? entry : null} entry={entry} tellPrimary={project.workspace.roots.length > 0}
+        teamDown={team_.running ? null : team_.startCommand} /* REQ-015 R1 (TASK-B-104) */
+        proposalWaits={proposalWaits(team, messages, proposals)} /* D-105 P2 (TASK-B-120) */
+        mode={project.mode} hops={hops} /* ทำต่อ on the workable cards in แบบสั่งทีละขั้น (TASK-B-121) */
         // a server-built element handed to the client Board needs a key, or React's dev build warns about a list (DEF-6, TASK-B-102)
         modeControl={<ModeControl key="mode" projectId={id} mode={project.mode} hopBudget={project.hopBudget} hopsUsed={project.hopsUsed} lastRun={lastRun} />} />
     </main>

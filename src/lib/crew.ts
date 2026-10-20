@@ -1,6 +1,7 @@
 // Who is doing what, at a glance (REQ-014 R4): one seat per chain member — the entry worker first, then the chain's own order — and what that
 // seat is up to. Pure: the screen reads the chain, the cards and the hops and hands them here.
-import type { Card, CawApi, Chain, ChatMessage, Hop, Worker } from "@/api/caw";
+import type { Card, CawApi, Chain, ChatMessage, ChatQuestion, Hop, Mode, Proposal, Worker } from "@/api/caw";
+import { oneAnswer } from "@/words";
 
 /** `answeringChat`: the running hop is on a chat message, not on a card (D-066 / TASK-B-073 C7) — busy like `working`, with no card to name. */
 export type SeatState = "working" | "answeringChat" | "stuck" | "waitingOnYou" | "idleWithWork" | "free";
@@ -22,6 +23,36 @@ export function entryQuestions(chain: Chain, chat: ChatMessage[]): { message: Ch
   const reply = chat[at]!;
   if (!reply.questions?.length || chat.slice(at + 1).some((m) => m.author === "operator")) return null;
   return { message: reply, questions: reply.questions };
+}
+
+/** What `ตามนั้น` posts for him (D-105 P1, TASK-B-119): `ตามนั้น — {answer}` per question, in question order, one per line — so `ตามนั้นทุกข้อ` is one message. */
+export const acceptText = (answers: string[]) => answers.map(oneAnswer.posted).join("\n");
+
+/** What an answered question shows (D-105): its proposed answer, but only when the operator's NEXT message after the asking reply has the line
+ *  `ตามนั้น — {answer}` (he took it); otherwise null — he answered in his own words, so the screen says only `ตอบแล้ว`. */
+export function answeredWith(chat: ChatMessage[], asked: ChatMessage, q: ChatQuestion): string | null {
+  const next = chat.slice(chat.indexOf(asked) + 1).find((m) => m.author === "operator");
+  return next && next.text.split("\n").some((l) => l.trim() === oneAnswer.posted(q.proposedDefault)) ? q.proposedDefault : null;
+}
+
+/** The board says the entry worker's proposal waits for his agreement (D-105 P2, TASK-B-120): the newest message is the entry worker's reply, no question is
+ *  open on it, and an OPEN proposal answers the operator message it replies to (a proposal hangs on the operator message, `Proposal.messageId`). */
+export function proposalWaits(chain: Chain, chat: ChatMessage[], proposals: Proposal[]): boolean {
+  const last = chat.at(-1);
+  if (!chain.entryWorkerId || !last || last.author !== `worker:${chain.entryWorkerId}` || last.questions?.length || !last.replyTo) return false;
+  return proposals.some((p) => p.status === "open" && p.messageId === last.replyTo);
+}
+
+/** Can this card's step be started from the board (D-105, TASK-B-121, SPEC-B-005 Q-1)? Only in แบบสั่งทีละขั้น, on a card the core calls workable, with someone
+ *  assigned to run it, and while NO hop is running (a project runs one hop at a time). */
+export function canCarryOn(card: Card, mode: Mode, hops: Hop[]): boolean {
+  return mode === "manual" && card.workable && card.assigneeId !== null && !hops.some((h) => h.endedAt === null);
+}
+
+/** Is the entry worker answering the chat right now (TASK-B-114, D-103)? An open hop of theirs on a chat message, not on a card — the same hop the
+ *  board's seat reads as `answeringChat`. */
+export function entryAnswering(chain: Chain, hops: Hop[]): boolean {
+  return !!chain.entryWorkerId && hops.some((h) => h.workerId === chain.entryWorkerId && h.endedAt === null && h.cardId === null && !!h.messageId);
 }
 
 /** The board's notice (TASK-B-098, D-094 § 0 B-1): the newest chat message is a worker's (you have not answered it) and it carries no questions — a reply

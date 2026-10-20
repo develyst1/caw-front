@@ -7,7 +7,7 @@
 // Anything the real server computes (workable, the counts, hopsUsed) is computed here on read, never stored.
 import { STARTING_FACES } from "@/lib/faces"; // the one list of faces: the seed's starting-team workers carry the approved ones (TASK-B-072)
 import {
-  CawError, type Avatar, type Card, type CardContext, type CardStatus, type CawApi, type Chain, type CawEvent, type ChatMessage, type Effort, type Hop, type HopOutcome, type Mode,
+  CawError, type Avatar, type Card, type CardContext, type CardStatus, type CawApi, type CodeMap, type Chain, type CawEvent, type ChatMessage, type Effort, type Hop, type HopOutcome, type Mode,
   type ModelName, type Note, type PartContext, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker, type WorkerRole,
 } from "./caw";
 
@@ -172,7 +172,7 @@ const STATUSES: CardStatus[] = ["todo", "doing", "review", "done", "stuck"];
 /** One project's state. Workers are global (below); a project uses them through its chain. */
 interface Proj {
   id: string; name: string; blueprintProjectId: string; version: number; latestSeenVersion: number;
-  mode: Mode; hopBudget: number; roots: string[]; createdAt: string;
+  mode: Mode; hopBudget: number; roots: string[]; readOnly: string[]; codeMap: CodeMap | null; createdAt: string;
   cards: Seed[]; notes: Record<string, Note[]>; hops: Hop[]; runs: Omit<Run, "hopsUsed">[]; chat: StoredMessage[]; proposals: StoredProposal[];
   /** the hops of the chat steps (SPEC-A-008 § v1.4 puts them in the hop list, `Hop.messageId`; the mock keeps them apart — `Hop` does not model it yet) */
   chatHops: { id: string; messageId: string; endedAt: string | null; outcome: HopOutcome | null }[];
@@ -184,11 +184,11 @@ const refuse = (status: number, code: string, message: string, details?: unknown
 /** a project with nothing in it yet (what `createProject` makes; also the `new-project` state) */
 const blank = (version: number, n: number): Proj => ({
   id: id("p", n), name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version, latestSeenVersion: BLUEPRINT_LATEST,
-  mode: "manual", hopBudget: 0, roots: [], createdAt: NOW, cards: [], notes: {}, hops: [], runs: [], chat: [], proposals: [], chatHops: [], members: [], edges: [], entry: null,
+  mode: "manual", hopBudget: 0, roots: [], readOnly: [], codeMap: null, createdAt: NOW, cards: [], notes: {}, hops: [], runs: [], chat: [], proposals: [], chatHops: [], members: [], edges: [], entry: null,
 });
 
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like"] as const;
+export const MOCK_STATES = ["dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
@@ -200,22 +200,44 @@ export type MockState = (typeof MOCK_STATES)[number];
  *  Anything else (or nothing) is the plain seed. */
 /** What only the mock can do: act as the runner. The screens never call these; the tests and the seeds do. */
 export interface MockRunner {
-  /** Starts a card hop (v1.14): a project has one running hop (409 `hop_running` `{ hopId }`), and a card in `todo` becomes `doing` in the same step. */
-  startHop(cardId: string, workerId: string): Promise<Hop>;
+  /** The RUNNER starts a card hop (v1.14), on any card and with no event (the operator's own start is `CawApi.startHop`): a project has one running hop
+   *  (409 `hop_running` `{ hopId }`), and a card in `todo` becomes `doing` in the same step. */
+  runnerStartHop(cardId: string, workerId: string): Promise<Hop>;
   /** Ends a running hop (outcome `commented`). 404 for an unknown hop. */
   finishHop(hopId: string): Promise<void>;
   /** The entry worker answers the project's newest operator message with a plain reply (no question, no proposal, no amendment) and the log gets
    *  `chat.replied`, so the thread and `lastSeq` move together. An ask nobody answered yet also gets a finished chat hop (`commented`); one that was
    *  answered already just gets the further reply under it. 404 unknown project · 409 `nothing_to_answer` (no operator message at all). */
   replyChat(projectId: string, text: string): Promise<ChatMessage>;
+  /** The team starts (`true`) or stops checking in (`false`), as `teamStatus()` reports it. Nothing else changes and no event is written. */
+  setTeamRunning(running: boolean): void;
+  /** A worker saves the project's code map, as the setup step does (SPEC-A-009 Revision 1 A3): `map` (default: the `code-map` state's sample) replaces any map, `updatedAt`
+   *  is now, `updatedBy` is the entry worker, `confirmedAt` is cleared, and `project.code_map_saved` is written so `lastSeq` moves. 404 unknown project · 409 `no_entry_worker`. */
+  saveCodeMap(projectId: string, map?: Partial<CodeMap> & Pick<CodeMap, "folders" | "stack" | "commands" | "rules" | "questions">): Promise<void>;
 }
+
+/** The sample code map of the `code-map` state and of `saveCodeMap` (a worker's notes on the code; its times, author and confirmation are set when it is saved). */
+const SAMPLE_CODE_MAP: Omit<CodeMap, "updatedAt" | "updatedBy" | "confirmedAt"> = {
+  folders: [
+    { name: "booking-web", kind: "fe", note: "หน้าจอจองห้อง (Next.js)" },
+    { name: "booking-api", kind: "be", note: "API และฐานข้อมูล" },
+    { name: "docs", kind: "other" },
+  ],
+  stack: ["TypeScript", "Next.js", "PostgreSQL"],
+  commands: { run: ["bun run dev", "bun run dev:api"], test: ["bun test", "bunx playwright test"] },
+  rules: [],
+  questions: [
+    { text: "ห้องใหญ่ที่ต้องขออนุมัติ นับที่กี่คนขึ้นไป", proposedDefault: "เกิน 10 คน" },
+    { text: "ทดสอบกับฐานข้อมูลจริงได้ไหม", proposedDefault: "ไม่ได้ ใช้ฐานข้อมูลในหน่วยความจำ" },
+  ],
+};
 
 export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRunner {
   const workers: Worker[] = structuredClone(WORKERS);
   let nextHop = 100, nextWorker = workers.length, nextProject = 1, nextNote = 100, nextRun = 2, nextCard = SEEDS.length, nextMessage = CHAT.length; // runs r-1 and r-2, 12 cards and 4 messages are seeded
   const projects: Proj[] = [{
     id: PROJECT_ID, name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version: BLUEPRINT_VERSION, latestSeenVersion: BLUEPRINT_LATEST,
-    mode: opts.state === "dispatcher-stopped" ? "dispatcher" : "manual", hopBudget: 40, roots: [], createdAt: "2026-10-12T20:00:00+07:00", // a new project has no folders yet (REQ-011: the warning)
+    mode: opts.state === "dispatcher-stopped" ? "dispatcher" : "manual", hopBudget: 40, roots: [], readOnly: [], codeMap: null, createdAt: "2026-10-12T20:00:00+07:00", // a new project has no folders yet (REQ-011: the warning)
     cards: structuredClone(SEEDS), notes: structuredClone(NOTES), hops: structuredClone(SEEDED_HOPS), chat: structuredClone(CHAT), proposals: structuredClone(PROPOSALS), chatHops: [],
     runs: [{
       id: RUN_1, projectId: PROJECT_ID, mode: "dispatcher", hopBudget: 3, startedAt: "2026-10-13T08:00:00+07:00", endedAt: "2026-10-13T08:06:00+07:00",
@@ -230,7 +252,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   // the one project: six people (long Thai names, a PM + BA entry, an FE + BE), a chain with a return line QA → SA, one person in no chain, one deleted worker,
   // a long folder path, three cards from an accepted proposal (the BE's is `doing` because a hop is running on it — v1.14 —, the QA's is stuck), and the entry
   // worker's chat reply with a question nobody has answered.
-  if (opts.state === "operator-like") {
+  if (opts.state === "operator-like" || opts.state === "code-map") { // (`code-map` is `operator-like` plus a code map, filled in below)
     const w = (n: number, name: string, roles: WorkerRole[], deletedAt: string | null = null): Worker => ({
       id: id("w", n), name, role: roles[0]!, roles, skills: roles.map((r) => `role-${r.toLowerCase()}`), model: "sonnet", effort: "medium", combinedFrom: null, avatar: null, deletedAt,
     });
@@ -242,7 +264,8 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     p.members = [paul, sa, fena, beta, kit, qa].map((x) => x.id);
     p.edges = [[paul, sa], [sa, fena], [sa, beta], [sa, kit], [fena, qa], [beta, qa], [kit, qa], [qa, sa]].map(([a, b]) => ({ from: a!.id, to: b!.id }));
     p.entry = paul.id;
-    p.roots = ["/Users/operator/Develyst/จองห้องประชุม-แอปพลิเคชันสำหรับองค์กรขนาดใหญ่/frontend-web-application"];
+    p.roots = ["/Users/operator/Develyst/จองห้องประชุม-แอปพลิเคชันสำหรับองค์กรขนาดใหญ่/frontend-web-application", "/Users/operator/Develyst/mychannel-mc2-spec"];
+    p.readOnly = ["/Users/operator/Develyst/mychannel-mc2-spec"]; // REQ-015 R4a (D-100): one folder the team may read but not write, so the screens have a case to show
     p.runs = [];
     p.notes = {};
     p.chatHops = [];
@@ -269,10 +292,17 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     nextMessage = 2;
     nextCard = 3;
   }
+  // REQ-015 R2: `code-map` = `operator-like` plus what a worker would have saved about the code, not yet confirmed by the operator (it is the entry worker's, Paul's, map)
+  if (opts.state === "code-map") {
+    const p = projects[0]!;
+    p.codeMap = { ...structuredClone(SAMPLE_CODE_MAP), updatedAt: new Date(Date.now() - 20 * 60_000).toISOString(), updatedBy: `worker:${p.entry}`, confirmedAt: null };
+  }
   // TASK-B-075: the entry worker's newest chat reply (M4, which already carries a proposal and an amendment) also asks the operator something, and no operator
   // message comes after it — so `entryAsked` holds and the entry seat waits on you. Everything else in the thread is the plain seed's.
-  if (opts.state === "entry-asked") {
+  if (opts.state === "entry-asked" || opts.state === "entry-asked-two") {
     projects[0]!.chat.find((m) => m.id === M(4))!.questions = [{ text: "นับการจองที่ยกเลิกในสรุปรายวันด้วยไหม", proposedDefault: "ไม่นับ", cases: ["นับ", "ไม่นับ"] }];
+    // TASK-B-117: `entry-asked-two` — the same reply asks a second thing, so the sheet can be seen taking two answers (TASK-B-119)
+    if (opts.state === "entry-asked-two") projects[0]!.chat.find((m) => m.id === M(4))!.questions!.push({ text: "สรุปรายวันส่งให้ใครทุกเช้า", proposedDefault: "ผู้จัดการอาคาร", cases: ["ผู้จัดการอาคาร", "ทุกคนในทีม"] });
   }
   if (opts.state === "chat-failed" || opts.state === "chat-running") {
     const p = projects[0]!, failed = opts.state === "chat-failed";
@@ -290,7 +320,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   if (opts.state === "new-project") projects.push(blank(1, ++nextProject));
   // C5 (TASK-B-073): the seed has one running card hop — ฝน's, started now (so she reads `working`, not quiet); `working-quiet` is the same hop started 12 minutes
   // before the seed was made, with no sign of life since (so `lastActivityAt` is 12 minutes old); `working-now` moves the running hop to แบงค์ on card 4 (a project has one running hop at a time).
-  if (opts.state !== "chat-running" && opts.state !== "operator-like") { // (`operator-like` has its own running hop)
+  if (opts.state !== "chat-running" && opts.state !== "operator-like" && opts.state !== "code-map" && opts.state !== "manual-idle") { // (`operator-like` has its own running hop; `manual-idle` has none)
     const at = new Date();
     const running = (workerId: string, cardId: string, startedAt: Date): Hop => ({ // a hop's `lastActivityAt` is its start until a heartbeat moves it
       id: id("h", 20), projectId: PROJECT_ID, runId: null, claimedBy: null, messageId: null, cardId, workerId, startedAt: startedAt.toISOString(), lastActivityAt: startedAt.toISOString(),
@@ -330,7 +360,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   const isStuck = (c: Seed) => c.status === "stuck" || (c.kind === "question" && c.answer === null) || c.specChangedVersion !== null;
   const summary = (p: Proj): ProjectSummary => ({
     id: p.id, name: p.name, blueprintProjectId: p.blueprintProjectId, version: p.version, latestSeenVersion: p.latestSeenVersion,
-    mode: p.mode, hopBudget: p.hopBudget, hopsUsed: p.hops.length, entryWorkerId: p.entry, workspace: { roots: [...p.roots] }, createdAt: p.createdAt,
+    mode: p.mode, hopBudget: p.hopBudget, hopsUsed: p.hops.length, entryWorkerId: p.entry, workspace: { roots: [...p.roots], readOnly: [...p.readOnly] }, codeMap: structuredClone(p.codeMap), createdAt: p.createdAt,
     cardsDone: p.cards.filter((c) => c.status === "done").length, cardsTotal: p.cards.length, stuckCount: p.cards.filter(isStuck).length,
   });
   const run = (p: Proj, r: Omit<Run, "hopsUsed">): Run => ({ ...r, hopsUsed: p.hops.filter((h) => h.runId === r.id && h.endedAt !== null).length });
@@ -339,7 +369,35 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   });
   const member = (p: Proj, wid: string) => { if (!p.members.includes(wid)) refuse(400, "not_a_member", "that worker is not in this project's chain"); };
 
-  const base: Omit<CawApi, "events"> = {
+  /** The hop a start makes: a project has one running hop (409 `hop_running` `{ hopId }`), and a card in `todo` becomes `doing` in the same step (v1.14). */
+  const beginHop = (p: Proj, c: Seed, workerId: string): Hop => {
+    const running = p.hops.find((h) => h.endedAt === null);
+    if (running) refuse(409, "hop_running", "this project already has a hop running", { hopId: running.id });
+    const at = new Date().toISOString();
+    const hop: Hop = { id: id("h", ++nextHop), projectId: p.id, runId: null, claimedBy: null, messageId: null, cardId: c.id, workerId, startedAt: at, lastActivityAt: at, endedAt: null, outcome: null, tokensIn: null, tokensOut: null, note: "" };
+    p.hops.unshift(hop);
+    if (c.status === "todo") c.status = "doing";
+    return structuredClone(hop);
+  };
+
+  const base: Omit<CawApi, "events" | "teamStatus"> = {
+    // the operator's `ทำต่อ` (REQ-016 AC-4): 404 (project, card, worker) → hop_running → not_workable. `no_budget` is not modelled: the mock project has no run budget to spend in manual mode
+    startHop: async (pid, cardId, workerId) => {
+      const p = need(pid);
+      const found = locate(cardId);
+      if (!found || found.p.id !== p.id) return refuse(404, "not_found", "no such card");
+      worker(workerId);
+      const running = p.hops.find((h) => h.endedAt === null);
+      if (running) refuse(409, "hop_running", "this project already has a hop running", { hopId: running.id });
+      if (!workable(p, found.c)) refuse(409, "not_workable", "this card cannot be worked on now");
+      return beginHop(p, found.c, workerId);
+    },
+    confirmCodeMap: async (pid) => {
+      const p = need(pid);
+      const map = p.codeMap ?? refuse(409, "no_code_map", "this project has no code map yet");
+      map.confirmedAt ??= new Date().toISOString(); // asking again keeps the first time
+      return structuredClone(map);
+    },
     projects: async () => projects.map(summary),
     project: async (pid) => { const p = get(pid); return p ? summary(p) : null; },
     setMode: async (pid, next, budget) => {
@@ -351,12 +409,14 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       if (next === "manual") for (const r of p.runs) if (r.endedAt === null) { r.endedAt = new Date().toISOString(); r.stopReason = "operator_stopped"; }
       return summary(p);
     },
-    setWorkspace: async (pid, next) => {
+    setWorkspace: async (pid, next, readOnly = []) => {
       const p = get(pid);
       if (!p) return null;
       const bad = next.length > 20 || next.some((r) => !ABSOLUTE.test(r) || r.length > 500 || r.split(/[\\/]/).includes(".."));
       if (bad) refuse(400, "validation", "roots: at most 20 absolute paths, no `..` segment, each ≤ 500 chars");
+      if (readOnly.some((r) => !next.includes(r))) refuse(400, "validation", "readOnly: every entry must be one of roots");
       p.roots = [...next];
+      p.readOnly = [...readOnly];
       return summary(p);
     },
     cards: async (pid, query = {}) => { const p = get(pid); return !p ? [] : p.cards.map((c) => full(p, c)).filter((c) =>
@@ -622,6 +682,8 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     removeEdge: ["chain.edge_removed", (a) => a[0]], setEntry: ["chain.entry_set", (a) => a[0]],
     postChat: ["chat.posted", (a) => a[0]], retryChat: ["chat.retry_requested", (a) => projects.find((p) => p.chat.some((m) => m.id === a[0]))?.id ?? null],
     acceptProposal: ["proposal.accepted", (_a, r) => r[0]?.projectId ?? null],
+    confirmCodeMap: ["project.code_map_confirmed", (a) => a[0]],
+    startHop: ["hop.started", (a) => a[0]],
   };
   const api: Record<string, unknown> = { ...base };
   for (const [name, [type, projectOf]] of Object.entries(WRITES)) {
@@ -634,24 +696,39 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   }
   api.events = async (pid: string, query: { after?: number; limit?: number } = {}) =>
     structuredClone(log.filter((e) => e.projectId === pid && e.seq > (query.after ?? 0)).slice(0, Math.min(query.limit ?? 100, 500)));
+  // REQ-015 R1: the mock team is running unless the `team-down` state (or the runner) says it stopped; a stopped team was last seen ten minutes ago
+  let teamRunning = opts.state !== "team-down";
+  const lastSeen = new Date(Date.now() - 10 * 60_000).toISOString();
+  (api as { teamStatus: CawApi["teamStatus"] }).teamStatus = async () =>
+    teamRunning ? { running: true, runnerName: "mock", lastSeenAt: new Date().toISOString(), startCommand: "cd caw-back && bun run dev" } : { running: false, runnerName: null, lastSeenAt: lastSeen, startCommand: "cd caw-back && bun run dev" };
   const runner: MockRunner = {
-    startHop: async (cardId, workerId) => {
+    setTeamRunning: (running) => { teamRunning = running; },
+    saveCodeMap: async (pid, map = SAMPLE_CODE_MAP) => {
+      const p = need(pid);
+      if (!p.entry) refuse(409, "no_entry_worker", "a code map is saved by the entry worker, and this project has none");
+      const at = new Date().toISOString();
+      p.codeMap = { ...structuredClone(map), updatedAt: at, updatedBy: `worker:${p.entry}`, confirmedAt: null };
+      log.push({ seq: log.length + 1, at, actor: `worker:${p.entry}`, projectId: p.id, type: "project.code_map_saved", data: {} });
+    },
+    runnerStartHop: async (cardId, workerId) => {
       const { p, c } = needCard(cardId);
       worker(workerId);
-      const running = p.hops.find((h) => h.endedAt === null);
-      if (running) refuse(409, "hop_running", "this project already has a hop running", { hopId: running.id });
-      const at = new Date().toISOString();
-      const hop: Hop = { id: id("h", ++nextHop), projectId: p.id, runId: null, claimedBy: null, messageId: null, cardId, workerId, startedAt: at, lastActivityAt: at, endedAt: null, outcome: null, tokensIn: null, tokensOut: null, note: "" };
-      p.hops.unshift(hop);
-      if (c.status === "todo") c.status = "doing"; // v1.14: in the same event
-      return structuredClone(hop);
+      return beginHop(p, c, workerId);
     },
     replyChat: async (pid, text) => {
       const p = need(pid);
       const ask = p.chat.findLast((m) => m.author === "operator");
       if (!ask || !p.entry) return refuse(409, "nothing_to_answer", "there is no operator message to answer");
       const at = new Date().toISOString();
-      if (ask.replyHopId === null) {
+      // the core: the reply "sets the asked message's `replyHopId` to the running hop", and that hop ends when the runner finishes it — so an open chat hop on the ask
+      // (`chat-running`) is the one answered and ended here; without one, the reply makes its own, already ended (TASK-B-115, D-103 Q-1)
+      const open = p.chatHops.find((h) => h.messageId === ask.id && h.endedAt === null);
+      if (open) {
+        open.endedAt = at; open.outcome = "commented";
+        const listed = p.hops.find((h) => h.id === open.id);
+        if (listed) { listed.endedAt = at; listed.outcome = "commented"; }
+        ask.replyHopId = open.id;
+      } else if (ask.replyHopId === null) {
         const hopId = id("h", ++nextHop);
         p.chatHops.push({ id: hopId, messageId: ask.id, endedAt: at, outcome: "commented" });
         ask.replyHopId = hopId;

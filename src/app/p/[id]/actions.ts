@@ -52,6 +52,19 @@ export async function stopOpenRun(projectId: string): Promise<ModeResult> {
   }
 }
 
+/** ทำต่อ (REQ-016 AC-4, D-105, TASK-B-117): the operator starts one step of a card for its worker in แบบสั่งทีละขั้น. A refusal (`hop_running`, `not_workable`, `no_budget`)
+ *  comes back as its code, for the screen to say in words; the page is refreshed either way, because a refusal means the board was out of date. */
+export async function startStep(projectId: string, cardId: string, workerId: string): Promise<ModeResult> {
+  try {
+    await api.startHop(projectId, cardId, workerId);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, code: isCawError(e) ? e.code : "unreachable" };
+  } finally {
+    revalidatePath(`/p/${projectId}`, "layout");
+  }
+}
+
 /** ใช้ทีมเริ่มต้น (REQ-014 R2, SPEC-B-003 Decision 2, TASK-B-064): makes the five-seat starting team through Bob's idempotent `ensureStartingTeam` —
  *  a second press, or a retry after a drop, finishes the team and changes nothing else. */
 export async function useStartingTeam(projectId: string): Promise<ModeResult> {

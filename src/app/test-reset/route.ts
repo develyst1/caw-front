@@ -21,6 +21,17 @@ export function POST(req: Request) {
       (e: { status?: number; message?: string }) => new Response(e.message ?? "refused", { status: e.status ?? 500 }),
     );
   }
+  const team = searchParams.get("team");
+  if (team !== null) { // the mock team starts or stops checking in, without a reset (TASK-B-103, REQ-015 R1)
+    if (team !== "up" && team !== "down") return new Response('team: "up" or "down"', { status: 400 });
+    (api as unknown as MockRunner).setTeamRunning(team === "up");
+    return new Response(null, { status: 204 });
+  }
+  const codeMap = searchParams.get("codeMap");
+  if (codeMap !== null) { // a worker saves the first project's code map, as the setup step does (TASK-B-110, REQ-015 R2): the e2e for a map arriving live
+    if (codeMap !== "save") return new Response('codeMap: "save"', { status: 400 });
+    return (api as unknown as MockRunner).saveCodeMap(MOCK_PROJECT_ID).then(() => new Response(null, { status: 204 }), (e: { status?: number; message?: string }) => new Response(e.message ?? "refused", { status: e.status ?? 500 }));
+  }
   const state = searchParams.get("state");
   if (state === null) { resetMock(); return new Response(null, { status: 204 }); }
   if (!(MOCK_STATES as readonly string[]).includes(state)) return new Response(`unknown state "${state}"; known: ${MOCK_STATES.join(", ")}`, { status: 400 });

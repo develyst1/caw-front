@@ -77,3 +77,19 @@ test("POST /test-reset?reply=… → 204 and the entry worker's plain reply is i
   await expect(page.locator('[data-message]:not([data-message="operator"])').filter({ hasText: "รับทราบครับ" })).toHaveCount(1);
   expect((await request.post(url("อีกครั้ง"))).status()).toBe(204); // a further reply under the same ask is fine
 });
+
+test("POST /test-reset?team=down → 204 (the gate-off 404 and the read itself are in `src/api/mock.test.ts`) and the mock team stops checking in; ?team=up brings it back; ?state=team-down starts that way; anything else → 400 (TASK-B-103)", async ({ request }) => {
+  expect((await request.post("/test-reset?team=down")).status()).toBe(204);
+  expect((await request.post("/test-reset?team=up")).status()).toBe(204);
+  expect((await request.post("/test-reset?team=sideways")).status()).toBe(400);
+  expect((await request.post("/test-reset?team=")).status()).toBe(400);
+  expect((await request.post("/test-reset?state=team-down")).status()).toBe(204); // a known state now
+  expect((await request.post("/test-reset")).status()).toBe(204);
+});
+
+test("POST /test-reset?codeMap=save → 204 (that the project then carries a map is read back in `src/api/mock.test.ts`: no screen shows it before B-108); anything but `save` → 400; the reset after it → 204 (TASK-B-110)", async ({ request }) => {
+  expect((await request.post("/test-reset?codeMap=other")).status()).toBe(400);
+  expect((await request.post("/test-reset?codeMap=save")).status()).toBe(204);
+  expect((await request.post("/test-reset?codeMap=")).status()).toBe(400);
+  expect((await request.post("/test-reset")).status()).toBe(204);
+});

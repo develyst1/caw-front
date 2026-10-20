@@ -7,7 +7,7 @@ import { readiness, type ReadinessItem } from "./readiness";
 const W = (id: string, roles: WorkerRole[]): Worker => ({ id, name: id, role: roles[0]!, roles, skills: ["x"], model: "sonnet", effort: "medium", combinedFrom: null, avatar: null, deletedAt: null });
 const project = (over: Partial<Project> = {}): Project => ({
   id: "p", name: "n", blueprintProjectId: "b", version: 1, latestSeenVersion: 1, mode: "manual", hopBudget: 0, hopsUsed: 0, entryWorkerId: null,
-  workspace: { roots: ["/work/app"] }, createdAt: "", ...over,
+  workspace: { roots: ["/work/app"], readOnly: [] }, codeMap: null, createdAt: "", ...over,
 });
 const pm = W("pm", ["PM"]), sa = W("sa", ["SA"]), fe = W("fe", ["FE"]), be = W("be", ["BE"]), qa = W("qa", ["QA"]);
 const E = (...pairs: [string, string][]) => pairs.map(([from, to]) => ({ from, to }));
@@ -68,7 +68,14 @@ describe("readiness", () => {
   });
 
   test("folder: no writable folder → todo", () => {
-    expect(item(run(chain(FULL), { workspace: { roots: [] } }), "folder").state).toBe("todo");
+    expect(item(run(chain(FULL), { workspace: { roots: [], readOnly: [] } }), "folder").state).toBe("todo");
+  });
+  // TASK-B-113 (SPEC-A-009 Revision 2: a hop with no writable root stops): ok needs at least one root that is not read-only
+  test("folder: one writable → ok; only read-only → todo; mixed → ok", () => {
+    expect(item(run(chain(FULL), { workspace: { roots: ["/a/web"], readOnly: [] } }), "folder").state).toBe("ok");
+    expect(item(run(chain(FULL), { workspace: { roots: ["/a/spec"], readOnly: ["/a/spec"] } }), "folder").state).toBe("todo");
+    expect(item(run(chain(FULL), { workspace: { roots: ["/a/spec", "/b/spec"], readOnly: ["/a/spec", "/b/spec"] } }), "folder").state).toBe("todo");
+    expect(item(run(chain(FULL), { workspace: { roots: ["/a/web", "/a/spec"], readOnly: ["/a/spec"] } }), "folder").state).toBe("ok");
   });
 
   test("an empty team: the rules that need people are `todo` (nothing to be ok about), the forbidden shape is not there", () => {

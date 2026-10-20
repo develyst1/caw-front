@@ -4,6 +4,8 @@
 // `mock.ts`; `http.ts` will implement the same interface, sending `X-CAW-Actor: operator` on every write; screens do not change.
 // caw-front never touches a database.
 
+import type { components } from "./schema";
+
 export type Mode = "manual" | "dispatcher";
 export type CardStatus = "todo" | "doing" | "review" | "done" | "stuck";
 export type CardKind = "work" | "question";
@@ -24,9 +26,13 @@ export interface Project {
   hopBudget: number;
   hopsUsed: number;
   entryWorkerId: string | null;
-  workspace: { roots: string[] }; // v1.1: the folders the team may write in
+  workspace: { roots: string[]; readOnly: string[] }; // v1.1: the folders the team may use; Revision 2 (D-100): `readOnly` ⊆ `roots` are the ones it may read but not write (generated: `components["schemas"]["Project"]["workspace"]`)
+  codeMap: components["schemas"]["Project"]["codeMap"]; // Revision 1 A3 (REQ-015 R2): what the team learned about the code — a `CodeMap`, or null until a worker saves one
   createdAt: string;
 }
+/** The project's code map (SPEC-A-009 Revision 1 A3) — written by a worker, never by this app; the operator can only confirm it. From caw-back's OpenAPI. `rules` may be
+ *  empty (the screen says `ไม่มี`). Saving again replaces the map and clears `confirmedAt`. */
+export type CodeMap = components["schemas"]["CodeMap"];
 /** `stuck` counts cards with status `stuck`, open question cards and cards with `specChangedVersion` set. */
 export interface ProjectSummary extends Project { cardsDone: number; cardsTotal: number; stuckCount: number }
 
@@ -182,6 +188,9 @@ export interface Proposal {
 
 /** One line of the project's event log (SPEC-A-008 § Event types): every write is one event. `data` is the write's input — the screens only look at `seq`, `at`, `actor`
  *  and `type` (what changed, when, by whom). */
+/** GET /v1/team-status (contract v1.16, SPEC-A-009 § 1b, Revision 1) — from caw-back's OpenAPI. `running` = the last check-in said `running` and is ≤ 45 s old. */
+export type TeamStatus = components["schemas"]["TeamStatus"];
+
 export interface CawEvent { seq: number; at: string; actor: string; projectId: string | null; type: string; data?: unknown }
 
 export interface CawApi {
@@ -189,8 +198,9 @@ export interface CawApi {
   project(id: string): Promise<Project | null>;                                 // GET /v1/projects/{id} (a `Project`: the counts come with the list)
   /** PATCH /v1/projects/{id}/mode — never touches `hopsUsed`, cards or hops (REQ-011 AC-6). */
   setMode(id: string, mode: Mode, hopBudget?: number): Promise<Project | null>;
-  /** PATCH /v1/projects/{id}/workspace — 0–20 absolute paths, no `..` segment, ≤ 500 chars each; else a 400. */
-  setWorkspace(id: string, roots: string[]): Promise<Project | null>;
+  /** PATCH /v1/projects/{id}/workspace — 0–20 absolute paths, no `..` segment, ≤ 500 chars each; else a 400. `readOnly` (Revision 2) must be a subset of `roots`, else a 400
+   *  `validation`; left out it is `[]` — every folder writable — so a caller that does not know about read-only folders sends none and loses none it did not have. */
+  setWorkspace(id: string, roots: string[], readOnly?: string[]): Promise<Project | null>;
   cards(projectId: string, query?: { assigneeId?: string; status?: CardStatus; workable?: boolean }): Promise<Card[]>; // GET …/cards
   card(cardId: string): Promise<Card | null>;                                   // GET /v1/cards/{cardId}
   cardContext(cardId: string): Promise<CardContext | null>;                     // GET /v1/cards/{cardId}/context
@@ -207,6 +217,9 @@ export interface CawApi {
   /** PATCH /v1/runs/{runId} `{ stopReason: "operator_stopped", report: "" }` — the operator stops an open run (D-056, TASK-B-055); the
    *  mode is untouched. A run already over is refused `CawError(409, "already_finished")` — the screen takes that as done. */
   stopRun(runId: string): Promise<Run>;
+  /** POST /v1/projects/{id}/hops — the operator starts one step of a card for a worker (`ทำต่อ` in แบบสั่งทีละขั้น, REQ-016 AC-4, D-105): the runner then claims the running hop.
+   *  Refused: 404 (no such project, card or worker) · 409 `no_budget` · 409 `not_workable` (the card cannot be worked now) · 409 `hop_running` (a project has one running hop; `details: { hopId }`). */
+  startHop(projectId: string, cardId: string, workerId: string): Promise<Hop>;
 
   // ---- the operator's other writes (SPEC-A-008 § API v1; every one carries `X-CAW-Actor: operator` in the http implementation) ----
   /** POST /v1/projects — 201, or 409 `already_exists` (`details.id` = the existing project — v1.15: for the same Blueprint project at ANY version), 404 `blueprint_project_not_found`, 409 `version_not_confirmed`, 502 `blueprint_unreachable`. */
@@ -249,6 +262,13 @@ export interface CawApi {
 
   /** GET /v1/projects/{id}/events?after=&limit= — oldest first; `after` = a seq (default 0), `limit` ≤ 500. An unknown project has no events. */
   events(projectId: string, query?: { after?: number; limit?: number }): Promise<CawEvent[]>;
+
+  /** POST /v1/projects/{id}/code-map/confirm (operator only) — 200 the code map with `confirmedAt` set. Refused: 404 `not_found` (no such project) · 409 `no_code_map`
+   *  (no worker has saved one yet). The screen never writes a map; a worker does. */
+  confirmCodeMap(projectId: string): Promise<CodeMap>;
+
+  /** GET /v1/team-status — a read, no actor, not tied to a project: is the team (the runner) checking in right now? `running` = the last check-in was `running` and is ≤ 45 s old. */
+  teamStatus(): Promise<TeamStatus>;
 
   // ---- the chat with the entry worker, and the cards it proposes (REQ-013) ----
   /** GET /v1/projects/{id}/chat — oldest first; `after` = a message id, `limit` ≤ 200. An unknown project has no messages. */

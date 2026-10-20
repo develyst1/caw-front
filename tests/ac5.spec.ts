@@ -311,6 +311,21 @@ test.describe("the AC-5 probe proves itself", () => {
     expect(centre, "the svg's centre really is below the box").toBeGreaterThan(0);
   });
 
+  // TASK-B-118 (D-105: the แชต PAGE scrolls): content scrolled under a pinned bar (sticky / fixed) is scrolled away, not covered — but only when the svg scrolls with the
+  // document; any other cover is still caught. Positive and negative control, one each.
+  test("@ac5 positive control: an svg under a plain position:absolute overlay still reports svg-covered", async ({ page }) => {
+    const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;position:relative">${SVG}<div style="position:absolute;left:0;top:0;width:60px;height:60px;background:#ddd">over</div>`;
+    expect(rulesOf(await run(page, html))).toEqual(["svg-covered"]);
+  });
+  test("@ac5 negative control: an svg the DOCUMENT scrolled under a position:sticky top bar is not reported", async ({ page }) => {
+    const html = `<!doctype html><meta charset="utf-8"><body style="margin:0"><header style="position:sticky;top:0;height:80px;background:#ddd;z-index:1">bar</header>
+      <div style="height:200px"></div>${SVG}<div style="height:3000px"></div>`;
+    const out = await run(page, html, () => { window.scrollTo(0, 80 + 200 + 20 - 40); }); // bar 80 + spacer 200 + half the svg 20 − 40: its centre is 40px from the top, under the 80px bar
+    expect(out).toEqual([]);
+    const under = await page.evaluate(() => { const r = document.querySelector("svg")!.getBoundingClientRect(); return r.top + r.height / 2; });
+    expect(under, "the test only means something if the svg's centre really is under the bar").toBeLessThan(80);
+  });
+
   test("@ac5 …and past the SIDE edge of a box that scrolls sideways (something beside the box), gives 0", async ({ page }) => {
     const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;display:flex"><aside style="width:200px;height:60px;background:#ddd">side</aside><div id="box" style="overflow:auto;width:100px;height:60px;white-space:nowrap">${SVG.replace('style="display:block"', 'style="display:inline-block"')}<div style="display:inline-block;width:300px;height:10px"></div></div>`;
     const out = await run(page, html, () => { document.getElementById("box")!.scrollLeft = 100; }); // the svg is now left of the box, over the aside

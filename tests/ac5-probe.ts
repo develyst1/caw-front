@@ -6,7 +6,9 @@
 //   truncated-no-full-text  a box cut short on purpose (ellipsis or line clamp, and really cut) whose whole text is NOT in a title / aria-label (its own or an ancestor's) or an aria-labelledby target
 //   outside-clip    an element sits outside its nearest clipping ancestor, on an axis where that ancestor does NOT scroll (auto / scroll is fine)
 //   svg-stroke      an SVG shape's stroke reaches outside its svg
-//   svg-covered     the middle of an svg is under another node (one that is neither its ancestor nor inside it) — unless the svg is scrolled out of its own scroll box
+//   svg-covered     the middle of an svg is under another node (one that is neither its ancestor nor inside it) — unless the svg is scrolled out of its own scroll box, or
+//                   (TASK-B-118, D-105) the svg scrolls with the document and its cover is, or is inside, a position sticky / fixed BAR (under half the viewport tall): a pinned
+//                   header or footer over scrolled content. A pinned element that covers the screen (a modal's scrim) is still a cover.
 //   thai-broken     a name is split across two lines: for `[data-name]` any space-separated part of it that would fit on one line (TASK-B-089; a part wider than its box may wrap inside itself, Q1 of B-091); for the other name elements any Thai word (Intl.Segmenter('th'))
 //   title-cut       (inside an open layer only) the layer's title is cut by an ellipsis or a line clamp — a drawer or dialog must show the whole of what it is about
 //   page-overflow-x the page scrolls sideways
@@ -119,6 +121,16 @@ export function probe(arg: string | [string, Element | null | undefined]): Failu
       for (const top of document.elementsFromPoint(cx, cy)) {
         if (top === svg || svg.contains(top) || top.contains(svg)) break; // reached the svg (or something that holds it) first: nothing is on top of it
         if (getComputedStyle(top).pointerEvents === "none") continue;
+        // TASK-B-118: when the DOCUMENT is the svg's scroll box (no own scroller above), a pinned BAR (sticky / fixed, under half the viewport tall) over it is the page
+        // scrolled, not a cover; a pinned element as tall as the screen (a modal's scrim) still covers
+        if (!scroller || scroller === document.documentElement) {
+          let bar = false;
+          for (let e: Element | null = top; e && e !== document.documentElement; e = e.parentElement) {
+            const p = getComputedStyle(e).position;
+            if (p === "sticky" || p === "fixed") { bar = e.getBoundingClientRect().height < innerHeight / 2; break; }
+          }
+          if (bar) break;
+        }
         add("svg-covered", svg, `under ${short(top)}`); // what covers it, in place of the svg's (empty) text
         break;
       }

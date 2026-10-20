@@ -253,14 +253,14 @@ describe("a hop in the mock follows the core (v1.14)", () => {
     const { api } = await quiet();
     const cards = await api.cards(PID);
     const todo = cards.find((c) => c.status === "todo" && c.kind === "work")!;
-    const hop = await api.startHop(todo.id, todo.assigneeId!);
+    const hop = await api.runnerStartHop(todo.id, todo.assigneeId!);
     expect(hop).toMatchObject({ cardId: todo.id, endedAt: null, messageId: null });
     expect(hop.lastActivityAt).toBe(hop.startedAt);
     expect((await api.card(todo.id))!.status).toBe("doing");
     await api.finishHop(hop.id);
     expect((await api.card(todo.id))!.status).toBe("doing"); // finishing does not undo it
     const doing = (await api.cards(PID)).find((c) => c.status === "doing" && c.assigneeId !== null)!;
-    await api.startHop(doing.id, doing.assigneeId!);
+    await api.runnerStartHop(doing.id, doing.assigneeId!);
     expect((await api.card(doing.id))!.status).toBe("doing");
   });
 
@@ -268,7 +268,7 @@ describe("a hop in the mock follows the core (v1.14)", () => {
     const { api } = await quiet();
     for (const status of ["review", "done", "stuck"] as const) {
       const c = (await api.cards(PID)).find((x) => x.status === status && x.assigneeId !== null)!;
-      const h = await api.startHop(c.id, c.assigneeId!);
+      const h = await api.runnerStartHop(c.id, c.assigneeId!);
       expect((await api.card(c.id))!.status).toBe(status);
       await api.finishHop(h.id);
     }
@@ -277,10 +277,10 @@ describe("a hop in the mock follows the core (v1.14)", () => {
   test("a project has one running hop: starting a second → 409 hop_running with the running hop's id; an unknown card → 404", async () => {
     const { api } = await quiet();
     const [a, b] = (await api.cards(PID)).filter((c) => c.kind === "work" && c.assigneeId !== null);
-    const first = await api.startHop(a!.id, a!.assigneeId!);
-    const e = await expectRefusal(api.startHop(b!.id, b!.assigneeId!), 409, "hop_running");
+    const first = await api.runnerStartHop(a!.id, a!.assigneeId!);
+    const e = await expectRefusal(api.runnerStartHop(b!.id, b!.assigneeId!), 409, "hop_running");
     expect(e.details).toEqual({ hopId: first.id });
-    await expectRefusal(api.startHop("c-nope", a!.assigneeId!), 404, "not_found");
+    await expectRefusal(api.runnerStartHop("c-nope", a!.assigneeId!), 404, "not_found");
   });
 });
 
@@ -304,7 +304,7 @@ describe("removeMember and `hop_running` (v1.14): the checks run in the order 40
     })();
     const ploy = await byName(api, "ปลา");
     const card = (await api.cards(PID)).find((c) => c.kind === "work" && c.assigneeId === ploy.id)!;
-    const hop = await api.startHop(card.id, ploy.id);
+    const hop = await api.runnerStartHop(card.id, ploy.id);
     expect((await expectRefusal(api.removeMember(PID, ploy.id), 409, "hop_running")).details).toEqual({ hopId: hop.id });
     await api.finishHop(hop.id);
     await expectRefusal(api.removeMember(PID, ploy.id), 409, "is_entry"); // the hop is over: the next check speaks
@@ -325,3 +325,179 @@ describe("removeMember and `hop_running` (v1.14): the checks run in the order 40
   });
 });
 
+
+describe("read-only folders (REQ-015 R4a, D-100, SPEC-A-009 Revision 2)", () => {
+  const A = "/Users/me/app", B = "/Users/me/spec";
+  test("a project starts with no read-only folder; the list and the single read carry `workspace.readOnly`", async () => {
+    const api = createMockApi();
+    expect((await api.project(PID))!.workspace.readOnly).toEqual([]);
+    expect((await summaryOf(api)).workspace.readOnly).toEqual([]);
+  });
+  test("setWorkspace keeps `readOnly`; left out it is `[]` (all writable), as the contract's default says", async () => {
+    const api = createMockApi();
+    expect((await api.setWorkspace(PID, [A, B], [B]))!.workspace).toEqual({ roots: [A, B], readOnly: [B] });
+    expect((await api.project(PID))!.workspace.readOnly).toEqual([B]);
+    expect((await api.setWorkspace(PID, [A, B]))!.workspace).toEqual({ roots: [A, B], readOnly: [] });
+    expect((await api.setWorkspace(PID, [A, B], []))!.workspace.readOnly).toEqual([]);
+  });
+  test("a read-only path that is not in `roots` → 400 validation, and nothing changes", async () => {
+    const api = createMockApi();
+    await api.setWorkspace(PID, [A, B], [B]);
+    await expectRefusal(api.setWorkspace(PID, [A], [B]), 400, "validation");
+    await expectRefusal(api.setWorkspace(PID, [A, B], ["/Users/me/other"]), 400, "validation");
+    expect((await api.project(PID))!.workspace).toEqual({ roots: [A, B], readOnly: [B] });
+  });
+  test("removing a folder takes it out of `readOnly` too (the caller sends the shorter list on both)", async () => {
+    const api = createMockApi();
+    await api.setWorkspace(PID, [A, B], [B]);
+    expect((await api.setWorkspace(PID, [A], []))!.workspace).toEqual({ roots: [A], readOnly: [] });
+    await api.setWorkspace(PID, [A, B], [B]);
+    expect((await api.setWorkspace(PID, [A]))!.workspace).toEqual({ roots: [A], readOnly: [] }); // and with `readOnly` left out
+  });
+});
+
+describe("the reply door ends the open chat hop it answers (TASK-B-115, D-103 Q-1)", () => {
+  test("`chat-running`, then replyChat: the open hop is ended in hops() and in the chat hop, and the ask's replyHopId is that very hop", async () => {
+    const api = createMockApi({ state: "chat-running" });
+    const open = (await api.hops(PID)).find((h) => h.messageId !== null && h.endedAt === null)!;
+    expect(open).toBeDefined();
+    const hopsBefore = (await api.hops(PID)).length;
+    const seq0 = (await api.events(PID)).at(-1)?.seq ?? 0;
+    await api.replyChat(PID, "ตอบแล้วครับ");
+    const after = (await api.hops(PID)).find((h) => h.id === open.id)!;
+    expect(after.endedAt).not.toBeNull();
+    expect(after.outcome).toBe("commented");
+    expect((await api.hops(PID)).length).toBe(hopsBefore); // that hop, not a new one
+    expect((await api.hops(PID)).some((h) => h.endedAt === null)).toBe(false); // nothing is left running
+    const ask = (await api.chat(PID)).find((m) => m.id === open.messageId)!;
+    expect(ask.replyHopId).toBe(open.id);
+    expect(ask.chatHop).toMatchObject({ id: open.id, outcome: "commented" });
+    expect(ask.chatHop!.endedAt).not.toBeNull();
+    expect((await api.events(PID, { after: seq0 })).map((e) => e.type)).toEqual(["chat.replied"]); // still the one event
+  });
+  test("the plain seed: nothing is open, so the reply makes its own ended hop, as before — and no hop appears in hops()", async () => {
+    const api = createMockApi();
+    const hopsBefore = (await api.hops(PID)).length;
+    const ask = await api.postChat(PID, "ถามหน่อย");
+    await api.replyChat(PID, "ตอบ");
+    const got = (await api.chat(PID)).find((m) => m.id === ask.id)!;
+    expect(got.replyHopId).not.toBeNull();
+    expect(got.chatHop).toMatchObject({ id: got.replyHopId, outcome: "commented" });
+    expect(got.chatHop!.endedAt).not.toBeNull();
+    expect((await api.hops(PID)).length).toBe(hopsBefore);
+  });
+  test("an open card hop (not a chat hop) is left running by a reply", async () => {
+    const api = createMockApi(); // the plain seed runs ฝน on a card
+    const card = (await api.hops(PID)).find((h) => h.endedAt === null && h.messageId === null)!;
+    expect(card).toBeDefined();
+    await api.postChat(PID, "ถามหน่อย");
+    await api.replyChat(PID, "ตอบ");
+    expect((await api.hops(PID)).find((h) => h.id === card.id)!.endedAt).toBeNull();
+  });
+});
+
+describe("startHop, the operator's `ทำต่อ` (REQ-016 AC-4, TASK-B-117): POST /v1/projects/{id}/hops", () => {
+  const quiet = async () => {
+    const api = createMockApi();
+    await api.finishHop((await api.hops(PID)).find((h) => h.endedAt === null)!.id);
+    return api;
+  };
+  const workableCard = async (api: CawApi, nth = 0) => (await api.cards(PID)).filter((c) => c.workable && c.assigneeId !== null)[nth]!;
+  test("a workable card: the hop is running, the card is `doing`, and the log gets `hop.started` (seq +1)", async () => {
+    const api = await quiet();
+    const c = await workableCard(api);
+    const seq0 = (await api.events(PID)).at(-1)?.seq ?? 0;
+    const hop = await api.startHop(PID, c.id, c.assigneeId!);
+    expect(hop).toMatchObject({ projectId: PID, cardId: c.id, workerId: c.assigneeId, endedAt: null, messageId: null });
+    expect((await api.hops(PID)).filter((h) => h.endedAt === null).map((h) => h.id)).toEqual([hop.id]);
+    expect((await api.card(c.id))!.status).toBe("doing");
+    const evs = await api.events(PID, { after: seq0 });
+    expect(evs.map((e) => e.type)).toEqual(["hop.started"]);
+    expect(evs[0]!.seq).toBe(seq0 + 1);
+  });
+  test("a second while one runs → 409 hop_running { hopId }, and no event", async () => {
+    const api = await quiet();
+    const [a, b] = [await workableCard(api, 0), await workableCard(api, 1)];
+    const first = await api.startHop(PID, a.id, a.assigneeId!);
+    const seq = (await api.events(PID)).at(-1)!.seq;
+    const e = await expectRefusal(api.startHop(PID, b.id, b.assigneeId!), 409, "hop_running");
+    expect(e.details).toEqual({ hopId: first.id });
+    expect((await api.events(PID)).at(-1)!.seq).toBe(seq);
+  });
+  test("a card that is not workable (done / review / stuck / waiting on another) → 409 not_workable, nothing started, no event", async () => {
+    const api = await quiet();
+    const notWorkable = (await api.cards(PID)).filter((c) => !c.workable && c.assigneeId !== null);
+    expect(notWorkable.length).toBeGreaterThan(0);
+    const seq0 = (await api.events(PID)).at(-1)?.seq ?? 0;
+    for (const c of notWorkable) await expectRefusal(api.startHop(PID, c.id, c.assigneeId!), 409, "not_workable");
+    expect((await api.hops(PID)).some((h) => h.endedAt === null)).toBe(false);
+    expect((await api.events(PID)).at(-1)?.seq ?? 0).toBe(seq0);
+  });
+  test("unknown card or worker → 404; a card of another project is not found in this one", async () => {
+    const api = await quiet();
+    const c = await workableCard(api);
+    await expectRefusal(api.startHop(PID, "c-nope", c.assigneeId!), 404, "not_found");
+    await expectRefusal(api.startHop(PID, c.id, "w-nope"), 404, "not_found");
+    await expectRefusal(api.startHop("p-nope", c.id, c.assigneeId!), 404, "not_found");
+  });
+  test("a card of ANOTHER project is not found in this one (`new-project` has a second, empty project)", async () => {
+    const api = createMockApi({ state: "new-project" });
+    await (api as unknown as import("./mock").MockRunner).finishHop((await api.hops(PID)).find((h) => h.endedAt === null)!.id);
+    const other = (await api.projects()).find((p) => p.id !== PID)!.id;
+    const c = (await api.cards(PID)).find((x) => x.workable && x.assigneeId !== null)!;
+    await expectRefusal(api.startHop(other, c.id, c.assigneeId!), 404, "not_found");
+    expect((await api.hops(PID)).some((h) => h.endedAt === null)).toBe(false);
+  });
+});
+
+describe("mock states for the next screens (TASK-B-117)", () => {
+  test("`entry-asked-two`: `entry-asked`, and the entry worker's newest reply carries TWO questions, each with its proposedDefault", async () => {
+    const two = createMockApi({ state: "entry-asked-two" });
+    const msgs = await two.chat(PID);
+    const newest = msgs.filter((m) => m.author.startsWith("worker:")).at(-1)!;
+    expect(newest.questions).toHaveLength(2);
+    expect(newest.questions!.every((q) => q.text.length > 0 && q.proposedDefault.length > 0)).toBe(true);
+    expect(newest.questions![0]!.text).not.toBe(newest.questions![1]!.text);
+    // nobody has answered it: the operator's messages all come before it
+    expect(msgs.at(-1)!.id).toBe(newest.id);
+    // and it is otherwise the `entry-asked` thread
+    const one = (await createMockApi({ state: "entry-asked" }).chat(PID));
+    expect(msgs.map((m) => m.id)).toEqual(one.map((m) => m.id));
+    expect(one.filter((m) => m.author.startsWith("worker:")).at(-1)!.questions).toHaveLength(1);
+  });
+  test("`manual-idle`: the project is in manual, nothing is running, and two or more cards are workable, each with an assignee", async () => {
+    const api = createMockApi({ state: "manual-idle" });
+    expect((await api.project(PID))!.mode).toBe("manual");
+    expect((await api.hops(PID)).some((h) => h.endedAt === null)).toBe(false);
+    const workable = (await api.cards(PID)).filter((c) => c.workable);
+    expect(workable.length).toBeGreaterThanOrEqual(2);
+    expect(workable.every((c) => c.assigneeId !== null)).toBe(true);
+    // the plain seed is not that: it has its one running hop
+    expect((await createMockApi().hops(PID)).some((h) => h.endedAt === null)).toBe(true);
+  });
+});
+
+describe("the `startStep` server action (TASK-B-117)", () => {
+  test("ok → { ok: true } and the page is revalidated; a refusal → its code (not_workable, hop_running), revalidated too; an unknown project → not_found", async () => {
+    const { mock } = await import("bun:test");
+    const revalidated: string[][] = [];
+    mock.module("next/cache", () => ({ revalidatePath: (...a: string[]) => { revalidated.push(a); } }));
+    const saved = process.env.CAW_API;
+    process.env.CAW_API = "mock";
+    try {
+      const { startStep } = await import("../app/p/[id]/actions");
+      const { api, resetMock } = await import("./index");
+      resetMock("manual-idle");
+      const [a, b] = (await api.cards(PID)).filter((c) => c.workable && c.assigneeId !== null);
+      expect(await startStep(PID, a!.id, a!.assigneeId!)).toEqual({ ok: true });
+      expect((await api.hops(PID)).filter((h) => h.endedAt === null)).toHaveLength(1);
+      expect(await startStep(PID, b!.id, b!.assigneeId!)).toEqual({ ok: false, code: "hop_running" });
+      const done = (await api.cards(PID)).find((c) => !c.workable && c.assigneeId !== null)!;
+      await (api as unknown as import("./mock").MockRunner).finishHop((await api.hops(PID)).find((h) => h.endedAt === null)!.id);
+      expect(await startStep(PID, done.id, done.assigneeId!)).toEqual({ ok: false, code: "not_workable" });
+      expect(await startStep("p-nope", a!.id, a!.assigneeId!)).toEqual({ ok: false, code: "not_found" });
+      expect(revalidated).toEqual([[`/p/${PID}`, "layout"], [`/p/${PID}`, "layout"], [`/p/${PID}`, "layout"], ["/p/p-nope", "layout"]]);
+      resetMock();
+    } finally { if (saved === undefined) delete process.env.CAW_API; else process.env.CAW_API = saved; }
+  });
+});

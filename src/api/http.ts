@@ -5,8 +5,8 @@
 // `CawError(0, "unreachable")`. A 404 on a read of one thing is `null` (or an empty list), not an error.
 import createClient from "openapi-fetch";
 import {
-  CawError, isCawError, type Card, type CardContext, type CawApi, type CawEvent, type Chain, type ChatMessage, type Hop, type Note, type PartContext, type Project,
-  type ProjectSummary, type Proposal, type Run, type Worker,
+  CawError, isCawError, type Card, type CodeMap, type CardContext, type CawApi, type CawEvent, type Chain, type ChatMessage, type Hop, type Note, type PartContext, type Project,
+  type ProjectSummary, type Proposal, type Run, type TeamStatus, type Worker,
 } from "./caw";
 import type { paths } from "./schema";
 
@@ -53,7 +53,8 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     projects: async () => (await ok(client.GET("/v1/projects"))).projects as ProjectSummary[],
     project: (id) => orNull(client.GET("/v1/projects/{id}", { params: { path: { id } } })) as Promise<Project | null>,
     setMode: (id, mode, hopBudget) => orNull(client.PATCH("/v1/projects/{id}/mode", { params: { path: { id } }, body: { mode, hopBudget } })) as Promise<Project | null>,
-    setWorkspace: (id, roots) => orNull(client.PATCH("/v1/projects/{id}/workspace", { params: { path: { id } }, body: { roots } })) as Promise<Project | null>,
+    // `readOnly` (Revision 2) goes only when given
+    setWorkspace: (id, roots, readOnly) => orNull(client.PATCH("/v1/projects/{id}/workspace", { params: { path: { id } }, body: readOnly === undefined ? { roots } : { roots, readOnly } })) as Promise<Project | null>,
     // the back end takes `workable` as the words "true" / "false" (the generated type says so)
     cards: (id, q = {}) => orEmpty<Card>(client.GET("/v1/projects/{id}/cards", { params: { path: { id }, query: { ...q, workable: q.workable === undefined ? undefined : q.workable ? "true" : "false" } } }) as Promise<Settled<{ cards: Card[] }>>, "cards"),
     card: (cardId) => orNull(client.GET("/v1/cards/{cardId}", { params: { path: { cardId } } })) as Promise<Card | null>,
@@ -104,11 +105,16 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     postChat: (id, text) => ok(client.POST("/v1/projects/{id}/chat", { params: { path: { id } }, body: { text } })) as Promise<ChatMessage>,
     proposals: (id, q = {}) => orEmpty<Proposal>(client.GET("/v1/projects/{id}/proposals", { params: { path: { id }, query: q } }), "proposals"),
     events: (id, q = {}) => orEmpty<CawEvent>(client.GET("/v1/projects/{id}/events", { params: { path: { id }, query: q } }) as Promise<Settled<{ events: CawEvent[] }>>, "events"),
+    // 200 the map with `confirmedAt`; 404 (no such project) and 409 `no_code_map` are CawErrors
+    confirmCodeMap: (id) => ok(client.POST("/v1/projects/{id}/code-map/confirm", { params: { path: { id } } })) as Promise<CodeMap>,
+    teamStatus: () => ok(client.GET("/v1/team-status")) as Promise<TeamStatus>,
     // 202 with an empty object: nothing to read back; the refusals (404 too — a message that is not there is a mistake, not an empty list) are CawErrors
     retryChat: async (messageId) => {
       const r = await call(client.POST("/v1/chat/{messageId}/retry", { params: { path: { messageId } } }) as Promise<Settled<unknown>>);
       if (!r.response.ok) refusal(r);
     },
+    // 201 with the Hop; the refusals (409 no_budget · not_workable · hop_running, 404) are CawErrors
+    startHop: (id, cardId, workerId) => ok(client.POST("/v1/projects/{id}/hops", { params: { path: { id } }, body: { cardId, workerId } })) as Promise<Hop>,
     acceptProposal: async (id) => (await ok(client.POST("/v1/proposals/{id}/accept", { params: { path: { id } } }))).cards,
   };
 }

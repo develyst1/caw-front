@@ -306,3 +306,80 @@ describe("deleteWorker (SPEC-A-008 § v1.14)", () => {
   });
 });
 
+
+describe("team status (contract v1.16)", () => {
+  test("GET /v1/team-status, no actor, and the 200 body is returned as it is", async () => {
+    const body = { running: true, runnerName: "runner-1", lastSeenAt: "2026-10-20T10:00:00.000Z", startCommand: "cd caw-back && bun run dev" } as const;
+    const { api, log } = against(() => json(200, body));
+    expect(await api.teamStatus()).toEqual(body);
+    expect(log).toEqual([{ method: "GET", path: "/v1/team-status", query: "", actor: null, body: undefined }]);
+  });
+  test("a team that never checked in: null name and time are kept as null", async () => {
+    const body = { running: false, runnerName: null, lastSeenAt: null, startCommand: "cd caw-back && bun run dev" } as const;
+    expect(await against(() => json(200, body)).api.teamStatus()).toEqual(body);
+  });
+  test("an unreachable caw-back stays CawError(0, unreachable); a refusal becomes a CawError", async () => {
+    const down = createHttpApi({ baseUrl: "http://caw.test", fetch: async () => { throw new Error("connect ECONNREFUSED"); } });
+    const e = await down.teamStatus().then(() => null, (x: unknown) => x);
+    expect(e).toBeInstanceOf(CawError);
+    expect([(e as CawError).status, (e as CawError).code]).toEqual([0, "unreachable"]);
+    const r = await against(() => json(500, { error: { code: "boom", message: "x" } })).api.teamStatus().then(() => null, (x: unknown) => x);
+    expect([(r as CawError).status, (r as CawError).code]).toEqual([500, "boom"]);
+  });
+});
+
+describe("code map (contract Revision 1 A3)", () => {
+  const map = { folders: [{ name: "caw-front", kind: "fe" }], stack: ["Next"], commands: { run: ["bun run dev"], test: ["bun test"] }, rules: [], questions: [], updatedAt: "2026-10-20T10:00:00.000Z", updatedBy: "worker:w1", confirmedAt: "2026-10-20T10:05:00.000Z" } as const;
+  test("POST /v1/projects/{id}/code-map/confirm carries the operator actor, no body; the 200 map is returned as it is", async () => {
+    const { api, log } = against(() => json(200, map));
+    expect(await api.confirmCodeMap("p1")).toEqual(map as never);
+    expect(log).toEqual([{ method: "POST", path: "/v1/projects/p1/code-map/confirm", query: "", actor: "operator", body: undefined }]);
+  });
+  test("409 no_code_map and 404 become CawErrors with their code", async () => {
+    const no = await against(() => json(409, { error: { code: "no_code_map", message: "no map" } })).api.confirmCodeMap("p1").then(() => null, (x: unknown) => x);
+    expect([(no as CawError).status, (no as CawError).code]).toEqual([409, "no_code_map"]);
+    const gone = await against(() => json(404, { error: { code: "not_found", message: "x" } })).api.confirmCodeMap("p-nope").then(() => null, (x: unknown) => x);
+    expect([(gone as CawError).status, (gone as CawError).code]).toEqual([404, "not_found"]);
+  });
+  test("a project read carries its `codeMap` through (null stays null)", async () => {
+    const withMap = await against(() => json(200, { id: "p1", name: "ก", codeMap: map })).api.project("p1");
+    expect(withMap!.codeMap).toEqual(map as never);
+    const without = await against(() => json(200, { id: "p1", name: "ก", codeMap: null })).api.project("p1");
+    expect(without!.codeMap).toBeNull();
+  });
+});
+
+describe("read-only folders (Revision 2)", () => {
+  test("the PATCH body carries `readOnly` only when it is given", async () => {
+    const { api, log } = against(() => json(200, { id: "p1", workspace: { roots: ["/a", "/b"], readOnly: ["/b"] } }));
+    await api.setWorkspace("p1", ["/a", "/b"]);
+    await api.setWorkspace("p1", ["/a", "/b"], ["/b"]);
+    await api.setWorkspace("p1", ["/a"], []);
+    expect(log.map((s) => s.body)).toEqual([{ roots: ["/a", "/b"] }, { roots: ["/a", "/b"], readOnly: ["/b"] }, { roots: ["/a"], readOnly: [] }]);
+  });
+  test("the 200 project keeps its `workspace.readOnly`; a 400 validation is a CawError", async () => {
+    const got = await against(() => json(200, { id: "p1", workspace: { roots: ["/a"], readOnly: ["/a"] } })).api.setWorkspace("p1", ["/a"], ["/a"]);
+    expect(got!.workspace).toEqual({ roots: ["/a"], readOnly: ["/a"] });
+    const e = await against(() => json(400, { error: { code: "validation", message: "readOnly: not in roots" } })).api.setWorkspace("p1", ["/a"], ["/b"]).then(() => null, (x: unknown) => x);
+    expect([(e as CawError).status, (e as CawError).code]).toEqual([400, "validation"]);
+  });
+});
+
+describe("startHop, `ทำต่อ` (TASK-B-117)", () => {
+  const hop = { id: "h1", projectId: "p1", runId: null, claimedBy: null, messageId: null, cardId: "c1", workerId: "w1", startedAt: "2026-10-20T10:00:00.000Z", lastActivityAt: "2026-10-20T10:00:00.000Z", endedAt: null, outcome: null, tokensIn: null, tokensOut: null, note: "" };
+  test("POST /v1/projects/{id}/hops with exactly { cardId, workerId }, the operator actor; the 201 hop comes back", async () => {
+    const { api, log } = against(() => json(201, hop));
+    expect(await api.startHop("p1", "c1", "w1")).toEqual(hop as never);
+    expect(log).toEqual([{ method: "POST", path: "/v1/projects/p1/hops", query: "", actor: "operator", body: { cardId: "c1", workerId: "w1" } }]);
+  });
+  test("the three 409s become CawErrors with their code (hop_running keeps its details); an unreachable back end stays unreachable", async () => {
+    for (const code of ["no_budget", "not_workable", "hop_running"]) {
+      const e = await against(() => json(409, { error: { code, message: "no", details: code === "hop_running" ? { hopId: "h9" } : undefined } })).api.startHop("p1", "c1", "w1").then(() => null, (x: unknown) => x);
+      expect([(e as CawError).status, (e as CawError).code]).toEqual([409, code]);
+      if (code === "hop_running") expect((e as CawError).details).toEqual({ hopId: "h9" });
+    }
+    const down = createHttpApi({ baseUrl: "http://caw.test", fetch: async () => { throw new Error("ECONNREFUSED"); } });
+    const e = await down.startHop("p1", "c1", "w1").then(() => null, (x: unknown) => x);
+    expect([(e as CawError).status, (e as CawError).code]).toEqual([0, "unreachable"]);
+  });
+});
