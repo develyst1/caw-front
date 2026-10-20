@@ -1,8 +1,8 @@
 // The board comp (TASK-B-039 DoD 3, REQ-011 AC-3 on the mock): every card in its place, the question card first, the filter
 // narrows; plus the 390 sideways columns and the keyboard path.
 import { expect, test } from "./fixtures";
-import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { acceptAnswer, column, section } from "../src/words";
+import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
+import { acceptAnswer, column, distill, section } from "../src/words";
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 
@@ -84,7 +84,7 @@ test("@1280 all five columns fit beside each other, and the chat is behind its t
   for (const [l, r] of boxes) { expect(l).toBeGreaterThanOrEqual(0); expect(r).toBeLessThanOrEqual(1280); }
   await expect(page.locator("[data-chat-panel]")).toBeHidden();
   await expect(page.locator("[data-composer]:visible")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: new RegExp(section.chat) })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: section.board }).getByRole("link", { name: new RegExp(section.chat) })).toBeVisible(); // the tab (TASK-B-098 adds ไปที่แชต)
 });
 
 test("ตามนั้น answers the question in one press — the sheet leaves and รอคำตอบ clears", async ({ page }) => {
@@ -104,7 +104,8 @@ test.describe("on operator-like", () => {
   test("ตอบเอง… on the chat question opens the chat with the question in the box", async ({ page }) => {
     await page.goto(BOARD);
     await page.locator('[data-ask="chat"] [data-answer-own]').click();
-    await expect(page.getByLabel("เล่างานให้ทีมฟัง…")).toHaveValue(/ห้องใหญ่คือห้องที่จุกี่คนขึ้นไป/);
+    await expect(page.getByLabel(distill.placeholder("Paul"))).toHaveValue( // C-1 (TASK-B-100): the box names operator-like's entry person
+      /ห้องใหญ่คือห้องที่จุกี่คนขึ้นไป/);
   });
 });
 
@@ -131,4 +132,20 @@ test("a card moved from another tab shows in its new column within 4 s, with no 
   await expect(page.locator(`[data-column="review"] [data-card="${id}"]`)).toHaveCount(1, { timeout: 4000 });
   console.log(`DEF-4: the board followed in ${Date.now() - t0} ms`);
   expect(await page.evaluate(() => (window as unknown as { stay?: number }).stay)).toBe(1);
+});
+
+// TASK-B-100 B-2 / B-7 / B-4 (D-094): no cards → one sentence and one button in place of five empty columns; no folded 3/3 strip; the crew has no frame
+test.describe("a project with no cards", () => {
+  test.use({ seedState: "new-project" });
+  test("the empty board is one sentence; once there is a team its button is เล่างานให้ {entry} ในแชต → แชต", async ({ page }) => {
+    await page.goto(`/p/${MOCK_NEW_PROJECT_ID}`);
+    await expect(page.locator("[data-board-empty]")).toBeVisible();
+    await expect(page.locator("[data-columns]")).toHaveCount(0);
+    await page.getByRole("button", { name: /ใช้ทีมเริ่มต้น/ }).click();
+    const tell = page.locator("[data-tell-entry]");
+    await expect(tell).toHaveText(distill.tellEntry("ปลา"));
+    await expect(page.locator("[data-crew-wrap]")).toHaveCSS("border-top-width", "0px");
+    await tell.click();
+    await expect(page).toHaveURL(new RegExp(`/p/${MOCK_NEW_PROJECT_ID}/chat$`));
+  });
 });

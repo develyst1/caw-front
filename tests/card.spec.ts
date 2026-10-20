@@ -4,7 +4,7 @@
 // seed (tests/fixtures.ts), so none has to put anything back.
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { acceptAnswer, assigneeLabel, card as cardWord, cardMark, column, commentPlaceholder, linkedWith, send, statusLabel, timelineHeading, toSpec } from "../src/words";
+import { acceptAnswer, assigneeLabel, card as cardWord, cardMark, column, commentPlaceholder, distill, linkedWith, section, send, statusLabel, timelineHeading, toSpec } from "../src/words";
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 
@@ -126,4 +126,22 @@ test("card: a refused hand-off reads ส่งต่อไม่ได้: {who}
   await expect(refused).toContainText(refusedHandoff("ฝน", "มิ้นท์"));
   const order = await page.locator("[data-note]").evaluateAll((ns) => ns.map((n) => n.getAttribute("data-note")));
   expect(order).toEqual(["comment", "handoff", "handoff_refused", "comment"]);
+});
+
+// TASK-B-100 K-1 / K-2 / K-4 (D-094): no back link (the บอร์ด tab is current), direction B frames, ตอบ on the own answer
+test("card on direction B: the บอร์ด tab is current, no back link; title 600; hairline frames, no shadow", async ({ page }) => {
+  await page.goto(BOARD);
+  await page.locator("[data-column] [data-card]").first().click();
+  await expect(page.locator("nav a[aria-current=page]")).toHaveText(section.board);
+  await expect(page.locator(`main a[href="${BOARD}"]`)).toHaveCount(0);
+  await expect(page.locator("main h2").first()).toHaveCSS("font-weight", "600");
+  const spec = page.locator("section[aria-labelledby=where]");
+  await expect(spec).toHaveCSS("border-top-width", "1px");
+  await expect(spec).toHaveCSS("box-shadow", "none");
+});
+test("a question card's own answer is sent with ตอบ — not the comment box's ส่ง (K-4)", async ({ page }) => {
+  await page.goto(BOARD);
+  await page.locator('[data-ask="card"] [data-question]').first().click();
+  await expect(page.getByRole("button", { name: distill.answer, exact: true })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: send, exact: true })).toHaveCount(1); // the comment box's
 });

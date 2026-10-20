@@ -94,7 +94,7 @@ describe("crewState", () => {
 // ---- the home's one line per project: who is working, how many seats are stuck, how many wait on you (D-066 C4) ----
 import type { CawApi, ProjectSummary } from "@/api/caw";
 import { createMockApi, MOCK_PROJECT_ID } from "@/api/mock";
-import { crewSummary, entryAsked, entryQuestions, homeSummaries } from "./crew";
+import { crewSummary, entryAsked, entryQuestions, entryWaitsInChat, homeSummaries } from "./crew";
 
 describe("crewSummary", () => {
   test("working = the name of the first working seat in chain order (null when nobody), stuck and waitingOnYou are counts of seats", () => {
@@ -231,6 +231,25 @@ describe("chat questions wait on you (C3)", () => {
     expect(entryQuestions(chain(), chat)).toEqual({ message: chat[0], questions: asks });
     expect(entryQuestions(chain(), [...chat, msg(2, "operator")])).toBeNull();
     expect(entryQuestions(chain(null), chat)).toBeNull();
+  });
+});
+
+// TASK-B-098 (D-094 § 0, B-1 / B-5): the board's one-line notice — the newest chat message is the team's, unanswered, with no structured question
+describe("entryWaitsInChat — the board's notice", () => {
+  const entry = "w1";
+  test("the newest message is the entry worker's, without questions → it waits on you in the chat", () => {
+    expect(entryWaitsInChat(chain(), [msg(1, "operator"), msg(2, `worker:${entry}`)])).toBe(true);
+  });
+  test("you wrote last (or a reply is on its way) → no notice", () => {
+    expect(entryWaitsInChat(chain(), [msg(1, `worker:${entry}`), msg(2, "operator")])).toBe(false);
+  });
+  test("a reply with questions is the AskSheet's, never the notice too (B-5); an empty list of questions is a plain reply", () => {
+    expect(entryWaitsInChat(chain(), [msg(1, `worker:${entry}`, { questions: asks })])).toBe(false);
+    expect(entryWaitsInChat(chain(), [msg(1, `worker:${entry}`, { questions: [] })])).toBe(true);
+  });
+  test("no chat, or no entry worker → no notice", () => {
+    expect(entryWaitsInChat(chain(), [])).toBe(false);
+    expect(entryWaitsInChat(chain(null), [msg(1, `worker:${entry}`)])).toBe(false);
   });
 });
 

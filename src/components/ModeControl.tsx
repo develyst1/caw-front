@@ -5,7 +5,8 @@
 // opens a run. With a run still open, nothing changes and the control says so beside it (DEF-2). Mode อัตโนมัติ whose run has
 // stopped does not look like it is running: the last stop reason shows, with how to start the next run (D-052). Choosing
 // แบบสั่งทีละขั้น switches at once. An open run, in either mode, has หยุดการรันนี้ beside กำลังรัน (D-056, B-056): it stops the run
-// and leaves the mode, so on อัตโนมัติ the stopped line above takes over. The page around it is never reset — only the header's state changes.
+// and leaves the mode, so on อัตโนมัติ the stopped line above takes over. The page around it is never reset — only the control's state changes.
+// It lives on the board, above the columns (TASK-B-099, D-094 H-1); the mode's sentence is the toggle's title and the budget dialog's line (H-2).
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -52,7 +53,7 @@ export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
   const running = lastRun?.open === true;
 
   return (
-    <div className={s.mode}>
+    <div className={s.mode} data-mode-bar>
       {/* TASK-B-085: the mode is a ToggleGroup (Radix, one of two — role radio). The chosen side is a filled indigo-tint object;
           on อัตโนมัติ that has stopped it is outlined only, so the header does not look like it is running (D-052). */}
       <ToggleGroup
@@ -60,6 +61,7 @@ export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
         value={mode}
         disabled={pending}
         aria-label={`${modeWord.manual} / ${modeWord.dispatcher}`}
+        title={modeLine[mode]}
         spacing={0}
         variant="outline"
         className="rounded-lg"
@@ -78,6 +80,7 @@ export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
       <Dialog open={asking} onOpenChange={(o) => { if (!o) setAsking(false); }}>
         <DialogContent showCloseButton={false} aria-describedby={undefined} className="w-[min(360px,calc(100vw-32px))] gap-4 border-hair bg-sheet p-6" data-budget-ask>
           <DialogTitle className="m-0 text-[17px] font-semibold text-ink">{modeWord.dispatcher}</DialogTitle>
+          <p className="m-0 text-sm text-ink2" data-mode-line>{modeLine.dispatcher}</p>
           <form className={s.budgetAsk} onSubmit={(e) => { e.preventDefault(); go("dispatcher", n); }}>
             <label className={s.budgetLabel}>
               <span>{budgetLabel(n)}</span>
@@ -99,8 +102,6 @@ export function ModeControl({ projectId, mode, hopBudget, hopsUsed, lastRun }: {
           <Button variant="outline" className="min-h-11" onClick={ask} disabled={pending} aria-describedby="caw-run-stopped">{modeWord.dispatcher}</Button>
         </span>
       )}
-      {/* the mode switch explains itself (D-063, TASK-B-064): one line for the mode in effect */}
-      <span className={s.modeLine} data-mode-line>{modeLine[mode]}</span>
       {error && <p className={s.modeError} role="alert">{error}</p>}
     </div>
   );

@@ -1,6 +1,6 @@
 // REQ-011's wording table, row by row: each word is here, verbatim.
 import { describe, expect, test } from "bun:test";
-import { blueprintBuild, budget, card, cardMark, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, section, startRefused, stopReason, workspace } from "./words";
+import { blueprintBuild, budget, card, cardMark, chatWaits, distill, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, section, startRefused, stopReason, workspace } from "./words";
 
 describe("REQ-011 wording table", () => {
   test("columns, in the order they are drawn", () => {
@@ -55,5 +55,20 @@ describe("REQ-011 wording table", () => {
     expect([0, 38_000, 60_000, 72_000, 3_600_000, 7_500_000, 90_000].map(runWords.duration)).toEqual(
       ["0 วินาที", "38 วินาที", "1 นาที", "1 นาที 12 วินาที", "1 ชั่วโมง", "2 ชั่วโมง 5 นาที", "1 นาที 30 วินาที"]);
     expect(hopOutcome).toEqual({ commented: "แสดงความเห็น", handed_off: "ส่งต่อ", status: "เปลี่ยนสถานะ", asked: "ถามคุณ", failed: "ไม่สำเร็จ", stopped: "หยุดไว้", interrupted: "ถูกขัดจังหวะ" });
+  });
+});
+
+describe("D-094 § 0 — the board's chat notice, as approved", () => {
+  test("{entry} รอคุณอยู่ในแชต · ไปที่แชต", () => {
+    expect(chatWaits.line("Paul")).toBe("Paul รอคุณอยู่ในแชต");
+    expect(chatWaits.go).toBe("ไปที่แชต");
+  });
+});
+
+describe("D-094 — the distill's other words, as approved (TASK-B-100)", () => {
+  test("B-2 · C-1 · T-1 · K-4 · S-1", () => {
+    expect(distill.tellEntry("Paul")).toBe("เล่างานให้ Paul ในแชต");
+    expect(distill.placeholder("Paul")).toBe("เล่างานให้ Paul…");
+    expect([distill.chainReady, distill.answer, distill.backToProjects]).toEqual(["สายงานพร้อม", "ตอบ", "กลับไปที่โปรเจกต์"]);
   });
 });

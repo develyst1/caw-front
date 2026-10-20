@@ -1,6 +1,7 @@
 // เริ่มโปรเจกต์ (REQ-011 R1): the page Blueprint's "ส่งไปสร้างที่ CAW" opens with `?project=<Blueprint project id>&version=<n>`. It asks the
 // back end to make the project and goes to its board; if one already exists for that version (409 already_exists) it goes to that one.
-// Anything else is said in words with the way back. The POST is idempotent, so a reload or a prefetch does no harm.
+// Anything else is said in words with the way back. The POST is idempotent, so a reload or a prefetch does no harm. The header is the home's shell
+// (S-1, P-4, TASK-B-100): no CAW mark, and no heading of its own — this page is not the projects list; the button says where it goes.
 import { redirect } from "next/navigation";
 import { api, onSampleData } from "@/api";
 import { isCawError } from "@/api/caw";
@@ -8,7 +9,7 @@ import s from "@/components/projects.module.css";
 import st from "./start.module.css";
 import { CawRoot } from "@/theme/CawRoot";
 import { ThemeToggle } from "@/theme/ThemeToggle";
-import { sampleData, section, startRefused } from "@/words";
+import { distill, sampleData, section, startRefused } from "@/words";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,7 @@ export default async function Start({ searchParams }: { searchParams: Promise<{ 
     <CawRoot>
       <header className={s.header}>
         <div className={s.headerIn}>
-          <span className={s.mark}>CAW</span>
-          <h1 className={s.title}>{section.projects}</h1>
+          <span className={s.title}>{section.projects}</span>
           <span className={st.spacer} />
           <ThemeToggle />
         </div>
@@ -47,7 +47,7 @@ export default async function Start({ searchParams }: { searchParams: Promise<{ 
         <div className={st.panel} role="alert">
           {/* on sample data the mock cannot know real Blueprint projects — "not found" would be the wrong sentence (D-058) */}
           <p className={st.text}>{refused === "blueprint_project_not_found" && onSampleData() ? sampleData : startRefused[refused ?? "other"]}</p>
-          <a className={st.back} href="/">{section.projects}</a>
+          <a className={st.back} href="/">{distill.backToProjects}</a>
         </div>
       </main>
     </CawRoot>

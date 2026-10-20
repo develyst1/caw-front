@@ -8,7 +8,6 @@
 .name { margin: 0; font-size: var(--caw-t-page); line-height: 1.15; font-weight: 800; letter-spacing: -0.015em; flex: 1 1 auto; min-width: 0; } /* the page's one dominant heading (B5) */
 .mode { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .budget { color: var(--caw-ink2); font-size: 14px; font-variant-numeric: tabular-nums; }
-.modeLine { flex-basis: 100%; color: var(--caw-ink2); font-size: 14px; }
 .budgetAsk { display: grid; gap: 12px; }
 .budgetLabel { display: grid; gap: 6px; font-weight: 600; }
 /* TASK-B-047: the run's state beside the mode — open (blue, กำลังรัน), stopped (the reason, quiet; the selected อัตโนมัติ loses

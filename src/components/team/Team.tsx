@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { readiness, type ReadinessItem } from "@/lib/readiness";
 import { skillsFor } from "@/lib/roles";
-import { missing, readiness as rw, section, team as words, teamPage, teamRefused, undo } from "@/words";
+import { WorkspaceEditor } from "@/components/workspace/WorkspaceEditor";
+import { distill, missing, readiness as rw, section, team as words, teamPage, teamRefused, undo, workspace } from "@/words";
 import { AddPersonModal } from "./AddPersonModal";
 import { Bench } from "./Bench";
 import { ChainPicture, type NodeState } from "./ChainPicture";
@@ -46,6 +47,7 @@ export function Team({ projectId, project, workers, chain, openCards, states, pr
   const bench = live.filter((w) => !memberIds.has(w.id));
 
   const [open, setOpen] = useState<{ id: string; focus: DrawerFocus } | null>(null);
+  const [folders, setFolders] = useState(false); // the folders dialog: its row's แก้ and the readiness fix both open it (TASK-B-099, D-094 H-3)
   const person = open ? byId.get(open.id) ?? null : null;
   const [adding, setAdding] = useState(false);
   const [preset, setPreset] = useState<WorkerRole[]>([]);
@@ -120,7 +122,7 @@ export function Team({ projectId, project, workers, chain, openCards, states, pr
   const qa = members.find((m) => m.roles.includes("QA"));
   const openAt = (id: string | undefined | null, focus: DrawerFocus) => { if (id) setOpen({ id, focus }); };
   const addQa = () => { setPreset(["QA"]); setAdding(true); };
-  const focusFolders = () => { const el = document.querySelector<HTMLElement>("[data-folders]"); el?.scrollIntoView({ block: "center" }); el?.focus(); };
+  const focusFolders = () => setFolders(true);
   const check = (i: ReadinessItem): { line: string; fix?: { label: string; go: () => void } } => {
     const who = i.who ?? [], first = who[0];
     const ok = { entry: rw.entry.ok, reachable: rw.reachable.ok, handoff: rw.handOff.ok, qaNotBuilder: rw.qaNotBuilder.ok, folder: rw.folder.ok }[i.rule];
@@ -145,12 +147,16 @@ export function Team({ projectId, project, workers, chain, openCards, states, pr
     <div className="mx-auto grid max-w-[1600px] gap-6 px-6 pb-12 pt-8 max-md:px-4 max-md:pt-4">
       <section className="rounded-[10px] border border-hair bg-sheet" aria-labelledby="chain-h">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hair px-6 py-4 max-md:px-4">
-          <h2 id="chain-h" className="m-0 text-[19px] font-semibold">{section.chain}</h2>
+          <h2 id="chain-h" className="m-0 text-[19px] font-semibold">{section.team}</h2> {/* T-3: the tab's own word */}
           <AddPersonModal open={adding} onOpenChange={(o) => { setAdding(o); if (!o) setPreset([]); }} preset={preset} busy={busy} error={errors.add ?? null}
             onCreate={(input) => act("add", () => createMember(projectId, input), () => { setAdding(false); setPreset([]); })} />
         </div>
         <ul className="m-0 flex list-none flex-wrap gap-x-5 gap-y-0.5 border-b border-hair px-6 py-2 text-sm text-ink2 max-md:px-4" aria-label={rw.heading} data-readiness>
-          {items.map((i) => {
+          {/* T-1 (TASK-B-100): only what needs fixing, each as its fix; all passing → one quiet ✓ สายงานพร้อม */}
+          {items.every((i) => i.state === "ok") && (
+            <li className="flex min-h-11 items-center gap-x-1.5" data-chain-ready><span aria-hidden className="font-semibold text-now">✓</span>{distill.chainReady}</li>
+          )}
+          {items.filter((i) => i.state !== "ok").map((i) => {
             const c = check(i);
             return (
               <li key={i.rule} className="flex min-h-11 flex-wrap items-center gap-x-1.5" data-check={i.rule} data-state={i.state}>
@@ -162,10 +168,19 @@ export function Team({ projectId, project, workers, chain, openCards, states, pr
             );
           })}
         </ul>
+        {/* the folders the team may write in, beside the readiness line that checks them (TASK-B-099, D-094 H-3 / T-4) */}
+        {/* below 768: the label and แก้ on one line, the paths (or the none sentence) under them (B-099 review) */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-hair px-6 py-2 text-sm max-md:px-4 md:flex md:flex-wrap" data-folders-row>
+          <span className="font-semibold text-ink">{workspace.heading}</span>
+          {project.workspace.roots.length > 0
+            ? <ul className="m-0 flex min-w-0 flex-1 list-none flex-wrap gap-x-4 gap-y-0.5 p-0 text-ink2 max-md:col-span-2 max-md:row-start-2">{project.workspace.roots.map((r) => <li key={r} className="[overflow-wrap:anywhere]" data-folder-path>{r}</li>)}</ul>
+            : <span className="min-w-0 flex-1 text-ink3 max-md:col-span-2 max-md:row-start-2">{workspace.none}</span>}
+          <WorkspaceEditor projectId={projectId} roots={project.workspace.roots} open={folders} onOpenChange={setFolders} />
+        </div>
         <div className="px-6 py-5 max-md:px-4 max-md:py-2">
           <ChainPicture members={members} edges={chain.edges} entryId={chain.entryWorkerId} states={states} selected={open?.id ?? null} onOpen={(id) => setOpen({ id, focus: null })} />
-          {/* D-086: what an arrow means, once, quietly (the B-086 critique's lowest heuristic was help) */}
-          <p className="m-0 mt-3 text-center text-sm text-ink3 max-md:text-left" data-chain-hint>{teamPage.chainHint}</p>
+          {/* D-086: what an arrow means, once, quietly (the B-086 critique's lowest heuristic was help) — only where arrows are drawn (T-2: ≥ 768) */}
+          <p className="m-0 mt-3 text-center text-sm text-ink3 max-md:hidden" data-chain-hint>{teamPage.chainHint}</p>
         </div>
         {errors.chain && <p className="m-0 px-6 pb-4 text-sm font-semibold text-stuck" role="alert">{errors.chain}</p>}
       </section>

@@ -3,13 +3,14 @@
 // The board (REQ-011 R2; direction B, TASK-B-087; comps studies/REQ-014-direction-B/board.html + palettes P1): the roster (the filter), then what waits on
 // you — each open question in its own sheet, `ตามนั้น` takes the proposed answer in one press, `ตอบเอง…` goes where it can be answered in words (the card for
 // a card question, the chat with the question for the entry worker's) — then five columns divided by hairlines (no grey tubs, D-084), white cards with a
-// hairline. A running card is in `กำลังทำ` because the core moves it there (v1.14); the screen never moves a card. At 1280 the five fit (the chat is
-// behind its tab below 1440); below 768 the columns scroll sideways with a snap.
+// hairline. A running card is in `กำลังทำ` because the core moves it there (v1.14); the screen never moves a card. At 1280 the five fit; below 768 the
+// columns scroll sideways with a snap. No chat beside the board at any width (D-093): while the team waits on you in the chat without a structured
+// question, one line at the top says so and leads to the แชต tab (TASK-B-098, D-094 § 0).
 import {
   ArrowLeftRight, CircleHelp, Database, FolderKanban, GitBranch, Plug, RefreshCw, Server, Smartphone, TriangleAlert, User, Waypoints, type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import type { Card, CardStatus, ChatQuestion, Worker } from "@/api/caw";
 import { answerQuestion } from "@/app/p/[id]/actions";
 import { postMessage } from "@/app/p/[id]/chat/actions";
@@ -17,7 +18,7 @@ import { CrewStrip, type SeatView } from "@/components/CrewStrip";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
 import { group, kindGroup } from "@/theme/tokens";
-import { acceptAnswer, answerOwn, cardMark, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
+import { acceptAnswer, answerOwn, cardMark, chatWaits as waitsWords, distill, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
 
 export type PartRef = { kind: string; title: string };
 /** The entry worker's open chat questions (crew.ts `entryQuestions`), for the "waits on you" sheet. */
@@ -89,8 +90,13 @@ function AskSheet({ meta, text, proposed, face, onAccept, ownHref, cardId, pendi
   );
 }
 
-export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = null }: {
-  projectId: string; cards: Card[]; workers: Worker[]; parts: Record<string, PartRef>; seats?: SeatView[]; chatAsk?: ChatAsk;
+/** `chatWaits`: the entry worker, while the newest chat message is theirs and has no questions (crew.ts `entryWaitsInChat`) — else null.
+ *  `modeControl`: the project's mode, run state and stop — drawn right above the columns, where the run is watched (TASK-B-099, D-094 H-1).
+ *  `entry`: who takes work first — names the empty board's one button (TASK-B-100, B-2); `tellPrimary`: that button is the screen's primary
+ *  unless an earlier first step (the folder) still holds it (B7: one primary per screen). */
+export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = null, chatWaits = null, modeControl = null, entry = null, tellPrimary = true }: {
+  projectId: string; cards: Card[]; workers: Worker[]; parts: Record<string, PartRef>; seats?: SeatView[]; chatAsk?: ChatAsk; chatWaits?: Worker | null; modeControl?: ReactNode;
+  entry?: Worker | null; tellPrimary?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -111,6 +117,14 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
 
   return (
     <div className="grid min-w-0 gap-6" data-board>
+      {chatWaits && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" data-chat-waits>
+          <Avatar name={chatWaits.name} avatar={chatWaits.avatar} size="md" />
+          <p className="m-0 min-w-0 flex-1 text-[15px] font-semibold">{waitsWords.line(chatWaits.name)}</p>
+          {/* the board's one primary (B7) unless a card question already holds it */}
+          <Button asChild variant={questions.length > 0 ? "outline" : "default"} className="min-h-11 px-5 font-semibold"><a href={`/p/${projectId}/chat`}>{waitsWords.go}</a></Button>
+        </div>
+      )}
       {seats.length > 0 && <CrewStrip seats={seats} chosen={chosen} onToggle={toggle} />}
 
       {(questions.length > 0 || chatAsk) && (
@@ -128,6 +142,14 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
         </ul>
       )}
 
+      {modeControl}
+      {/* B-7 / B-2: no cards yet → one sentence and one button in place of five empty columns; while the team waits, the notice above is the way in */}
+      {cards.length === 0 ? (
+        <div className="grid justify-items-center gap-4 rounded-[10px] border border-hair bg-sheet px-6 py-10 text-center max-md:px-4" data-board-empty>
+          <p className="m-0 max-w-[48ch] text-[15px] text-ink2">{redesign.emptyBoard}</p>
+          {entry && !chatWaits && <Button asChild variant={tellPrimary ? "default" : "outline"} className="min-h-11 px-5 font-semibold"><a href={`/p/${projectId}/chat`} data-tell-entry>{distill.tellEntry(entry.name)}</a></Button>}
+        </div>
+      ) : (
       <div className="grid grid-cols-5 overflow-hidden rounded-[10px] border border-hair bg-sheet max-md:flex max-md:snap-x max-md:snap-mandatory max-md:overflow-x-auto" data-columns>
         {columnOrder.map((st) => {
           const list = inColumn(st), loud = st === "stuck" && list.length > 0;
@@ -148,6 +170,7 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
           );
         })}
       </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { card, faces, rolePicker, section, team as words, teamPage, undo } from "../src/words";
+import { card, faces, rolePicker, section, team as words, teamPage, undo, workspace } from "../src/words";
 
 const TEAM = `/p/${MOCK_PROJECT_ID}/team`;
 const W = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -140,9 +140,9 @@ test("the face picker: shape, colour and eyes save together, and the node shows 
   await expect(node(page, FENA).locator("svg[data-face]")).toHaveAttribute("data-face", /^gem-/);
 });
 
-test("readiness: one line of ticks; with no QA the fix opens the add modal with QA picked (B10 / OD-3)", async ({ page }) => {
+test("readiness: only what needs fixing (T-1); with no QA the fix opens the add modal with QA picked (B10 / OD-3)", async ({ page }) => {
   await page.goto(TEAM);
-  await expect(page.locator("[data-readiness] [data-check]")).toHaveCount(5);
+  await expect(page.locator('[data-readiness] [data-check][data-state="ok"]')).toHaveCount(0); // T-1 (TASK-B-100): passed checks are not listed
   await open(page, QA);
   await drawer(page).locator("[data-remove]").click();       // ณัฐธิดา holds a card → the cards dialog
   await page.locator("[data-remove-confirm]").click();
@@ -211,4 +211,23 @@ test("@390 a too-long first name is shown whole in the drawer title — every le
     ellipsis: getComputedStyle(p).textOverflow, clipped: p.scrollWidth > p.clientWidth + 1, inside: p.getBoundingClientRect().right <= innerWidth + 0.5,
   })));
   expect(parts).toEqual([{ ellipsis: "clip", clipped: false, inside: true }, { ellipsis: "clip", clipped: false, inside: true }]);
+});
+
+// TASK-B-100 T-2 / T-3 (D-094) and the folders row at 390 (B-099 review)
+test("the page's heading is the tab's word ทีม; the arrow hint shows at 1440 only", async ({ page }) => {
+  await page.goto(TEAM);
+  await expect(page.locator("#chain-h")).toHaveText(section.team);
+  await expect(page.locator("[data-chain-hint]")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("[data-chain-hint]")).toBeHidden();
+});
+test("@390 the folders row: its label and แก้ on one line, the folders under them", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(TEAM);
+  const row = page.locator("[data-folders-row]");
+  const label = (await row.getByText(workspace.heading, { exact: true }).boundingBox())!;
+  const edit = (await row.locator("[data-folders]").boundingBox())!;
+  expect(Math.abs((label.y + label.height / 2) - (edit.y + edit.height / 2))).toBeLessThanOrEqual(6);
+  const under = (await row.locator("[data-folder-path], span").last().boundingBox())!;
+  expect(under.y).toBeGreaterThan(edit.y + edit.height - 2);
 });

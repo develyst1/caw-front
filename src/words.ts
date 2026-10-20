@@ -126,7 +126,6 @@ export const chat = {
   retry: "ลองอีกครั้ง",                                                       // REQ-013 (D-057)
   estimate: (n: number, h: number) => `${n} งาน ใช้ประมาณ ${h} ก้าว`,           // REQ-013
   notInSpec: "เรื่องนี้ยังไม่มีใน spec — ส่งไปเพิ่มใน Blueprint แล้ว",           // REQ-013
-  enterHint: "กด Enter เพื่อส่ง",                                              // carried-over (Blueprint chat)
   placeholder: "เล่างานให้ทีมฟัง…",                                             // REQ-013 (PM 2026-10-14) — the box (and its accessible name)
   empty: "ยังไม่มีข้อความ — เล่างานให้ทีมฟังได้เลย",                             // REQ-013 (PM 2026-10-14) — an empty thread
   waitsFor: (items: string) => `รอข้อ ${items} ก่อน`,                            // REQ-013 (PM 2026-10-14) — an item's dependencies, by their numbers
@@ -168,7 +167,6 @@ export const redesign = {
   setUpTeam: "จัดทีม",                                                                 // REQ-014 (D-061) home card action · step 1 title
   openBlueprint: "เปิด Blueprint",                                                     // REQ-014 (D-061) home empty state
   stepsHeading: "เริ่มงานใน 3 ขั้น",                                                    // REQ-014 (D-061)
-  stepsLine: "ทำครบแล้วทีมจะเริ่มแตกงานเป็นการ์ดบนบอร์ดนี้",                               // REQ-014 (D-061)
   stepTeamText: "ทีมเริ่มต้นห้าคน รับงานจากคุณที่ PM แล้วส่งต่อกันตามสายงาน เปลี่ยนคนหรือบทบาททีหลังได้", // REQ-014 (D-061)
   useStartingTeam: "ใช้ทีมเริ่มต้น",                                                    // REQ-014 (D-061)
   ownTeam: "จัดทีมเอง",                                                               // REQ-014 (D-061)
@@ -190,13 +188,12 @@ export const redesign = {
 // `ทุกคนมีบทบาท` and `ตั้งงบไว้แล้ว` are NOT here: dropped by the review (SPEC-B-003 A3, A4) before the build ----
 /** The light / dark toggle's accessible name (D-063). */
 export const themeToggle = "สลับโหมดมืด / สว่าง";
-/** What is missing, as a link to its fix (D-063): the sentence, then the link words. Chat head + steps panel. */
+/** What is missing, as a link to its fix (D-063): the sentence, then the link words. ทีม's readiness line (the chat head's use went with the panel, TASK-B-098). */
 export const missing = {
-  team: { text: "ยังไม่มีทีม", fix: "จัดทีม" },
   entry: { text: "ยังไม่มีคนรับงานคนแรก", fix: "เลือกที่หน้าทีม" },
   folder: { text: "ยังไม่ได้กำหนดโฟลเดอร์", fix: "เพิ่มโฟลเดอร์" },
 } as const;
-/** The mode switch explains itself (D-063): one line for the mode in effect. */
+/** The mode switch explains itself (D-063): one line per mode — the toggle's title, and the budget dialog's line (TASK-B-099, H-2). */
 export const modeLine: Record<Mode, string> = {
   manual: "แบบสั่งทีละขั้น — คุณกดให้แต่ละคนทำทีละก้าว",
   dispatcher: "อัตโนมัติ — ทีมทำต่อกันเองจนครบงบที่คุณตั้ง",
@@ -302,16 +299,8 @@ export const teamPage = {
 /** The chat panel's head (D-083 (3), final: PM 2026-10-16, SPEC-B-003 Decision 8 / REQ-014 § User-facing). */
 export const chatHead = {
   title: (entry: string) => `แชตกับ ${entry}`,
-  line: (entry: string) => `เล่างาน แล้ว ${entry} เสนอการ์ดให้`,
 } as const;
 
-/** The smaller screens (TASK-B-088). `team-proposed B-088` until the PM approves. */
-export const headerMenu = {
-  label: "โหมดและโฟลเดอร์",                                                         // team-proposed B-088 — the 390 header menu's name
-} as const;
-export const homePage = {
-  fromBlueprint: "โปรเจกต์ใหม่มาจากปุ่ม ส่งไปสร้างที่ CAW ใน Blueprint —",          // team-proposed B-088 — the home's one line (§ 6: no start action here)
-} as const;
 export const errorPage = {
   notFound: "ไม่พบหน้านี้ — ลิงก์อาจเก่าหรือถูกลบไปแล้ว",                           // team-proposed B-088
   failed: "หน้านี้เปิดไม่สำเร็จ ลองอีกครั้ง หรือกลับไปที่โปรเจกต์",                    // team-proposed B-088
@@ -329,4 +318,22 @@ export const backendDown = {
   text: "ยังต่อ caw-back ไม่ได้ — เปิด caw-back ก่อน แล้วกดลองอีกครั้ง",   // team-proposed B-093
   command: "คำสั่งเปิด caw-back",                                            // team-proposed B-093 — the label above the command line
   tried: (url: string) => `ลองต่อที่ ${url}`,                               // team-proposed B-093
+} as const;
+
+/** The board's one line while the team waits on you in the chat (TASK-B-098, D-094 § 0 — approved as written). */
+export const chatWaits = {
+  line: (entry: string) => `${entry} รอคุณอยู่ในแชต`,                       // D-094 § 0
+  go: "ไปที่แชต",                                                            // D-094 § 0
+} as const;
+
+/** The folders row on ทีม (TASK-B-099, D-094 H-3 / T-4 — approved as written): `โฟลเดอร์ที่ทีมเขียนได้` (workspace.heading), the paths, and this button. */
+export const folderEdit = "แก้";                                               // D-094 H-3
+
+/** The distill's other new words (TASK-B-100, D-094 — approved as written in studies/REQ-014-distill-PM.md). */
+export const distill = {
+  tellEntry: (entry: string) => `เล่างานให้ ${entry} ในแชต`,                    // D-094 B-2 — the empty board's one button
+  placeholder: (entry: string) => `เล่างานให้ ${entry}…`,                       // D-094 C-1 — the chat box (and its accessible name)
+  chainReady: "สายงานพร้อม",                                                   // D-094 T-1 — shown after a ✓ when every check passes
+  answer: "ตอบ",                                                              // D-094 K-4 — the question card's own-answer button
+  backToProjects: "กลับไปที่โปรเจกต์",                                          // D-094 S-1 — the start page's one button
 } as const;

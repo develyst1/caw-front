@@ -1,18 +1,16 @@
-// A CAW project: the header every project screen shares (REQ-011 R5, polish-plan § 2.3, TASK-B-085) — one row: the way back to the projects,
-// the project's name and its places (แชต carries what waits on you); on the right the mode and the folders, compact. Below 768 px the places
-// take their own row and stay with the header as it sticks. Inside CAW's root (Ant's theme, still used by the screens not yet rebuilt).
+// A CAW project: the header every project screen shares (REQ-011 R5, polish-plan § 2.3, TASK-B-085 → TASK-B-099, D-094 § 1) — one job: say which
+// project you are in and get you between its places. One row: the way back to the projects, the project's name, its places (แชต carries what
+// waits on you), a small `กำลังรัน` while a run is open (H-1: the mode itself lives on the board), and the theme. Below 768 px the places take
+// their own row and stay with the header as it sticks; no menu (H-4). Folders live on ทีม (H-3); no warning bar here (H-5).
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { api } from "@/api";
-import { ModeControl } from "@/components/ModeControl";
-import { HeaderMenu, ProjectNav } from "@/components/runs/ProjectNav";
-import w from "@/components/workspace/workspace.module.css";
-import { WorkspaceEditor } from "@/components/workspace/WorkspaceEditor";
+import { ProjectNav } from "@/components/runs/ProjectNav";
 import { homeSummaries } from "@/lib/crew";
 import { CawRoot } from "@/theme/CawRoot";
 import { ThemeToggle } from "@/theme/ThemeToggle";
-import { section, workspace } from "@/words";
+import { runRunning, section } from "@/words";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +18,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
   const { id } = await params;
   const [p, [latest], summary, jar] = await Promise.all([api.project(id), api.runs(id, 1), homeSummaries(api, [{ id }]), cookies()]);
   if (!p) notFound();
-  // the newest run decides the header's run state: open, or stopped with its reason (TASK-B-047)
-  const lastRun = latest ? { open: latest.endedAt === null, stopReason: latest.stopReason, hopBudget: latest.hopBudget, hopsUsed: latest.hopsUsed, mode: latest.mode } : null;
+  const running = !!latest && latest.endedAt === null; // the newest run is the open one, if any (TASK-B-047)
   return (
     <CawRoot initialDark={jar.get("caw-theme")?.value === "dark" /* CawRoot's THEME_KEY — a server file cannot read a client module's value */}>
       <header className="sticky top-[var(--caw-sample-bar,0px)] z-20 border-b border-hair bg-sheet">
@@ -31,21 +28,11 @@ export default async function ProjectLayout({ children, params }: { children: Re
           <div className="max-md:order-last max-md:-mx-1 max-md:w-full">
             <ProjectNav projectId={p.id} waiting={summary[p.id]?.waitingOnYou ?? 0} />
           </div>
-          <div className="ml-auto flex flex-wrap items-center gap-3 max-md:hidden">
-            {/* the mode's one-line explanation (D-063) wraps under the toggle instead of widening the row, so the header stays one row at 1280 */}
-            <div className="max-w-[300px] text-sm">
-              <ModeControl projectId={p.id} mode={p.mode} hopBudget={p.hopBudget} hopsUsed={p.hopsUsed} lastRun={lastRun} />
-            </div>
-            <WorkspaceEditor projectId={p.id} roots={p.workspace.roots} />
+          <div className="ml-auto flex items-center gap-3">
+            {running && <span className="inline-flex min-h-[26px] items-center rounded-md bg-now-soft px-2 text-sm font-semibold text-now" data-run-mark>{runRunning}</span>}
             <ThemeToggle />
           </div>
-          {/* below 768: the same three in one menu (B-088); its content mounts only while open, so nothing is drawn twice */}
-          <HeaderMenu>
-            <ModeControl projectId={p.id} mode={p.mode} hopBudget={p.hopBudget} hopsUsed={p.hopsUsed} lastRun={lastRun} />
-            <div className="flex flex-wrap items-center gap-3"><WorkspaceEditor projectId={p.id} roots={p.workspace.roots} /><ThemeToggle /></div>
-          </HeaderMenu>
         </div>
-        {p.workspace.roots.length === 0 && <p className={w.warn} role="status" data-folder-warn><span className={w.warnIn}>{workspace.none}</span></p>}
       </header>
       {children}
     </CawRoot>

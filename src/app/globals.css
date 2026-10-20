@@ -121,22 +121,17 @@
 
 /* ---- dark only (D-091, from variants.css): containers are panels, cards are sheets ---- */
 [data-theme="dark"] header:not(main header), /* the page's top bar only — a heading block inside a page (the card's) stays on the page */
-[data-theme="dark"] [data-crew-wrap],
 [data-theme="dark"] [data-columns],
 [data-theme="dark"] [data-asks] > li,
-[data-theme="dark"] [data-chat-panel],
+[data-theme="dark"] [data-chat-waits],
+[data-theme="dark"] [data-board-empty],
 [data-theme="dark"] [data-first-steps] { background: var(--gd-panel); }
 [data-theme="dark"] [data-columns] [data-card],
 [data-theme="dark"] [data-composer] textarea { background: var(--gd-sheet); }
-[data-theme="dark"] [data-crew-fade] { --tw-gradient-from: var(--gd-panel); }
 
-/* ---- no slabs: the folded first steps and the notes are tints or hairlines ---- */
-[data-theme="dark"] [data-first-steps][data-folded] { background: transparent; border: 1px solid var(--gd-hair); color: var(--gd-ink2); }
-[data-theme="dark"] [data-amendment] { background: transparent; border: 1px solid color-mix(in oklab, var(--gd-stuck) 35%, transparent); }
-
-/* ---- no box inside a box in the chat: the worker's reply sits on the panel with its face; its question is set off by a hairline, not a frame ---- */
+/* ---- no box inside a box in the chat (C-3, TASK-B-100: the amendment keeps its tint without a border, the questions are an indent — in Chat.tsx):
+   the worker's reply sits on the page with its face ---- */
 [data-theme="dark"] [data-message="worker"] [data-bubble] { border-color: transparent; background: transparent; padding-left: 0; padding-right: 0; }
-[data-theme="dark"] [data-chat-question] { border: 0; border-top: 1px solid var(--gd-hair); border-radius: 0; background: transparent; padding-left: 0; padding-right: 0; }
 [data-theme="dark"] [data-message="operator"] [data-bubble] { background: var(--gd-accent-soft); }
 
 @layer utilities {

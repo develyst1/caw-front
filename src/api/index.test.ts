@@ -39,4 +39,24 @@ describe("backendReachable", () => {
     expect(await backendReachable(1500)).toBe(true);
     server.stop(true);
   });
+  test("the probe asks GET /health, the light route (not /v1/projects)", async () => {
+    const seen: string[] = [];
+    const server = Bun.serve({ port: 0, fetch: (req) => { seen.push(`${req.method} ${new URL(req.url).pathname}`); return Response.json({ ok: true }); } });
+    process.env.CAW_API_URL = `http://127.0.0.1:${server.port}`;
+    expect(await backendReachable()).toBe(true);
+    expect(seen).toEqual(["GET /health"]);
+    server.stop(true);
+  });
+  test("a caw-back that answers after 2 s is still up (default limit)", async () => {
+    const server = Bun.serve({ port: 0, fetch: async () => { await Bun.sleep(2000); return Response.json({ ok: true }); } });
+    process.env.CAW_API_URL = `http://127.0.0.1:${server.port}`;
+    expect(await backendReachable()).toBe(true);
+    server.stop(true);
+  });
+  test("nothing listening → false, fast (< 500 ms), with the default limit", async () => {
+    process.env.CAW_API_URL = "http://127.0.0.1:9";
+    const t0 = Date.now();
+    expect(await backendReachable()).toBe(false);
+    expect(Date.now() - t0).toBeLessThan(500);
+  });
 });

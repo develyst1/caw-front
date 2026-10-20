@@ -1,7 +1,5 @@
-/* The folder editor (TASK-B-043): a button in the project header opening a dialog; the warning bar under the header while there are none. */
+/* The folder editor (TASK-B-043 → TASK-B-099): a button on ทีม's folders row opening a dialog (the header's warning bar went, H-5). */
 .trigger { min-height: 44px; }
-.warn { margin: 0; padding: 10px 24px; background: var(--caw-stuckSoft); border-top: 1px solid var(--caw-stuckLine); color: var(--caw-stuck); font-size: 15px; font-weight: 600; }
-.warnIn { display: block; max-width: 1600px; margin: 0 auto; }
 .body { display: grid; gap: 16px; }
 .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .root { display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 12px; border: 1px solid var(--caw-line); border-radius: var(--caw-r-tag); background: var(--caw-canvas); }
@@ -10,7 +8,7 @@
 .row { display: flex; gap: 8px; }
 .row > :first-child { flex: 1; min-width: 0; }
 .error { margin: 0; color: var(--caw-stuck); font-size: 14px; font-weight: 600; }
-@media (max-width: 480px) { .warn { padding: 10px 16px; } .row { flex-direction: column; } }
+@media (max-width: 480px) { .row { flex-direction: column; } }
 /* the undo toast for a removed folder (TASK-B-065, A-P6) */
 .toast { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 6px 6px 6px 14px; border-radius: 12px; background: var(--caw-you); color: var(--caw-youInk); font-size: 15px; }
 .toastBtn { min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--caw-youInk); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

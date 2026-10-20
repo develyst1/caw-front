@@ -31,9 +31,10 @@ export function CrewStrip({ seats, chosen, onToggle }: { seats: SeatView[]; chos
     ro.observe(el);
     return () => { el.removeEventListener("scroll", read); ro.disconnect(); };
   }, [seats.length]);
-  const fade = "pointer-events-none absolute inset-y-0 z-[1] w-10 from-sheet to-transparent";
+  const fade = "pointer-events-none absolute inset-y-0 z-[1] w-10 from-canvas to-transparent"; // the strip sits on the page (B-4)
   return (
-    <section className="relative min-w-0 overflow-hidden rounded-[10px] border border-hair bg-sheet" aria-label={section.team} data-crew-wrap>
+    // B-4 (TASK-B-100): no frame of its own — a plain row of people on the page; the hairlines between seats stay
+    <section className="relative min-w-0 overflow-hidden" aria-label={section.team} data-crew-wrap>
       {more.start && <span className={`${fade} left-0 bg-linear-to-r`} aria-hidden data-crew-fade="start" />}
       {more.end && <span className={`${fade} right-0 bg-linear-to-l`} aria-hidden data-crew-fade="end" />}
       <ul ref={ref} className="m-0 grid list-none grid-cols-3 p-0 max-md:flex max-md:snap-x max-md:snap-mandatory max-md:overflow-x-auto max-md:[scrollbar-width:none]" data-crew>

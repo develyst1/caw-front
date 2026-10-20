@@ -83,4 +83,11 @@ describe("RunsList", () => {
     expect(html).toContain(runPage.chatStep("อยากให้ห้องประชุมใหญ่ต้องอนุมัติ"));
     expect(html).toContain('href="/p/p/chat"');
   });
+  // R-2 (TASK-B-100, D-094): an outcome the screen has no word for (the core's chat reply) draws no chip, never an empty pill
+  test("an outcome with no word shows no chip; a known one and a running hop still do", () => {
+    const html = render([], [hop("h1", null, { outcome: "replied" as Hop["outcome"] })]);
+    expect(html).not.toContain("data-outcome");
+    expect(render([], [hop("h2", null)])).toContain(hopOutcome.commented);
+    expect(render([], [hop("h3", null, { endedAt: null, outcome: null })])).toContain(runRunning);
+  });
 });

@@ -71,7 +71,7 @@ test("a run that is still going reads กำลังรัน — switching to 
   await page.getByText(mode.dispatcher, { exact: true }).first().click();
   await page.locator("[data-budget-ask] form button[type=submit]").click(); // the budget question's submit (scoped: the board also has the chat box's submit, TASK-B-064) — it starts at the project's budget (D-051)
   const seeded = (await createMockApi().project(MOCK_PROJECT_ID))!.hopBudget; // read from the seed, not a number (TASK-B-047 Q2)
-  await expect(page.locator("header")).toContainText(budget(seeded, 0)); // A4 (TASK-B-074): the open run's own budget, not the project's total
+  await expect(page.locator("[data-mode-bar]")).toContainText(budget(seeded, 0)); // TASK-B-099: on the board's mode bar. A4 (TASK-B-074): the open run's own budget, not the project's total
   await page.goto(RUNS);
   const runs = page.locator("[data-run]");
   await expect(runs).toHaveCount(3);
@@ -124,4 +124,12 @@ test.describe("on operator-like", () => {
       expect(broken, `@${w}`).toEqual([]);
     }
   });
+});
+
+// TASK-B-100 R-1 (D-094): the current tab already says การรัน — the page heading is for screen readers only
+test("the runs page heading is kept for screen readers, not drawn", async ({ page }) => {
+  await page.goto(RUNS);
+  const h = page.getByRole("heading", { level: 2, name: section.runs });
+  await expect(h).toHaveCount(1);
+  await expect(h).toHaveClass(/sr-only/);
 });

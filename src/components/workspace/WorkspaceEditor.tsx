@@ -1,6 +1,6 @@
 "use client";
 
-// The folders the team may write in (REQ-011 / SPEC-A-008 v1.1): a button in the project header opens a dialog listing them, each with
+// The folders the team may write in (REQ-011 / SPEC-A-008 v1.1): a button on ทีม's folders row (TASK-B-099, D-094 H-3) opens a dialog listing them, each with
 // เอาออก, and a field to add one. A path the rules refuse (relative, `..`, more than 20) answers with the field's own hint — no new word.
 // TASK-B-088: rebuilt on shadcn (Radix Dialog, Input, Button); undo is as before.
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,17 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { teamPage, undo, workspace } from "@/words";
+import { folderEdit, teamPage, undo, workspace } from "@/words";
 import { saveRoots } from "./actions";
 import { canAdd } from "./roots";
 import s from "./workspace.module.css";
 
-export function WorkspaceEditor({ projectId, roots }: { projectId: string; roots: string[] }) {
+/** `open` / `onOpenChange`: ทีม opens it from its readiness fix too, so the page may hold the state; left out, the dialog holds its own. */
+export function WorkspaceEditor({ projectId, roots, open: held, onOpenChange }: { projectId: string; roots: string[]; open?: boolean; onOpenChange?: (o: boolean) => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [own, setOwn] = useState(false);
+  const open = held ?? own;
+  const setOpen = (o: boolean) => { setOwn(o); onOpenChange?.(o); };
   const [draft, setDraft] = useState("");
   const [refused, setRefused] = useState(false);
   const [pending, start] = useTransition();
@@ -38,7 +41,7 @@ export function WorkspaceEditor({ projectId, roots }: { projectId: string; roots
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setRefused(false); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className={`${s.trigger} min-h-11 text-[15px]`} data-folders>{workspace.heading}{roots.length > 0 ? ` (${roots.length})` : ""}</Button>
+        <Button variant="outline" className={`${s.trigger} min-h-11 text-[15px]`} aria-label={`${folderEdit} ${workspace.heading}`} data-folders>{folderEdit}</Button>
       </DialogTrigger>
       <DialogContent showCloseButton={false} aria-describedby={undefined} className="w-[min(600px,calc(100vw-32px))] max-w-none gap-4 border-hair bg-sheet p-6 sm:max-w-none">
         <div className="flex items-center justify-between gap-4">

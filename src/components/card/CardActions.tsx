@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import type { CardStatus, Worker } from "@/api/caw";
 import { answerCard, assignCard, commentOn, setCardStatus, type ActionResult } from "@/app/p/[id]/c/[cardId]/actions";
-import { acceptAnswer, answerOwn, assigneeLabel, cardRefused, column, columnOrder, commentPlaceholder, send, statusLabel } from "@/words";
+import { acceptAnswer, answerOwn, assigneeLabel, cardRefused, column, columnOrder, commentPlaceholder, distill, send, statusLabel } from "@/words";
 import s from "./card.module.css";
 
 const refusal = (r: ActionResult) => (r.ok ? null : cardRefused[r.code] ?? cardRefused.other!);
@@ -73,7 +73,7 @@ export function AnswerQuestion({ projectId, cardId, proposed }: { projectId: str
       </Button>
       <form className={s.row} onSubmit={(e) => { e.preventDefault(); const t = own.trim(); if (t) go(() => answerCard(projectId, cardId, t), () => setOwn("")); }}>
         <Input className="h-11 text-[15px]" value={own} onChange={(e) => setOwn(e.target.value)} placeholder={answerOwn} aria-label={answerOwn} />
-        <Button type="submit" variant="outline" className="min-h-11" disabled={pending || !own.trim()}>{send}</Button>
+        <Button type="submit" variant="outline" className="min-h-11" disabled={pending || !own.trim()}>{distill.answer /* K-4: ตอบ, not the comment's ส่ง */}</Button>
       </form>
       <Refused text={error} />
     </div>

@@ -204,6 +204,10 @@ export interface MockRunner {
   startHop(cardId: string, workerId: string): Promise<Hop>;
   /** Ends a running hop (outcome `commented`). 404 for an unknown hop. */
   finishHop(hopId: string): Promise<void>;
+  /** The entry worker answers the project's newest operator message with a plain reply (no question, no proposal, no amendment) and the log gets
+   *  `chat.replied`, so the thread and `lastSeq` move together. An ask nobody answered yet also gets a finished chat hop (`commented`); one that was
+   *  answered already just gets the further reply under it. 404 unknown project · 409 `nothing_to_answer` (no operator message at all). */
+  replyChat(projectId: string, text: string): Promise<ChatMessage>;
 }
 
 export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRunner {
@@ -641,6 +645,21 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       p.hops.unshift(hop);
       if (c.status === "todo") c.status = "doing"; // v1.14: in the same event
       return structuredClone(hop);
+    },
+    replyChat: async (pid, text) => {
+      const p = need(pid);
+      const ask = p.chat.findLast((m) => m.author === "operator");
+      if (!ask || !p.entry) return refuse(409, "nothing_to_answer", "there is no operator message to answer");
+      const at = new Date().toISOString();
+      if (ask.replyHopId === null) {
+        const hopId = id("h", ++nextHop);
+        p.chatHops.push({ id: hopId, messageId: ask.id, endedAt: at, outcome: "commented" });
+        ask.replyHopId = hopId;
+      }
+      const reply: StoredMessage = { id: id("m", ++nextMessage), projectId: p.id, author: `worker:${p.entry}`, text, replyTo: ask.id, replyHopId: null, questions: null, proposalId: null, amendment: null, retryRequestedAt: null, at };
+      p.chat.push(reply);
+      log.push({ seq: log.length + 1, at, actor: reply.author, projectId: p.id, type: "chat.replied", data: {} });
+      return withHop(p, reply);
     },
     finishHop: async (hopId) => {
       const hop = projects.flatMap((p) => p.hops).find((h) => h.id === hopId);

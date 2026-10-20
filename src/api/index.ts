@@ -24,10 +24,12 @@ export function resetMock(state?: MockState) { globalThis.__cawMock = state ? cr
 /** Where caw-back is expected (the same default as http.ts). */
 export const backendUrl = () => process.env.CAW_API_URL ?? "http://127.0.0.1:4500";
 
-/** On http, can caw-back be reached right now? One light read with a short timeout (≤ 1.5 s), asked once per request by the root layout, so a
- *  down back end shows BackendDown instead of an error or a blank page (D-089). Any HTTP answer counts as reachable; only no answer does not. */
-export async function backendReachable(timeoutMs = 1500): Promise<boolean> {
-  try { await fetch(`${backendUrl()}/v1/projects`, { signal: AbortSignal.timeout(timeoutMs), cache: "no-store" }); return true; }
+/** On http, can caw-back be reached right now? One light read of caw-back's own `GET /health` with a 3 s limit, asked once per request by the root
+ *  layout, so a down back end shows BackendDown instead of an error or a blank page (D-089). `/v1/projects` was the probe first and took 1.1–1.4 s
+ *  against a real database, too close to a 1.5 s limit (D-094 X-1). Any HTTP answer counts as reachable; only no answer does not. A refused
+ *  connection fails at once, so a dead caw-back is not slowed by the longer limit. */
+export async function backendReachable(timeoutMs = 3000): Promise<boolean> {
+  try { await fetch(`${backendUrl()}/health`, { signal: AbortSignal.timeout(timeoutMs), cache: "no-store" }); return true; }
   catch { return false; }
 }
 

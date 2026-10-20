@@ -24,6 +24,13 @@ export function entryQuestions(chain: Chain, chat: ChatMessage[]): { message: Ch
   return { message: reply, questions: reply.questions };
 }
 
+/** The board's notice (TASK-B-098, D-094 § 0 B-1): the newest chat message is a worker's (you have not answered it) and it carries no questions — a reply
+ *  with questions is the board's AskSheet instead (B-5), never both. Needs an entry worker, whose face and name the notice shows. */
+export function entryWaitsInChat(chain: Chain, chat: ChatMessage[]): boolean {
+  const last = chat.at(-1);
+  return !!chain.entryWorkerId && !!last && last.author !== "operator" && !last.questions?.length;
+}
+
 /** Priority: a running hop → `working` (its card), or `answeringChat` when the hop is on a chat message; else a stuck card of theirs → `stuck`; else an open
  *  question waiting for the operator (one assigned to them, or one a card of theirs depends on — or, for the entry worker, questions it asked in the chat
  *  that nobody has answered: pass `chat`, oldest first) → `waitingOnYou`; else cards of theirs in `doing` with nobody running them → `idleWithWork`

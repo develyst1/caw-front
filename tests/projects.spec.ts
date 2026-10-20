@@ -1,17 +1,17 @@
 // The projects list and the start-project page (TASK-B-040, REQ-011 R1), on the mock (each test starts from its seed).
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { mode, projectCard, sampleData, section, startRefused } from "../src/words";
+import { distill, mode, projectCard, sampleData, section, startRefused } from "../src/words";
 
 const BP = "11111111-2222-4333-8444-555555555555"; // the one Blueprint project the mock knows
 
-test("/ lists the project: name, Blueprint version, mode, cards done of all, stuck — and the card opens its board", async ({ page }) => {
+test("/ lists the project: name, Blueprint version, cards done of all, stuck — and the card opens its board", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: section.projects })).toBeVisible();
   const card = page.locator("ul a").first();
   await expect(card.getByRole("heading", { level: 2, name: "จองห้องประชุม" })).toBeVisible();
   await expect(card).toContainText(projectCard.blueprintVersion(3));
-  await expect(card).toContainText(mode.manual);
+  await expect(card).not.toContainText(mode.manual); // P-3 (TASK-B-100): the mode chip shows only while อัตโนมัติ is running
   await expect(card).toContainText(projectCard.done(3, 12));
   // C2 (TASK-B-074): the home's stuck number is the board's stuck column (was the core's stuckCount, 4) — the same-number check is in project-screen.spec
   await expect(card).toContainText(/ติดอยู่ \d+/);
@@ -63,9 +63,9 @@ test("/start says why it cannot start, in words, with the way back — unknown B
   for (const [url, words] of cases) {
     await page.goto(url);
     await expect(page.locator("main [role=alert]"), url).toHaveText(new RegExp(words));
-    await expect(page.getByRole("link", { name: section.projects }), url).toBeVisible();
+    await expect(page.getByRole("link", { name: distill.backToProjects }), url).toBeVisible(); // S-1 (TASK-B-100)
   }
-  await page.getByRole("link", { name: section.projects }).click();
+  await page.getByRole("link", { name: distill.backToProjects }).click();
   await expect(page).toHaveURL("/");
 });
 

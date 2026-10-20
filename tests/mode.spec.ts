@@ -12,7 +12,9 @@ const auto = (page: Page) => page.locator("[data-mode-control]").getByRole("radi
 const manual = (page: Page) => page.locator("[data-mode-control]").getByRole("radio", { name: mode.manual });
 const budgetBox = (page: Page) => page.locator("[data-budget-ask] input") /* TASK-B-088: Radix Dialog */;
 const submitBudget = (page: Page) => page.getByRole("button", { name: mode.dispatcher, exact: true }).last().click();
-const budgetLine = async (page: Page) => /งบ \d+ ก้าว · ใช้ไป \d+/.exec((await page.locator("header").first().textContent())!)![0];
+// TASK-B-099 (D-094 H-1): the mode, its budget and its run state live on the board, above the columns — no longer in the header
+const bar = (page: Page) => page.locator("[data-mode-bar]");
+const budgetLine = async (page: Page) => /งบ \d+ ก้าว · ใช้ไป \d+/.exec((await bar(page).textContent())!)![0];
 
 test("mode: the budget box starts at the project's own budget (40), not 10", async ({ page }) => {
   await page.goto(BOARD);
@@ -38,7 +40,7 @@ test("mode: a run opened elsewhere while the budget box is up — อัตโ�
   // tab A sends its 30: refused in words; the run, the mode and the budget are tab B's, untouched
   await submitBudget(page);
   await expect(page.getByRole("alert").filter({ hasText: runStillOpen })).toBeVisible(); // (Next's route announcer is a 2nd alert)
-  await expect(page.locator("header").first()).toContainText(line);
+  await expect(bar(page)).toContainText(line);
   await expect(auto(page)).toHaveAttribute("aria-checked", "true");
   await other.goto(`${BOARD}/runs`);
   await expect(other.locator("[data-run]")).toHaveCount(runs);
@@ -63,7 +65,7 @@ test.describe("D-052: a run that ended by itself", () => {
 
   test("the header says why it stopped and offers อัตโนมัติ again; nothing reads กำลังรัน; the button opens the budget box at the project's budget", async ({ page }) => {
     await page.goto(BOARD);
-    const header = page.locator("header").first();
+    const header = bar(page); // the board's mode bar (TASK-B-099)
     await expect(page.locator('[data-run-state="stopped"]')).toHaveText(new RegExp(runStopped(stopReason.budget_spent).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     await expect(header).toContainText(runStopped(stopReason.budget_spent));
     await expect(header).not.toContainText(runRunning);

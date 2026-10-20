@@ -2,7 +2,8 @@
 
 // First steps (REQ-014 R1, SPEC-B-003 Decision 4 + STUDY-002 merge, comps B-066/B-068 2): one panel, three ordered steps — the team, the folders,
 // the first request — each done ✓ with its fact, the current one with its one action, and none locked (step 3 is open at once: the chat runs
-// without folders, SPEC A2). The head counts `พร้อมเริ่ม {done}/3`; at 3/3 the panel folds to that one line. The screen shows it until cards exist.
+// without folders, SPEC A2). The head counts `พร้อมเริ่ม {done}/3` (B-3: no bar, no extra line); at 3/3 it is gone (B-2, TASK-B-100) — the board's
+// empty state takes over until the first card. The screen shows it until cards exist.
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
@@ -37,7 +38,7 @@ export function FirstSteps({ projectId, teamSize, roots, hasChat }: { projectId:
     });
   };
 
-  if (count === 3) return <p className={s.folded} data-first-steps data-folded>{live.readyCount(3)}</p>;
+  if (count === 3) return null;
 
   const step = (key: keyof typeof done, n: number, title: string, body: React.ReactNode) => (
     <li className={`${s.step} ${done[key] ? s.done : current === key ? s.current : s.open}`} data-step={key} data-done={done[key]} aria-current={current === key ? "step" : undefined}>
@@ -56,8 +57,7 @@ export function FirstSteps({ projectId, teamSize, roots, hasChat }: { projectId:
     <section className={s.panel} aria-labelledby="fs-h" data-first-steps>
       <div className={s.head}>
         <h2 id="fs-h">{redesign.stepsHeading}</h2>
-        <span className={s.ready}>{live.readyCount(count)}<i aria-hidden><b style={{ width: `${(count / 3) * 100}%` }} /></i></span>
-        <p className={s.line}>{redesign.stepsLine}</p>
+        <span className={s.ready}>{live.readyCount(count)}</span>
       </div>
       <ol className={s.steps}>
         {step("team", 1, redesign.setUpTeam, <>

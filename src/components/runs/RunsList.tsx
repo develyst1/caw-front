@@ -29,15 +29,17 @@ function HopRows({ projectId, hops, workers, cards, chat }: { projectId: string;
     <ol className={s.hops}>
       {hops.map((h) => {
         const w = workers.find((x) => x.id === h.workerId), c = cards.find((x) => x.id === h.cardId), m = h.messageId ? chat.find((x) => x.id === h.messageId) : undefined;
+        const outcome = h.outcome ? hopOutcome[h.outcome] : runRunning;
         const cost = [h.endedAt ? runWords.duration(hopWallMs(h)) : null, h.tokensIn !== null && h.tokensOut !== null ? runWords.tokensInOut(h.tokensIn, h.tokensOut) : null].filter(Boolean).join(" · ");
         return (
           <li key={h.id} className={s.hop} data-hop>
             <span className={s.time}>{clockOf(h.startedAt)}</span>
-            <span className={s.who}><Person name={w?.name ?? h.workerId} avatar={w?.avatar ?? null} roles={w?.roles ?? []} size="sm" state={h.endedAt ? null : "working"} /></span>
+            <span className={s.who}><Person name={w?.name ?? h.workerId} avatar={w?.avatar ?? null} roles={w?.roles ?? []} size="sm" state={h.endedAt ? null : "working"} showRoles={false} /* R-3: who did it is enough on a cost list */ /></span>
             {c ? <a className={s.cardLink} href={`/p/${projectId}/c/${c.id}`}>{`#${c.number} ${c.title}`}</a>
               : h.messageId ? <a className={s.cardLink} href={`/p/${projectId}/chat`} title={m?.text} data-chat-step>{runPage.chatStep(firstWords(m?.text ?? ""))}</a>
               : <span>{h.cardId}</span>}
-            <span className={h.outcome ? `${s.chip} ${s.outcome}` : `${s.chip} ${s.chipRunning} ${s.outcome}`}>{h.outcome ? hopOutcome[h.outcome] : runRunning}</span>
+            {/* R-2 (TASK-B-100): an outcome with no word (a chat reply) shows no chip — never an empty pill */}
+            {outcome && <span className={h.outcome ? `${s.chip} ${s.outcome}` : `${s.chip} ${s.chipRunning} ${s.outcome}`} data-outcome>{outcome}</span>}
             {/* no empty pill: the cost shows only when there is one (TASK-B-088) */}
             {cost && <span className={s.cost}>{cost}</span>}
             {h.note && <p className={s.note}>{h.note}</p>}

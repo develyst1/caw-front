@@ -1,7 +1,7 @@
 // The reset door itself (TASK-B-045, -049): no state = the plain seed, a known state = that variant, an unknown one is refused and changes nothing.
 import { expect, test } from "./fixtures";
 import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
-import { runRunning } from "../src/words";
+import { distill, runRunning, send } from "../src/words";
 
 const modeOf = async (page: import("@playwright/test").Page) => {
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
@@ -64,3 +64,16 @@ test("POST /test-reset?state=entry-asked → 204 and the thread ends on the entr
   expect(await chat()).not.toContain(asked);
 });
 
+
+test("POST /test-reset?reply=… → 204 and the entry worker's plain reply is in the thread, also under an ask that was answered already; an empty reply → 400 (TASK-B-101)", async ({ page, request }) => {
+  const url = (text: string) => `/test-reset?reply=${encodeURIComponent(text)}`;
+  await page.goto(`/p/${MOCK_PROJECT_ID}/chat`);
+  await page.getByLabel(distill.placeholder("ปลา")).fill("ขอถามหน่อย");
+  await page.getByRole("button", { name: send }).click();
+  await expect(page.locator('[data-message="operator"]').filter({ hasText: "ขอถามหน่อย" })).toHaveCount(1);
+  expect((await request.post("/test-reset?reply=")).status()).toBe(400);
+  expect((await request.post(url("รับทราบครับ"))).status()).toBe(204);
+  await page.reload();
+  await expect(page.locator('[data-message]:not([data-message="operator"])').filter({ hasText: "รับทราบครับ" })).toHaveCount(1);
+  expect((await request.post(url("อีกครั้ง"))).status()).toBe(204); // a further reply under the same ask is fine
+});

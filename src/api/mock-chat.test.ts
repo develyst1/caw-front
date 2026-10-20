@@ -218,3 +218,63 @@ describe("a chat step that failed and the retry (SPEC-A-008 § v1.9, D-057)", ()
   });
 });
 
+
+describe("the reply door (TASK-B-101, D-095): the entry worker answers the operator's newest message", () => {
+  test("a plain reply under the message: no question, no proposal, the ask is answered, and the event log moves", async () => {
+    const api = createMockApi();
+    const entry = (await api.project(PID))!.entryWorkerId!;
+    const ask = await api.postChat(PID, "ขอปุ่มพิมพ์");
+    const seq0 = (await api.events(PID)).at(-1)!.seq;
+    await api.replyChat(PID, "รับทราบ จะทำให้");
+    const msgs = await api.chat(PID);
+    const reply = msgs.at(-1)!;
+    expect([reply.author, reply.text, reply.replyTo, reply.questions, reply.proposalId, reply.amendment]).toEqual([`worker:${entry}`, "รับทราบ จะทำให้", ask.id, null, null, null]);
+    const answered = msgs.find((m) => m.id === ask.id)!;
+    expect(answered.replyHopId).not.toBeNull();
+    expect(answered.chatHop).toMatchObject({ id: answered.replyHopId, outcome: "commented" });
+    expect(answered.chatHop!.endedAt).not.toBeNull();
+    const after = await api.events(PID, { after: seq0 });
+    expect(after.map((e) => e.type)).toEqual(["chat.replied"]);
+    expect(after[0]!.seq).toBe(seq0 + 1);
+  });
+  test("the newest operator message gets the reply even if it was answered already (then no second hop); no operator message at all → 409 nothing_to_answer; unknown project → 404", async () => {
+    const api = createMockApi();
+    const newest = (await api.chat(PID)).filter((m) => m.author === "operator").at(-1)!; // the seeded thread ends on a worker's reply to this one
+    await api.replyChat(PID, "อีกข้อ");
+    const msgs = await api.chat(PID);
+    expect(msgs.at(-1)).toMatchObject({ text: "อีกข้อ", replyTo: newest.id, questions: null, proposalId: null });
+    expect(msgs.find((m) => m.id === newest.id)!.chatHop).toEqual(newest.chatHop); // the ask keeps the hop it had
+    const blank = createMockApi({ state: "new-project" });
+    const NEW = (await blank.projects()).find((p) => p.id !== PID)!.id;
+    await expectRefusal(blank.replyChat(NEW, "x"), 409, "nothing_to_answer");
+    expect(await blank.chat(NEW)).toEqual([]);
+    await expectRefusal(api.replyChat("p-nope", "x"), 404, "not_found");
+  });
+});
+
+describe("POST /test-reset?reply=… (the door that calls it)", () => {
+  const saved = { api: process.env.CAW_API, gate: process.env.CAW_TEST_RESET };
+  const restore = () => { for (const [k, v] of [["CAW_API", saved.api], ["CAW_TEST_RESET", saved.gate]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } };
+  const post = async (query: string) => (await import("../app/test-reset/route")).POST(new Request(`http://x/test-reset${query}`, { method: "POST" }));
+  test("gate on (mock + CAW_TEST_RESET=1) → 204 and the newest operator message is answered; gate off → 404 and nothing changes", async () => {
+    try {
+      process.env.CAW_API = "mock"; process.env.CAW_TEST_RESET = "1";
+      expect((await post("")).status).toBe(204); // plain reset: a fresh mock
+      const { api } = await import("./index");
+      await api.postChat(PID, "ถามหน่อย");
+      const { status } = await post(`?reply=${encodeURIComponent("ตอบแล้ว")}`);
+      expect(status).toBe(204);
+      expect((await api.chat(PID)).at(-1)!.text).toBe("ตอบแล้ว");
+
+      await api.postChat(PID, "ถามอีก");
+      delete process.env.CAW_TEST_RESET;
+      expect((await post("?reply=x")).status).toBe(404);
+      process.env.CAW_TEST_RESET = "1"; process.env.CAW_API = "http";
+      expect((await post("?reply=x")).status).toBe(404);
+      process.env.CAW_API = "mock";
+      expect((await api.chat(PID)).at(-1)!.text).toBe("ถามอีก"); // no reply was written by the refused calls
+      expect((await post("?reply=")).status).toBe(400); // an empty reply is refused, like a message
+      expect((await post("")).status).toBe(204);
+    } finally { restore(); }
+  });
+});

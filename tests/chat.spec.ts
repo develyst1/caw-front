@@ -3,13 +3,13 @@
 // Seed (fixtures.ts reset): M1 → reply M2 (a question + proposal Q2 open, 3 items, 6 hops; Q1 superseded) · M3 → reply M4 (Q3, gone anchor).
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { chat as words, chatRefused, dependsOnHeading, partKind, proposedAnswer, section, send } from "../src/words";
+import { chat as words, chatRefused, dependsOnHeading, distill, partKind, proposedAnswer, section, send } from "../src/words";
 
 const CHAT = `/p/${MOCK_PROJECT_ID}/chat`;
 
 test("chat: the header links to แชต; the thread shows the worker's question like Blueprint's question card", async ({ page }) => {
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
-  await page.getByRole("link", { name: section.chat }).click();
+  await page.getByRole("navigation", { name: section.board }).getByRole("link", { name: section.chat }).click(); // the tab, not the board's ไปที่แชต (TASK-B-098)
   await expect(page).toHaveURL(CHAT);
   await expect(page.locator("[data-message]")).toHaveCount(4);
   const q = page.locator("[data-question]").first();
@@ -20,10 +20,10 @@ test("chat: the header links to แชต; the thread shows the worker's questio
 test("chat: a message posted appears in the thread, as the operator's", async ({ page }) => {
   await page.goto(CHAT);
   const text = `ทดสอบส่งข้อความ ${Date.now()}`;
-  await page.getByLabel(words.placeholder).fill(text);
+  await page.getByLabel(distill.placeholder("ปลา")) /* C-1 (TASK-B-100): the box names the plain seed's entry person */.fill(text);
   await page.getByRole("button", { name: send }).click();
   await expect(page.locator('[data-message="operator"]').filter({ hasText: text })).toHaveCount(1);
-  await expect(page.getByLabel(words.placeholder)).toHaveValue("");
+  await expect(page.getByLabel(distill.placeholder("ปลา")) /* C-1 (TASK-B-100): the box names the plain seed's entry person */).toHaveValue("");
 });
 
 test("chat: the open proposal shows its estimate; a superseded one reads as old and has no button", async ({ page }) => {
@@ -126,4 +126,39 @@ test("D-057: the plain seed shows neither the line nor ลองอีกคร�
   await expect(page.locator("[data-message]").first()).toBeVisible();
   await expect(page.locator("[data-chat-failed]")).toHaveCount(0);
   await expect(page.getByText(words.failed)).toHaveCount(0);
+});
+
+// TASK-B-100 C-1 / C-3 / C-4 (D-094): no sub-line and no Enter hint; questions without a frame; the box has only a top hairline, pinned to the bottom at 390
+test("chat: one head line, no Enter hint; a question has no frame; the box has a top hairline only", async ({ page }) => {
+  await page.goto(CHAT);
+  await expect(page.locator("main")).not.toContainText("กด Enter เพื่อส่ง");
+  await expect(page.locator("[data-chat-question]").first()).toHaveCSS("border-left-width", "0px");
+  const form = page.locator("[data-composer]");
+  await expect(form).toHaveCSS("border-left-width", "0px");
+  await expect(form).toHaveCSS("border-top-width", "1px");
+});
+test("@390 chat: the box sits at the bottom of the screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(CHAT);
+  const box = (await page.locator("[data-composer]").boundingBox())!;
+  expect(844 - (box.y + box.height)).toBeLessThanOrEqual(8);
+  // (the page as a whole still scrolls by the sample-data bar's height: CawRoot's min-height is 100vh under that bar — on sample data only, outside TASK-B-100)
+});
+
+// D-095 (TASK-B-102, DEF-5): the แชต page follows the project without a reload — the reply shows within one poll, and a half-written draft stays
+test("chat live: a reply arrives within 4 s without a reload; the box keeps its draft", async ({ page, request }) => {
+  await page.goto(CHAT);
+  await page.evaluate(() => { (window as unknown as { stay: number }).stay = 1; });
+  const box = page.getByLabel(distill.placeholder("ปลา"));
+  // the door answers the newest operator message only while it waits (409 otherwise): send one first, then start a draft
+  const ask = `ถามสด ${Date.now()}`;
+  await box.fill(ask);
+  await page.getByRole("button", { name: send }).click();
+  await expect(page.locator('[data-message="operator"]').filter({ hasText: ask })).toHaveCount(1);
+  await box.fill("ร่างที่ยังไม่ส่ง");
+  const reply = `คำตอบสด ${Date.now()}`;
+  expect((await request.post(`/test-reset?reply=${encodeURIComponent(reply)}`)).status()).toBe(204); // B-101's door
+  await expect(page.locator('[data-message="worker"]').filter({ hasText: reply })).toHaveCount(1, { timeout: 4_000 });
+  expect(await page.evaluate(() => (window as unknown as { stay?: number }).stay)).toBe(1); // same document: no reload
+  await expect(box).toHaveValue("ร่างที่ยังไม่ส่ง");
 });

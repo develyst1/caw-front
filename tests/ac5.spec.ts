@@ -37,6 +37,7 @@ const watchConsole = (page: Page) => {
     // the one exemption: a page that answers 404 on purpose (the unknown-card screen) makes Chrome log its OWN status as a console error — that is the page's
     // document, not a file it failed to load; every other failed resource (a favicon, an asset, an API call) still counts
     if (path && /\b404\b/.test(m.text()) && path === new URL(page.url()).pathname) return;
+    if (path.startsWith("/_next/static/chunks/")) path = ""; // `next dev` reports React's own warnings from its bundle: the file says nothing, the text does
     errors.push(`${path} ${m.text()}`.replace(/\s+/g, " ").trim().slice(0, 40));
   });
   page.on("pageerror", (e) => errors.push(String(e.message).replace(/\s+/g, " ").slice(0, 40)));
@@ -98,21 +99,34 @@ test.describe("AC-5 on the operator-like seed", () => {
   }
 });
 
+// ---- the console pass under `next dev` (TASK-B-101, D-095 DEF-6): React's development warnings (a duplicate key, a hydration mismatch) only exist in dev mode, so the build project
+// cannot see them. Run by `bunx playwright test --project ac5-dev` (own server on 3511, own dist folder); every screen once, on the same seed, console errors only.
+test.describe("AC-5 console under next dev", () => {
+  test.use({ seedState: "operator-like" });
+  for (const screen of SCREENS) {
+    test(`@ac5dev ${screen.name} · console`, async ({ page }) => {
+      const errors = watchConsole(page);
+      await page.goto(screen.url);
+      if (screen.name === "card") await expect(page.locator("main")).toContainText("ทำ API ขออนุมัติ");
+      await page.waitForLoadState("networkidle");
+      expect(lines(`${screen.name} · dev`, [], errors), `${screen.name} · dev`).toEqual([]);
+    });
+  }
+});
+
 // ---- every open layer (D-088, TEST-B-004 DEF-3): a drawer, a modal and a sheet are screens too — each is opened the way a user opens it (a click), at 1440 and 390, light and
 // dark, and measured INSIDE the open layer only (the page behind is inert and its overlay is not a defect). The topmost layer is the last `[role=dialog|alertdialog]` in the DOM.
 const WID = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const [FENA, QA] = [13, 16].map(WID); // `operator-like`: Fena (FE) holds cards; ณัฐธิดา วิริยะกุลพัฒนาเลิศ (QA) has the longest name
 const TEAM = `/p/${P}/team`;
 const BOARD = `/p/${P}`;
-/** at 390 the header's mode and folders live in the menu sheet: open it first (a click), as a user would */
-const viaMenu = async (page: Page, width: number) => { if (width < 768) await page.locator("[data-header-menu]").click(); };
 const LAYERS: { name: string; only?: "mobile"; open: (page: Page, width: number) => Promise<void> }[] = [
   { name: "person drawer", open: async (page) => { await page.goto(TEAM); await page.locator(`[data-node="${QA}"]:visible`).click(); } },
   { name: "add modal", open: async (page) => { await page.goto(TEAM); await page.locator("[data-add-person]").click(); } },
   { name: "remove dialog", open: async (page) => { await page.goto(TEAM); await page.locator(`[data-node="${FENA}"]:visible`).click(); await page.locator("[data-side-panel] [data-remove]").click(); } },
-  { name: "folders dialog", open: async (page, w) => { await page.goto(BOARD); await viaMenu(page, w); await page.locator("[data-folders]:visible").first().click(); } },
-  { name: "budget dialog", open: async (page, w) => { await page.goto(BOARD); await viaMenu(page, w); await page.locator("[data-mode-control]:visible").first().getByRole("radio", { name: mode.dispatcher }).click(); } },
-  { name: "header menu sheet", only: "mobile", open: async (page) => { await page.goto(BOARD); await page.locator("[data-header-menu]").click(); } },
+  // TASK-B-099 (D-094 H-1, H-3, H-4): the folders open from ทีม, the budget from the board's mode bar; the 390 header menu is gone
+  { name: "folders dialog", open: async (page) => { await page.goto(TEAM); await page.locator("[data-folders]:visible").first().click(); } },
+  { name: "budget dialog", open: async (page) => { await page.goto(BOARD); await page.locator("[data-mode-control]:visible").first().getByRole("radio", { name: mode.dispatcher }).click(); } },
 ];
 
 test.describe("AC-5 on every open layer, operator-like seed", () => {

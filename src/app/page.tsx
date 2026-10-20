@@ -2,6 +2,8 @@
 // each a link to its board. Read through `CawApi` on the server; a back end that cannot be reached says so in words, never a blank page.
 // REQ-014 (TASK-B-064, comp B-068 1): each row also says who is working now, how many are stuck and wait on you (Bob's `homeSummaries`), and shows
 // the team's faces; a project with no team says so. The header has the light / dark toggle; the empty state has one button to Blueprint.
+// TASK-B-100 (D-094 § 7): the "projects come from Blueprint" line only in the empty state — with projects, a quiet เปิด Blueprint in the header (P-1);
+// no bar while a project has no cards (P-2); the mode chip only while อัตโนมัติ is running (P-3); one header shell with /start (P-4, S-1).
 import { api } from "@/api";
 import { isCawError, type Chain, type ProjectSummary } from "@/api/caw";
 import { blueprintPartHref } from "@/blueprint";
@@ -12,7 +14,7 @@ import { lastSeq } from "@/lib/eventSeq";
 import { ThemeToggle } from "@/theme/ThemeToggle";
 import s from "@/components/projects.module.css";
 import { CawRoot } from "@/theme/CawRoot";
-import { homePage, live, mode, projectCard, redesign, section, startRefused } from "@/words";
+import { live, mode, projectCard, redesign, section, startRefused } from "@/words";
 
 // Blueprint's own address, from the one place CAW builds Blueprint links (blueprint.ts) — no second copy of the URL
 const blueprintHome = new URL(blueprintPartHref("x", "x")).origin;
@@ -41,6 +43,7 @@ export default async function Home() {
         <div className={s.headerIn}>
           <h1 className={s.title}>{section.projects}</h1>
           <span className={s.spacer} />
+          {projects.length > 0 && <a className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-now no-underline hover:underline" href={blueprintHome} data-open-blueprint>{redesign.openBlueprint}</a>}
           <ThemeToggle />
         </div>
       </header>
@@ -51,8 +54,6 @@ export default async function Home() {
           <div className={`${s.panel} ${s.empty}`}><p className={s.panelText}>{projectCard.none}</p><a className={s.cta} href={blueprintHome}>{redesign.openBlueprint}</a></div>
         ) : (
           <>
-          {/* there is no start action here (§ 6): a project comes from Blueprint's Build — said once, with the way there */}
-          <p className={s.from} data-from-blueprint>{homePage.fromBlueprint} <a href={blueprintHome}>{redesign.openBlueprint}</a></p>
           <ul className={s.grid}>
             {projects.map((p) => (
               <li key={p.id}>
@@ -60,7 +61,8 @@ export default async function Home() {
                   <h2 className={s.name}>{p.name}</h2>
                   <div className={s.meta}>
                     <span className={s.chip}>{projectCard.blueprintVersion(p.version)}</span>
-                    <span className={p.mode === "dispatcher" ? `${s.chip} ${s.chipAuto}` : s.chip}>{mode[p.mode]}</span>
+                    {/* P-3: the mode is news only while อัตโนมัติ is running (someone is working); the board says it otherwise */}
+                    {p.mode === "dispatcher" && live_[p.id]?.working && <span className={`${s.chip} ${s.chipAuto}`} data-mode-chip>{mode.dispatcher}</span>}
                     {/* C2 (TASK-B-074): stuck = the board's stuck column (homeSummaries), the same number the board shows */}
                     {(live_[p.id]?.stuck ?? 0) > 0 && <span className={`${s.chip} ${s.chipStuck}`}>{projectCard.stuck(live_[p.id]!.stuck)}</span>}
                     {(live_[p.id]?.waitingOnYou ?? 0) > 0 && <span className={`${s.chip} ${s.chipAsk}`}>{live.waitingOnYou(live_[p.id]!.waitingOnYou)}</span>}
@@ -72,9 +74,9 @@ export default async function Home() {
                     </div>
                   )}
                   <div className={s.progress}>
-                    <div className={s.bar} role="progressbar" aria-label={projectCard.done(p.cardsDone, p.cardsTotal)} aria-valuemin={0} aria-valuemax={p.cardsTotal} aria-valuenow={p.cardsDone}>
+                    {p.cardsTotal > 0 && <div className={s.bar} role="progressbar" aria-label={projectCard.done(p.cardsDone, p.cardsTotal)} aria-valuemin={0} aria-valuemax={p.cardsTotal} aria-valuenow={p.cardsDone}>
                       <span className={s.barFill} style={{ width: `${p.cardsTotal ? (100 * p.cardsDone) / p.cardsTotal : 0}%` }} />
-                    </div>
+                    </div>}
                     <span className={s.progressText}>{projectCard.done(p.cardsDone, p.cardsTotal)}</span>
                   </div>
                 </a>

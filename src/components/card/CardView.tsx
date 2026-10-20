@@ -3,12 +3,13 @@
 // One card (REQ-011 R3): where it sits in the spec FIRST — the part (kind word + name, Blueprint's icon), the parts it links to,
 // the answered questions it rests on, and a link that opens the part in Blueprint — then what to do, the timeline of comments
 // and hand-offs, and the cards it waits on. The operator's actions — status and re-assign under the title, answering on a
-// question card, the comment box under the timeline — are in CardActions. Words only from src/words.ts.
+// question card, the comment box under the timeline — are in CardActions. Words only from src/words.ts. No back link of its own: the บอร์ด
+// tab is marked current here (K-1, TASK-B-100).
 import { CircleHelp, RefreshCw } from "lucide-react";
 import type { Card, CardContext, Worker } from "@/api/caw";
 import {
   card as cardWord, cardMark, column, decisionsHeading, dependsOnHeading, handoffLine, linkKind, linkedWith, operatorName,
-  partKind, proposedAnswer, redesign, refusedHandoff, section, timelineHeading, todoHeading, toSpec, cardPage,
+  partKind, proposedAnswer, redesign, refusedHandoff, timelineHeading, todoHeading, toSpec, cardPage,
 } from "@/words";
 import { Avatar, Person } from "@/components/Person";
 import { AnswerQuestion, CardControls, CommentBox } from "./CardActions";
@@ -37,7 +38,6 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
 
   return (
     <div className={s.page}>
-      <a className={s.back} href={`/p/${projectId}`}>{section.board}</a>
       <header className={s.head}>
         <h2 className={s.title}>{card.title}</h2>
         <div className={s.meta}>

@@ -1,13 +1,13 @@
-// REQ-014 build part 2 (TASK-B-064): the project screen — first steps on a brand-new project, the crew strip, the chat beside the board — and
+// REQ-014 build part 2 (TASK-B-064): the project screen — first steps on a brand-new project, the crew strip, the chat notice (TASK-B-098: no chat beside the board) — and
 // the projects home. Seeds: `new-project` (a second project with nothing in it), `working-now` (แบงค์ runs a hop on card 4 now).
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
-import { chat, live, redesign, themeToggle, workspace } from "../src/words";
+import { chat, chatWaits, live, mode, modeLine, redesign, runRunning, section, themeToggle, workspace } from "../src/words";
 
 const NEW = `/p/${MOCK_NEW_PROJECT_ID}`;
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
-const box = (page: Page) => page.getByLabel(chat.placeholder);
+const box = (page: Page) => page.locator("[data-composer] textarea"); // TASK-B-100 C-1: its name is now `เล่างานให้ {entry}…`
 
 test.describe("first steps on a brand-new project", () => {
   test.use({ seedState: "new-project" });
@@ -31,6 +31,8 @@ test.describe("first steps on a brand-new project", () => {
     await expect(steps.locator('[data-step="folder"]')).toHaveAttribute("data-done", "true");
     await expect(steps).toContainText(live.readyCount(2));
 
+    // TASK-B-098: no chat beside the board any more — the แชต tab is the way in (step 3's own button is B-2, TASK-B-100)
+    await click(page.getByRole("navigation", { name: section.board }).getByRole("link", { name: new RegExp(section.chat) }));
     const ask = `ขอหน้าค้นหาห้อง ${Date.now()}`;
     await box(page).fill(ask);
     await box(page).press("Enter");
@@ -77,21 +79,49 @@ test.describe("the crew strip", () => {
     await box(other).press("Enter");
     await expect(other.locator('[data-message="operator"]').filter({ hasText: ask })).toHaveCount(1);
     await page.bringToFront(); // LiveRefresh polls only while its tab is visible (by design)
-    await expect(page.locator("[data-chat-panel]")).toContainText(ask, { timeout: 30_000 }); // one poll interval at most (busy 3 s, idle 30 s)
+    // the seed's newest chat message is the team's, so the board said it waits on you; your message answers it (TASK-B-098: no panel to watch any more)
+    await expect(page.locator("[data-chat-waits]")).toHaveCount(0, { timeout: 30_000 }); // one poll interval at most
     expect(await page.evaluate(() => (window as unknown as { stay?: number }).stay)).toBe(1); // same document: no reload
   });
 });
 
-// TASK-B-087 § 4: the box is beside the board only at ≥ 1440; at 390 the แชต tab is the way in and no box sits over the board
-test("@1440: the request box is in view on the board", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(BOARD);
-  await expect(box(page)).toBeInViewport();
+// TASK-B-098 (D-093, D-094 § 0): no chat on the board at any width — the แชต tab is the way in; one notice while the team waits on you there
+for (const [vw, vh] of [[1440, 900], [390, 844]] as const) {
+  test(`@${vw}: the board has no chat thread and no request box`, async ({ page }) => {
+    await page.setViewportSize({ width: vw, height: vh });
+    await page.goto(BOARD);
+    await expect(page.locator("[data-board]")).toBeVisible();
+    await expect(page.locator("[data-thread]")).toHaveCount(0);
+    await expect(page.locator("[data-composer]")).toHaveCount(0);
+  });
+}
+
+test("the newest chat message is the team's, with no question → the notice; ไปที่แชต lands on the chat", async ({ page }) => {
+  await page.goto(BOARD); // the plain seed: Paul's reply is the newest message and asks nothing
+  const notice = page.locator("[data-chat-waits]");
+  await expect(notice).toContainText(chatWaits.line("").trim()); // `{entry} รอคุณอยู่ในแชต`, whoever the entry person is
+  await expect(notice.locator("svg[data-face]")).toHaveCount(1);
+  await notice.getByRole("link", { name: chatWaits.go }).click();
+  await expect(page).toHaveURL(new RegExp(`${BOARD}/chat$`));
+  await expect(box(page)).toBeVisible();
 });
 
-test("the mode switch explains itself, and both headers have the light / dark toggle", async ({ page }) => {
+test.describe("a structured question from the entry person", () => {
+  test.use({ seedState: "entry-asked" });
+  test("shows as the AskSheet, never also as the notice (B-5)", async ({ page }) => {
+    await page.goto(BOARD);
+    await expect(page.locator('[data-ask="chat"]')).toHaveCount(1);
+    await expect(page.locator("[data-chat-waits]")).toHaveCount(0);
+  });
+});
+
+test("the mode switch explains itself — in its title and in the budget dialog (H-2) — and both headers have the light / dark toggle", async ({ page }) => {
   await page.goto(BOARD);
-  await expect(page.locator("[data-mode-line]")).toHaveText(/แบบสั่งทีละขั้น — |อัตโนมัติ — /);
+  await expect(page.locator("[data-mode-control]")).toHaveAttribute("title", modeLine.manual);
+  await expect(page.locator("[data-mode-line]")).toHaveCount(0); // no line under the toggle any more
+  await page.locator("[data-mode-control]").getByRole("radio", { name: mode.dispatcher }).click();
+  await expect(page.locator("[data-budget-ask] [data-mode-line]")).toHaveText(modeLine.dispatcher);
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: themeToggle })).toHaveCount(1);
   await page.goto("/");
   await expect(page.getByRole("button", { name: themeToggle })).toHaveCount(1);
@@ -111,18 +141,12 @@ test("@1440: the board shows exactly one visible primary button", async ({ page 
   await expect(page.locator('[data-slot="button"][data-variant="default"]:visible')).toHaveCount(1); // TASK-B-087: shadcn Button
 });
 
-test("the chat head names the first missing thing as a link to its fix (a project with cards and no folder)", async ({ page }) => {
+test("A4: the mode bar shows a budget only while an automatic run is open", async ({ page }) => {
   await page.goto(BOARD);
-  await expect(page.locator("[data-missing]")).toContainText("ยังไม่ได้กำหนดโฟลเดอร์");
-  await expect(page.locator("[data-missing] a")).toHaveCount(1);
-});
-
-test("A4: the header shows a budget only while an automatic run is open", async ({ page }) => {
-  await page.goto(BOARD);
-  await expect(page.locator("header").first()).not.toContainText("ใช้ไป");
+  await expect(page.locator("[data-mode-bar]")).not.toContainText("ใช้ไป");
   await page.locator("[data-mode-control]").getByRole("radio", { name: "อัตโนมัติ" }).click(); // TASK-B-085: ToggleGroup
   await page.locator("[data-budget-ask] form button[type=submit]").click();
-  await expect(page.locator("header").first()).toContainText(/งบ \d+ ก้าว · ใช้ไป 0/);
+  await expect(page.locator("[data-mode-bar]")).toContainText(/งบ \d+ ก้าว · ใช้ไป 0/);
 });
 
 // TASK-B-074 C2 / C3 / C7 (after B-073)
@@ -190,4 +214,41 @@ test.describe("DEF-1: the seat strip with the five-person starting team", () => 
     await expect(page.locator("[data-crew] [data-seat]").nth(4)).toBeInViewport({ ratio: 1 });
     await expect(page.locator('[data-crew-fade="start"]')).toHaveCount(1);
   });
+});
+
+// TASK-B-099 (D-094 § 1): the header's one job — back · name · tabs · theme, plus a small กำลังรัน while a run is open; the mode lives on the board
+for (const [vw, vh] of [[1440, 900], [390, 844]] as const) {
+  test(`@${vw}: the project header holds only back, name, tabs and theme — กำลังรัน only while a run is open`, async ({ page }) => {
+    await page.setViewportSize({ width: vw, height: vh });
+    for (const url of [BOARD, `${BOARD}/team`, `${BOARD}/runs`, `${BOARD}/chat`]) {
+      await page.goto(url);
+      const header = page.locator("header").first();
+      const controls = await header.locator("a, button, [role=radio], input").evaluateAll((els) => els.filter((e) => (e as HTMLElement).offsetParent !== null).length);
+      expect(controls, url).toBe(1 + 4 + 1); // back · the four tabs · theme
+      await expect(header.locator("[data-mode-control], [data-folders], [data-header-menu]"), url).toHaveCount(0);
+      await expect(header.locator("[data-run-mark]"), url).toHaveCount(0); // the seed's runs have ended
+    }
+    await page.goto(BOARD);
+    await page.locator("[data-mode-bar] [data-mode-control]").getByRole("radio", { name: mode.dispatcher }).click();
+    await page.locator("[data-budget-ask] form button[type=submit]").click();
+    await page.goto(`${BOARD}/team`); // seen from another screen too
+    await expect(page.locator("header [data-run-mark]")).toHaveText(runRunning);
+  });
+}
+
+test("the mode bar on the board: switch, budget and stop work there; การรัน shows the same state, read-only", async ({ page }) => {
+  await page.goto(BOARD);
+  const bar = page.locator("[data-mode-bar]");
+  await expect(bar.locator("xpath=following-sibling::*[1]")).toHaveAttribute("data-columns"); // right above the columns
+  await bar.getByRole("radio", { name: mode.dispatcher }).click();
+  await page.locator("[data-budget-ask] form button[type=submit]").click();
+  await expect(bar.locator('[data-run-state="open"]')).toHaveText(runRunning);
+  await page.goto(`${BOARD}/runs`);
+  await expect(page.locator("[data-run-mode]")).toContainText(mode.dispatcher);
+  await expect(page.locator("[data-run-mode]")).toContainText(runRunning);
+  await expect(page.locator("main [data-mode-control], main [data-stop-run]")).toHaveCount(0);
+  await page.goto(BOARD);
+  await bar.locator("[data-stop-run]").click();
+  await expect(bar.locator('[data-run-state="open"]')).toHaveCount(0);
+  await expect(page.locator("header [data-run-mark]")).toHaveCount(0);
 });
