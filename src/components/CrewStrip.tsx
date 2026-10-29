@@ -8,14 +8,17 @@
 import { useEffect, useRef, useState } from "react";
 import type { Avatar as Face, Hop } from "@/api/caw";
 import { STALE_MINUTES, quietMinutes, type SeatState } from "@/lib/crew";
-import { live, redesign, section } from "@/words";
+import { WorkerScreen } from "@/components/screen/WorkerScreen";
+import { Button } from "@/components/ui/button";
+import { live, redesign, screen, section } from "@/words";
 import { Avatar } from "./Person";
 
 export interface SeatView { id: string; name: string; avatar: Face | null; roles: string[]; state: SeatState; card: string | null; n?: number; hop?: Hop }
 
 function now(): number { return Date.now(); }
 
-export function CrewStrip({ seats, chosen, onToggle }: { seats: SeatView[]; chosen?: ReadonlySet<string>; onToggle?: (id: string) => void }) {
+export function CrewStrip({ projectId, seats, chosen, onToggle }: { projectId: string; seats: SeatView[]; chosen?: ReadonlySet<string>; onToggle?: (id: string) => void }) {
+  const [watching, setWatching] = useState<{ id: string; name: string } | null>(null); // REQ-104: nothing opens by itself — only ดูหน้าจอ opens a worker's screen
   const [t, setT] = useState<number | null>(null); // null on the server and the first paint: no "quiet" line until the browser's clock is read
   useEffect(() => { setT(now()); const id = setInterval(() => setT(now()), 30_000); return () => clearInterval(id); }, []);
   // below 768 the row scrolls: a fade on each edge that has more seats says so
@@ -50,23 +53,27 @@ export function CrewStrip({ seats, chosen, onToggle }: { seats: SeatView[]; chos
           const tone = busy ? "text-now font-medium" : seat.state === "stuck" ? "text-stuck font-medium" : seat.state === "waitingOnYou" ? "text-ink font-medium" : "text-ink2";
           const on = chosen?.has(seat.id) ?? false;
           return (
-            <li key={seat.id} className={`min-w-0 border-hair max-md:w-[280px] max-md:flex-none max-md:snap-start max-md:border-l max-md:first:border-l-0 md:border-l md:border-t md:[&:nth-child(3n+1)]:border-l-0 ${i < 3 ? "md:border-t-0" : ""}`}>
+            <li key={seat.id} className={`relative min-w-0 border-hair max-md:w-[280px] max-md:flex-none max-md:snap-start max-md:border-l max-md:first:border-l-0 md:border-l md:border-t md:[&:nth-child(3n+1)]:border-l-0 ${i < 3 ? "md:border-t-0" : ""}`}>
               <button type="button" data-seat={seat.name} data-state={seat.state} aria-pressed={on} disabled={!onToggle} onClick={() => onToggle?.(seat.id)}
                 className={`grid h-full min-h-[76px] w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 px-5 py-3.5 text-left transition-colors hover:bg-now-soft disabled:cursor-default disabled:hover:bg-transparent ${on ? "bg-now-soft shadow-[inset_0_0_0_2px_var(--gd-accent)]" : ""}`}>
                 <Avatar name={seat.name} avatar={seat.avatar} size="md" state={busy ? "working" : seat.state === "stuck" ? "stuck" : null} />
                 <span className="grid min-w-0 gap-0.5">
-                  <span className="flex min-w-0 items-baseline gap-2">
-                    <b className="name text-[15px] font-semibold" data-name title={seat.name}>{seat.name}</b>
+                  <span className="flex min-w-0 items-baseline gap-2 pr-[72px]" /* the corner button sits over this row's right end: keep the name and role marks clear of it (REQ-104, owner 13:13) */>
+                    <b id={`seat-name-${seat.id}`} className="name text-[15px] font-semibold" data-name title={seat.name}>{seat.name}</b>
                     <span className="shrink-0 text-sm tracking-wide text-ink3">{seat.roles.join(" · ")}</span>
                   </span>
                   <span className={`clamp-2 text-sm ${tone}`} title={line} data-seat-line>{line}</span>
                   {quiet !== null && quiet >= STALE_MINUTES && <span className="text-sm font-semibold text-stuck">{live.quiet(quiet)}</span>}
                 </span>
               </button>
+              {/* REQ-104: a small button in the seat's top-right corner, its own button beside the filter — pressing it opens the screen and leaves the filter as it was; the name tells which worker */}
+              <Button type="button" variant="ghost" className="absolute right-1 top-0 min-h-11 min-w-11 px-2 text-[13px] font-semibold text-now" data-watch={seat.name} aria-describedby={`seat-name-${seat.id}`}
+                onClick={() => setWatching({ id: seat.id, name: seat.name })}>{screen.watch}</Button>
             </li>
           );
         })}
       </ul>
+      {watching && <WorkerScreen projectId={projectId} workerId={watching.id} workerName={watching.name} onClose={() => setWatching(null)} />}
     </section>
   );
 }

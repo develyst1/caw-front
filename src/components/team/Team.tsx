@@ -201,7 +201,7 @@ export function Team({ projectId, project, workers, chain, openCards, states, pr
       <Bench people={bench} busy={busy} errors={benchErrors}
         onAdd={(id) => benchAct(id, () => addMember(projectId, id))} onDelete={(id) => benchAct(id, () => deleteWorker(projectId, id))} />
 
-      <PersonDrawer person={p} chain={chain} workers={workers} working={!!p && states[p.id] === "working"} focus={open?.focus ?? null} busy={busy}
+      <PersonDrawer projectId={projectId} person={p} chain={chain} workers={workers} working={!!p && states[p.id] === "working"} focus={open?.focus ?? null} busy={busy}
         errors={{ roles: errors.roles ?? null, face: errors.face ?? null, entry: errors.entry ?? null, handoff: errors.handoff ?? null, remove: errors.remove ?? null }}
         onClose={() => setOpen(null)} onRoles={onRoles} onFace={onFace} onEntry={onEntry} onLink={onLink} onCut={onCut} onRemove={() => { if (p) remove(p.id); }} />
 

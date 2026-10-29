@@ -8,13 +8,14 @@ import { useEffect, useRef, useState } from "react";
 import type { Avatar as FaceIds, Chain, Worker, WorkerRole } from "@/api/caw";
 import { Face } from "@/components/faces/Face";
 import { Avatar } from "@/components/Person";
+import { WorkerScreen } from "@/components/screen/WorkerScreen";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BODIES, COLORS, EYES, faceFor } from "@/lib/faces";
 import { NameParts } from "@/components/NameParts";
-import { card, faces, live, rolePicker, team as words, teamPage } from "@/words";
+import { card, faces, live, rolePicker, screen, team as words, teamPage } from "@/words";
 
 export const ROLES: WorkerRole[] = ["PM", "BA", "SA", "FE", "BE", "QA"];
 export const roleWord = (r: WorkerRole) => (r === "other" ? words.roleOther : r);
@@ -66,15 +67,16 @@ export function RoleChips({ value, onChange, label }: { value: WorkerRole[]; onC
 const section = "border-t border-hair px-6 py-5 first:border-t-0";
 const h3 = "m-0 mb-3 text-sm font-semibold text-ink2";
 
-export function PersonDrawer({ person, chain, workers, working, focus, busy, errors, onClose, onRoles, onFace, onEntry, onLink, onCut, onRemove }: {
-  person: Worker | null; chain: Chain; workers: Worker[]; working: boolean; focus: DrawerFocus; busy: boolean;
+export function PersonDrawer({ projectId, person, chain, workers, working, focus, busy, errors, onClose, onRoles, onFace, onEntry, onLink, onCut, onRemove }: {
+  projectId: string; person: Worker | null; chain: Chain; workers: Worker[]; working: boolean; focus: DrawerFocus; busy: boolean;
   errors: { roles: string | null; face: string | null; entry: string | null; handoff: string | null; remove: string | null };
   onClose: () => void; onRoles: (r: WorkerRole[]) => void; onFace: (f: FaceIds) => void; onEntry: () => void;
   onLink: (to: string) => void; onCut: (to: string) => void; onRemove: () => void;
 }) {
   const [picking, setPicking] = useState(false);
+  const [watching, setWatching] = useState(false); // REQ-104: the read-only screen of this person, opened only by ดูหน้าจอ
   const body = useRef<HTMLDivElement>(null);
-  useEffect(() => { setPicking(false); }, [person?.id]);
+  useEffect(() => { setPicking(false); setWatching(false); }, [person?.id]);
   // a readiness fix opens the drawer AT its control
   useEffect(() => {
     if (!person || !focus) return;
@@ -88,6 +90,7 @@ export function PersonDrawer({ person, chain, workers, working, focus, busy, err
   const isEntry = p?.id === chain.entryWorkerId;
 
   return (
+    <>
     <Sheet open={!!p} modal={false} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" showCloseButton={false} onInteractOutside={(e) => e.preventDefault()}
         className="w-[420px] max-w-[100vw] gap-0 overflow-y-auto border-hair bg-sheet p-0 sm:max-w-[420px]" data-side-panel>
@@ -104,6 +107,9 @@ export function PersonDrawer({ person, chain, workers, working, focus, busy, err
                 <SheetDescription className="m-0 text-sm text-ink3">{p.roles.map(roleWord).join(" · ")}{isEntry ? ` · ${words.entry}` : ""}</SheetDescription>
               </div>
               <Button variant="ghost" className="min-h-11" onClick={onClose}>{teamPage.close}</Button>
+            </div>
+            <div className={section}>
+              <Button variant="outline" className="min-h-11" onClick={() => setWatching(true)} data-watch={p.name}>{screen.watch}</Button>
             </div>
             {picking && (
               <div className={section} data-face-picker>
@@ -170,5 +176,7 @@ export function PersonDrawer({ person, chain, workers, working, focus, busy, err
         )}
       </SheetContent>
     </Sheet>
+    {p && watching && <WorkerScreen projectId={projectId} workerId={p.id} workerName={p.name} onClose={() => setWatching(false)} />}
+    </>
   );
 }

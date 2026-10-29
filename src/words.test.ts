@@ -1,6 +1,6 @@
 // REQ-011's wording table, row by row: each word is here, verbatim.
 import { describe, expect, test } from "bun:test";
-import { agreeStart, chatRefused, redesign, blueprintBuild, budget, card, cardMark, chatWaits, codeMapWords, distill, folderKind, oneAnswer, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, section, startRefused, stopReason, workspace } from "./words";
+import { agreeStart, chatRefused, redesign, blueprintBuild, budget, card, cardMark, chatWaits, codeMapWords, distill, folderKind, oneAnswer, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, screen, section, startRefused, stopReason, workspace } from "./words";
 
 describe("REQ-011 wording table", () => {
   test("columns, in the order they are drawn", () => {
@@ -111,5 +111,18 @@ describe("D-110 — a refused proposal follows D-105's rename (TASK-B-121)", () 
   test("anchor_not_in_version ends — เริ่มงานไม่ได้", () => {
     expect(chatRefused.anchor_not_in_version).toMatch(/— เริ่มงานไม่ได้$/);
     expect(chatRefused.anchor_not_in_version).not.toContain("สร้างการ์ด");
+  });
+});
+
+describe("REQ-104 — a worker's read-only screen (the PM's wording table)", () => {
+  test("every row, verbatim", () => {
+    expect(screen.watch).toBe("ดูหน้าจอ");
+    expect(screen.title("ฝน")).toBe("หน้าจอของ ฝน");
+    expect(screen.empty).toBe("ยังไม่ได้เริ่มทำงาน");
+    expect(screen.live).toBe("สด");
+    expect(screen.gap(12)).toBe("ขาดช่วง 12 วินาที — ระหว่างนี้ไม่ได้รับข้อมูล");
+    expect(screen.finished("14:05")).toBe("จบงานเมื่อ 14:05");
+    expect(screen.started("14:00")).toBe("เริ่มเมื่อ 14:00");
+    expect(screen.truncated).toBe("ยาวเกิน 5,000 บรรทัด — ส่วนที่เกินไม่ได้แสดง");
   });
 });

@@ -159,7 +159,7 @@ test.describe("the team is not running", () => {
     await page.goto(BOARD);
     const line = page.locator("[data-team-down]");
     await expect(line).toContainText(teamDown.line);
-    await expect(line.locator("[data-start-command]")).toHaveText("cd caw-back && bun run dev"); // the mock's TeamStatus.startCommand
+    await expect(line.locator("[data-start-command]")).toHaveText("cd caw-back && bun run runner"); // the mock's TeamStatus.startCommand
     await page.evaluate(() => { (window as unknown as { stay: number }).stay = 1; });
     expect((await request.post("/test-reset?team=up")).status()).toBe(204);
     await expect(line).toHaveCount(0, { timeout: 4_000 });

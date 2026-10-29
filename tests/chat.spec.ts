@@ -169,7 +169,7 @@ test.describe("the team is not running", () => {
   test("chat: the line with the start command; the box still sends and says the message waits", async ({ page }) => {
     await page.goto(CHAT);
     await expect(page.locator("[data-team-down]")).toContainText(teamDown.line);
-    await expect(page.locator("[data-team-down] [data-start-command]")).toHaveText("cd caw-back && bun run dev");
+    await expect(page.locator("[data-team-down] [data-start-command]")).toHaveText("cd caw-back && bun run runner");
     await expect(page.locator("[data-team-waits]")).toHaveText(teamDown.waits);
     const text = `รอทีม ${Date.now()}`;
     await page.getByLabel(distill.placeholder("ปลา")).fill(text);

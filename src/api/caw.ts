@@ -121,6 +121,21 @@ export interface Hop {
   note: string;
 }
 
+/** One line of what a hop's CLI showed (REQ-104, SPEC-103 § API): rendered and redacted by the runner. `seq` rises per hop but is not contiguous. */
+export interface HopOutputEntry {
+  seq: number;
+  at: string;                     // ISO 8601, when the runner saw the line
+  kind: "line" | "gap" | "truncated";
+  text: string;                   // ≤ 2000 chars; "" for `gap` and `truncated`
+  gapSeconds: number | null;      // ≥ 1 for `gap`, null otherwise
+}
+
+export interface HopOutput {
+  hopId: string;
+  entries: HopOutputEntry[];      // seq > `after`, ascending
+  more: boolean;                  // more entries wait past `limit`
+}
+
 export interface Run {
   id: string;
   projectId: string;
@@ -212,6 +227,8 @@ export interface CawApi {
   chain(projectId: string): Promise<Chain | null>;                              // GET /v1/projects/{id}/chain
   hops(projectId: string, query?: { limit?: number; runId?: string }): Promise<Hop[]>;  // GET …/hops (newest first)
   runs(projectId: string, limit?: number): Promise<Run[]>;                      // GET …/runs (newest first)
+  /** GET /v1/hops/{hopId}/output?after=&limit= (REQ-104) — a read, no actor. `after` = a seq (default -1 = from the start), `limit` 1..1000 (default 500). 404 `not_found`: no such hop. */
+  hopOutput(hopId: string, query?: { after?: number; limit?: number }): Promise<HopOutput>;
   /** POST /v1/projects/{id}/runs — one open run per project: a second is refused with `CawError(409, "run_open")`. */
   startRun(projectId: string, hopBudget: number): Promise<Run>;
   /** PATCH /v1/runs/{runId} `{ stopReason: "operator_stopped", report: "" }` — the operator stops an open run (D-056, TASK-B-055); the

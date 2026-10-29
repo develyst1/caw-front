@@ -384,3 +384,15 @@ export const agreeStart = {
   dispatcher: (n: number) => `ทีมจะเริ่มทำ ${n} การ์ดเองจนครบงบ`,                   // D-105 — above the button, mode อัตโนมัติ
   waiting: (entry: string) => `${entry} เสนองานไว้ รอคุณตกลง`,                     // D-105 — the board's line while the proposal waits
 } as const;
+
+/** A worker's read-only "screen" (REQ-104 § User-facing wording, the PM; the last two rows added 2026-10-29 from SPEC-103 Q1). `time` is already formatted. */
+export const screen = {
+  watch: "ดูหน้าจอ",                                                               // the open button on a worker (crew seat, team drawer)
+  title: (name: string) => `หน้าจอของ ${name}`,                                    // the view's title
+  empty: "ยังไม่ได้เริ่มทำงาน",                                                    // no hop yet
+  live: "สด",                                                                    // badge while the hop runs
+  gap: (n: number) => `ขาดช่วง ${n} วินาที — ระหว่างนี้ไม่ได้รับข้อมูล`,              // a gap marker
+  finished: (time: string) => `จบงานเมื่อ ${time}`,                                // a finished hop
+  started: (time: string) => `เริ่มเมื่อ ${time}`,                                  // the hop's start time
+  truncated: "ยาวเกิน 5,000 บรรทัด — ส่วนที่เกินไม่ได้แสดง",                         // the output was cut off
+} as const;

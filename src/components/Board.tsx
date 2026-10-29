@@ -178,7 +178,7 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
           <Button asChild variant={questions.length > 0 || firstCarry ? "outline" : "default"} className="min-h-11 px-5 font-semibold"><a href={`/p/${projectId}/chat`}>{waitsWords.go}</a></Button>
         </div>
       )}
-      {seats.length > 0 && <CrewStrip seats={seats} chosen={chosen} onToggle={toggle} />}
+      {seats.length > 0 && <CrewStrip projectId={projectId} seats={seats} chosen={chosen} onToggle={toggle} />}
 
       {askAll && chatAsk && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" data-ask-all>

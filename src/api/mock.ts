@@ -7,7 +7,7 @@
 // Anything the real server computes (workable, the counts, hopsUsed) is computed here on read, never stored.
 import { STARTING_FACES } from "@/lib/faces"; // the one list of faces: the seed's starting-team workers carry the approved ones (TASK-B-072)
 import {
-  CawError, type Avatar, type Card, type CardContext, type CardStatus, type CawApi, type CodeMap, type Chain, type CawEvent, type ChatMessage, type Effort, type Hop, type HopOutcome, type Mode,
+  CawError, type Avatar, type Card, type CardContext, type CardStatus, type CawApi, type CodeMap, type Chain, type CawEvent, type ChatMessage, type Effort, type Hop, type HopOutcome, type HopOutputEntry, type Mode,
   type ModelName, type Note, type PartContext, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker, type WorkerRole,
 } from "./caw";
 
@@ -107,6 +107,29 @@ const HOPS: Omit<Hop, "lastActivityAt" | "messageId">[] = [
 ];
 // v1.11: a hop's `lastActivityAt` starts as its `startedAt`; v1.4: no seeded hop answers a chat message (those are `chatHops`); the mock has no runner, so a heartbeat never moves it
 const SEEDED_HOPS: Hop[] = HOPS.map((h) => ({ ...h, lastActivityAt: h.startedAt, messageId: null }));
+
+// ---- what a hop's CLI showed (REQ-104, SPEC-103 § caw-front): worked out on read from the hop, never stored ----
+// A running hop gets one more line every SCREEN_TICK_MS since its start, so a watcher sees it grow. One seeded finished hop has a 12 s gap between lines,
+// one has no output at all, the other finished hops have three lines. The text is a terminal's own output, shaped like the runner's `screenLines`.
+const SCREEN_TICK_MS = 2000;
+const SCREEN_MAX = 5000;          // the runner's `maxLines`: the mock never grows past it
+const GAP_HOP = id("h", 1);
+const SILENT_HOP = id("h", 5);
+function screenOutput(hop: Hop, nowMs: number): HopOutputEntry[] {
+  const t0 = Date.parse(hop.startedAt);
+  const line = (seq: number, ms: number, text: string): HopOutputEntry => ({ seq, at: new Date(t0 + ms).toISOString(), kind: "line", text, gapSeconds: null });
+  const text = (i: number) => (i === 0 ? "● session mock" : `▸ Read src/step-${i}.ts`);
+  if (hop.endedAt === null) {
+    const n = Math.min(SCREEN_MAX, 1 + Math.max(0, Math.floor((nowMs - t0) / SCREEN_TICK_MS)));
+    return Array.from({ length: n }, (_, i) => line(i, i * SCREEN_TICK_MS, text(i)));
+  }
+  if (hop.id === SILENT_HOP) return [];
+  if (hop.id === GAP_HOP) {
+    return [line(0, 0, text(0)), line(1, 2000, "▸ Bash bun test"), { seq: 2, at: new Date(t0 + 16000).toISOString(), kind: "gap", text: "", gapSeconds: 12 },
+      line(3, 17000, "▸ Edit src/step-3.ts"), line(4, 19000, "■ success · turns 3")];
+  }
+  return [line(0, 0, text(0)), line(1, 2000, text(1)), line(2, 4000, "■ success · turns 2")];
+}
 
 // ---- the chat and the card proposals (SPEC-A-008 § v1.4): a thread with two asks; the first was answered with questions and a proposal
 // (an older proposal on the same message is superseded), the second with a proposal whose one anchor has since gone from Blueprint ----
@@ -452,6 +475,13 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     chain: async (pid) => { const p = get(pid); return p ? chainOf(p) : null; },
     hops: async (pid, query = {}) => { const p = get(pid); return !p ? [] : structuredClone(p.hops).filter((h) => query.runId === undefined || h.runId === query.runId)
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, query.limit ?? 50); },
+    hopOutput: async (hopId, query = {}) => {
+      const hop = projects.flatMap((p) => p.hops).find((h) => h.id === hopId);
+      if (!hop) return refuse(404, "not_found", "no such hop");
+      const after = query.after ?? -1, limit = Math.min(Math.max(query.limit ?? 500, 1), 1000);
+      const rest = screenOutput(hop, Date.now()).filter((e) => e.seq > after);
+      return { hopId, entries: rest.slice(0, limit), more: rest.length > limit };
+    },
     runs: async (pid, limit = 20) => { const p = get(pid); return !p ? [] : p.runs.map((r) => run(p, r)).sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, limit); },
     startRun: async (pid, budget) => {
       const p = need(pid);
@@ -700,7 +730,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   let teamRunning = opts.state !== "team-down";
   const lastSeen = new Date(Date.now() - 10 * 60_000).toISOString();
   (api as { teamStatus: CawApi["teamStatus"] }).teamStatus = async () =>
-    teamRunning ? { running: true, runnerName: "mock", lastSeenAt: new Date().toISOString(), startCommand: "cd caw-back && bun run dev" } : { running: false, runnerName: null, lastSeenAt: lastSeen, startCommand: "cd caw-back && bun run dev" };
+    teamRunning ? { running: true, runnerName: "mock", lastSeenAt: new Date().toISOString(), startCommand: "cd caw-back && bun run runner" } : { running: false, runnerName: null, lastSeenAt: lastSeen, startCommand: "cd caw-back && bun run runner" };
   const runner: MockRunner = {
     setTeamRunning: (running) => { teamRunning = running; },
     saveCodeMap: async (pid, map = SAMPLE_CODE_MAP) => {

@@ -1000,6 +1000,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/hops/{hopId}/output": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    after?: number | null;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    hopId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description entries with seq > after, ascending, at most `limit`; `more` = there are further ones */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            entries: components["schemas"]["HopOutputEntry"][];
+                            hopId: string;
+                            more: boolean;
+                        };
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    hopId: string;
+                };
+                cookie?: never;
+            };
+            /** @description a batch of what the hop's CLI showed */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        entries: {
+                            /** Format: date-time */
+                            at: string;
+                            gapSeconds?: number | null;
+                            /** @enum {string} */
+                            kind: "line" | "gap" | "truncated";
+                            seq: number;
+                            /** @default  */
+                            text?: string;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description how many entries were NEW; a (hopId, seq) already stored is skipped */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            stored: number;
+                        };
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description operator_only · runner_only · not_your_card · not_your_message · not_entry_worker */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/notify": {
         parameters: {
             query?: never;
@@ -3645,6 +3773,18 @@ export interface components {
             tokensOut: number | null;
             workerId: string;
         };
+        HopOutputEntry: {
+            /** @description ISO 8601: when the runner saw the line */
+            at: string;
+            /** @description required for `gap`, null otherwise */
+            gapSeconds: number | null;
+            /** @enum {string} */
+            kind: "line" | "gap" | "truncated";
+            /** @description increasing per hop, not contiguous (a dropped line leaves a hole) */
+            seq: number;
+            /** @description the rendered, redacted line for `line`; "" for `gap` and `truncated` */
+            text: string;
+        };
         Note: {
             actor: string;
             /** @description handoff_refused only: who the sender could have handed the card to */
@@ -3733,7 +3873,7 @@ export interface components {
              * @description what the screen tells the operator to run when running is false
              * @enum {string}
              */
-            startCommand: "cd caw-back && bun run dev";
+            startCommand: "cd caw-back && bun run runner";
         };
         Worker: {
             avatar: components["schemas"]["Avatar"] | null;

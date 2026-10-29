@@ -309,13 +309,13 @@ describe("deleteWorker (SPEC-A-008 § v1.14)", () => {
 
 describe("team status (contract v1.16)", () => {
   test("GET /v1/team-status, no actor, and the 200 body is returned as it is", async () => {
-    const body = { running: true, runnerName: "runner-1", lastSeenAt: "2026-10-20T10:00:00.000Z", startCommand: "cd caw-back && bun run dev" } as const;
+    const body = { running: true, runnerName: "runner-1", lastSeenAt: "2026-10-20T10:00:00.000Z", startCommand: "cd caw-back && bun run runner" } as const;
     const { api, log } = against(() => json(200, body));
     expect(await api.teamStatus()).toEqual(body);
     expect(log).toEqual([{ method: "GET", path: "/v1/team-status", query: "", actor: null, body: undefined }]);
   });
   test("a team that never checked in: null name and time are kept as null", async () => {
-    const body = { running: false, runnerName: null, lastSeenAt: null, startCommand: "cd caw-back && bun run dev" } as const;
+    const body = { running: false, runnerName: null, lastSeenAt: null, startCommand: "cd caw-back && bun run runner" } as const;
     expect(await against(() => json(200, body)).api.teamStatus()).toEqual(body);
   });
   test("an unreachable caw-back stays CawError(0, unreachable); a refusal becomes a CawError", async () => {

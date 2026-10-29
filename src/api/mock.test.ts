@@ -217,9 +217,9 @@ describe("seed variants (POST /test-reset?state=…)", () => {
 describe("team status (REQ-015 R1, contract v1.16)", () => {
   test("the mock team is running by default; `team-down` is not, with a last-seen time ten minutes ago; the start command is the same", async () => {
     const up = await createMockApi().teamStatus();
-    expect(up).toEqual({ running: true, runnerName: "mock", lastSeenAt: expect.any(String), startCommand: "cd caw-back && bun run dev" });
+    expect(up).toEqual({ running: true, runnerName: "mock", lastSeenAt: expect.any(String), startCommand: "cd caw-back && bun run runner" });
     const down = await createMockApi({ state: "team-down" }).teamStatus();
-    expect([down.running, down.runnerName, down.startCommand]).toEqual([false, null, "cd caw-back && bun run dev"]);
+    expect([down.running, down.runnerName, down.startCommand]).toEqual([false, null, "cd caw-back && bun run runner"]);
     const ago = Date.now() - Date.parse(down.lastSeenAt!);
     expect(ago).toBeGreaterThan(9.9 * 60_000);
     expect(ago).toBeLessThan(10.5 * 60_000);
