@@ -70,6 +70,7 @@ export interface Card {
   question: null | { text: string; proposedDefault: string; cases: string[] }; // for `kind: "question"`
   answer: string | null;
   workable: boolean;              // computed by the server: kind work · todo|doing · every dependency done · no spec change
+  stoppedMidway: { hopId: string; at: string; reason: string } | null; // REQ-111: the last hop ended without finishing (failed, stopped or interrupted); the card is back in `todo`
   createdAt: string;
   updatedAt: string;
 }

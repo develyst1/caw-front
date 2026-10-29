@@ -8,7 +8,7 @@ import { RunsList } from "./RunsList";
 const worker: Worker = { id: "w1", name: "ปลา", role: "PM", roles: ["PM"], skills: ["role-pm"], model: "opus", effort: "high", combinedFrom: null, avatar: null, deletedAt: null };
 const card: Card = {
   id: "c1", projectId: "p", number: 7, kind: "work", title: "ทำหน้าค้นหา", todo: "", status: "todo", assigneeId: "w1", anchor: { key: "SCR-001", version: 3 },
-  specChangedVersion: null, dependsOn: [], question: null, answer: null, workable: true, createdAt: "", updatedAt: "",
+  specChangedVersion: null, dependsOn: [], question: null, answer: null, workable: true, stoppedMidway: null, createdAt: "", updatedAt: "",
 };
 const REASONS: StopReason[] = ["budget_spent", "nothing_workable", "failed_review_twice", "limit_reached", "operator_stopped", "error"];
 const run = (id: string, over: Partial<Run> = {}): Run => ({

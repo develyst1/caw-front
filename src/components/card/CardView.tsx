@@ -5,7 +5,7 @@
 // and hand-offs, and the cards it waits on. The operator's actions — status and re-assign under the title, answering on a
 // question card, the comment box under the timeline — are in CardActions. Words only from src/words.ts. No back link of its own: the บอร์ด
 // tab is marked current here (K-1, TASK-B-100).
-import { CircleHelp, RefreshCw } from "lucide-react";
+import { CircleAlert, CircleHelp, RefreshCw } from "lucide-react";
 import type { Card, CardContext, Worker } from "@/api/caw";
 import {
   card as cardWord, cardMark, column, decisionsHeading, dependsOnHeading, handoffLine, linkKind, linkedWith, operatorName,
@@ -47,6 +47,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
           {running && <span className={s.now} data-running><Person name={running.name} avatar={running.avatar} size="sm" state="working" showRoles={false} /><span>{redesign.workingNow}</span></span>}
           {card.specChangedVersion !== null && <span className={s.markSpec}><RefreshCw aria-hidden className="size-3.5" />{cardMark.specChanged}</span>}
           {waiting && <span className={s.markWait}><CircleHelp aria-hidden className="size-3.5" />{cardMark.waitingAnswer}</span>}
+          {card.stoppedMidway && <span className={s.markStopped} data-stopped-midway><CircleAlert aria-hidden className="size-3.5" />{cardMark.stoppedMidway(card.stoppedMidway.reason)}</span>}
         </div>
         {card.kind === "work" && (
           <CardControls projectId={projectId} cardId={card.id} status={card.status} assigneeId={card.assigneeId} members={members}

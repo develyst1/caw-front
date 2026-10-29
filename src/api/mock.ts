@@ -40,10 +40,12 @@ type Seed = Omit<Card, "projectId" | "workable" | "createdAt" | "updatedAt">;
 const C = (n: number) => id("c", n);
 const seed = (n: number, title: string, todo: string, status: CardStatus, assigneeId: string | null, key: string, rest: Partial<Seed> = {}): Seed => ({
   id: C(n), number: n, kind: "work", title, todo, status, assigneeId, anchor: { key, version: BLUEPRINT_VERSION },
-  specChangedVersion: null, dependsOn: [], question: null, answer: null, ...rest,
+  specChangedVersion: null, dependsOn: [], question: null, answer: null, stoppedMidway: null, ...rest,
 });
 const SEEDS: Seed[] = [
-  seed(1, "ออกแบบหน้าค้นหาห้อง", "ออกแบบหน้าค้นหาห้องว่างตาม spec: เลือกวันที่ แล้วเลือกห้องและช่วงเวลา", "todo", W.fern, "SCR-001"),
+  seed(1, "ออกแบบหน้าค้นหาห้อง", "ออกแบบหน้าค้นหาห้องว่างตาม spec: เลือกวันที่ แล้วเลือกห้องและช่วงเวลา", "todo", W.fern, "SCR-001",
+    // REQ-111: the one seeded card whose last hop ended without finishing, so the screens can be seen (hop h-2 is a seeded one)
+    { stoppedMidway: { hopId: id("h", 2), at: "2026-10-13T08:03:00+07:00", reason: "หมดเวลา — ก้าวนี้ใช้เวลานานเกินไป" } }),
   seed(2, "ทำ API ค้นหาห้องว่าง", "ทำ endpoint ค้นหาห้องว่างจากปฏิทิน อ่านข้อมูล Room", "todo", W.bank, "API-001", { specChangedVersion: BLUEPRINT_LATEST }),
   seed(3, "ทำหน้ายืนยันการจอง", "ทำหน้ายืนยันพร้อมห้องที่เลือก และปุ่มกดยืนยันการจอง", "todo", W.fern, "SCR-002", { dependsOn: [C(2)] }),
   seed(4, "ทำ API สร้างการจอง", "ตรวจเวลาว่างและบันทึก Booking แล้วตอบ 201 พร้อมสถานะ", "doing", W.bank, "API-002"),
@@ -689,7 +691,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       const base = Math.max(0, ...p.cards.map((c) => c.number)); // numbers run on from the project's own last card
       const made = x.items.map((i, k): Seed => ({
         id: ids[k]!, number: base + k + 1, kind: "work", title: i.title, todo: i.todo, status: "todo", assigneeId: i.workerId,
-        anchor: { ...i.anchor }, specChangedVersion: null, dependsOn: i.dependsOn.map((d) => ids[d]!), question: null, answer: null,
+        anchor: { ...i.anchor }, specChangedVersion: null, dependsOn: i.dependsOn.map((d) => ids[d]!), question: null, answer: null, stoppedMidway: null,
       }));
       p.cards.push(...made);
       x.status = "accepted";

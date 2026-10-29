@@ -3653,6 +3653,12 @@ export interface components {
             specChangedVersion: number | null;
             /** @enum {string} */
             status: "todo" | "doing" | "review" | "done" | "stuck";
+            /** @description a card back in `todo` after a hop that failed, was stopped or was interrupted: that hop, when it ended, and the leading sentence of its note; null otherwise (SPEC-108 D7) */
+            stoppedMidway: {
+                at: string;
+                hopId: string;
+                reason: string;
+            } | null;
             title: string;
             todo: string;
             updatedAt: string;

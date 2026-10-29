@@ -8,7 +8,7 @@ const [pla, fern, bank, mint] = [W(1, "ปลา"), W(2, "ฝน"), W(3, "แบ
 const chain = (entry: string | null = "w1", members = [fern, pla, bank, mint]): Chain => ({ members, edges: [], entryWorkerId: entry });
 const card = (n: number, over: Partial<Card> = {}): Card => ({
   id: `c${n}`, projectId: "p", number: n, kind: "work", title: `งาน ${n}`, todo: "", status: "todo", assigneeId: null, anchor: { key: "SCR-001", version: 1 },
-  specChangedVersion: null, dependsOn: [], question: null, answer: null, workable: true, createdAt: "", updatedAt: "", ...over,
+  specChangedVersion: null, dependsOn: [], question: null, answer: null, workable: true, stoppedMidway: null, createdAt: "", updatedAt: "", ...over,
 });
 const hop = (n: number, workerId: string, cardId: string, endedAt: string | null): Hop => ({
   id: `h${n}`, projectId: "p", runId: null, claimedBy: null, cardId, workerId, startedAt: "2026-10-14T09:00:00+07:00", endedAt, lastActivityAt: "2026-10-14T09:00:00+07:00", messageId: null, outcome: endedAt ? "commented" : null,

@@ -7,7 +7,7 @@
 // columns scroll sideways with a snap. No chat beside the board at any width (D-093): while the team waits on you in the chat without a structured
 // question, one line at the top says so and leads to the แชต tab (TASK-B-098, D-094 § 0).
 import {
-  ArrowLeftRight, CircleHelp, Database, FolderKanban, GitBranch, Plug, RefreshCw, Server, Smartphone, TriangleAlert, User, Waypoints, type LucideIcon,
+  ArrowLeftRight, CircleAlert, CircleHelp, Database, FolderKanban, GitBranch, Plug, RefreshCw, Server, Smartphone, TriangleAlert, User, Waypoints, type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
@@ -74,10 +74,12 @@ function WorkCard({ card, worker, part, waiting, carry = null }: {
             <span className="name" data-name title={worker.name}>{worker.name}</span>
           </span>
         )}
-        {(card.specChangedVersion !== null || waiting) && (
-          <span className="flex flex-wrap gap-1.5">
+        {(card.specChangedVersion !== null || waiting || card.stoppedMidway) && (
+          <span className="flex min-w-0 flex-wrap gap-1.5">
             {card.specChangedVersion !== null && <span className="inline-flex items-center gap-1 rounded-md bg-stuck-soft px-2 py-0.5 text-sm font-medium text-stuck"><RefreshCw className="size-3.5" aria-hidden />{cardMark.specChanged}</span>}
             {waiting && <span className="inline-flex items-center gap-1 rounded-md bg-now-soft px-2 py-0.5 text-sm font-medium text-now"><CircleHelp className="size-3.5" aria-hidden />{cardMark.waitingAnswer}</span>}
+            {/* REQ-111: one line here, cut with an ellipsis when long; the whole sentence is in its title and on the card page */}
+            {card.stoppedMidway && <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-stuck-soft px-2 py-0.5 text-sm font-medium text-stuck" title={cardMark.stoppedMidway(card.stoppedMidway.reason)} data-stopped-midway><CircleAlert className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{cardMark.stoppedMidway(card.stoppedMidway.reason)}</span></span>}
           </span>
         )}
       </a>

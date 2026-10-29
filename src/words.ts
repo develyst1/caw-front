@@ -5,7 +5,10 @@ import type { CardStatus, HopOutcome, Mode, StopReason } from "@/api/caw";
 export const columnOrder: CardStatus[] = ["todo", "doing", "review", "done", "stuck"];
 export const column: Record<CardStatus, string> = { todo: "รอทำ", doing: "กำลังทำ", review: "รอตรวจ", done: "เสร็จ", stuck: "ติดอยู่" };
 
-export const cardMark = { specChanged: "spec เปลี่ยน", waitingAnswer: "รอคำตอบ" } as const;
+export const cardMark = {
+  specChanged: "spec เปลี่ยน", waitingAnswer: "รอคำตอบ",
+  stoppedMidway: (reason: string) => `งานนี้หยุดกลางทาง: ${reason} — รอทำต่อ`,   // REQ-111 — a card back in รอทำ after its hop ended without finishing; `reason` is the back end's sentence, shown as it is
+} as const;
 
 /** The project's `mode`: manual → one step at a time, dispatcher → automatic. */
 export const mode: Record<Mode, string> = { manual: "แบบสั่งทีละขั้น", dispatcher: "อัตโนมัติ" };

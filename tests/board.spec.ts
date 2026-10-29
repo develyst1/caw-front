@@ -2,7 +2,7 @@
 // narrows; plus the 390 sideways columns and the keyboard path.
 import { expect, test } from "./fixtures";
 import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
-import { acceptAnswer, agreeStart, column, distill, oneAnswer, section, teamDown } from "../src/words";
+import { acceptAnswer, agreeStart, cardMark, column, distill, oneAnswer, section, teamDown } from "../src/words";
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 
@@ -281,4 +281,19 @@ test("ทำต่อ · plain seed (a hop is running): no ทำต่อ", asy
   await page.goto(BOARD);
   await expect(page.locator("[data-column] [data-card]").first()).toBeVisible();
   await expect(page.locator("[data-carry-on]")).toHaveCount(0);
+});
+
+// REQ-111 (TASK-120): the card whose last hop ended without finishing says so, on the board (one line, the whole sentence in its title) and on its card page (whole)
+test("หยุดกลางทาง · the one seeded stopped card has the sentence on the board and on its page; no other card has it", async ({ page }) => {
+  const sentence = cardMark.stoppedMidway("หมดเวลา — ก้าวนี้ใช้เวลานานเกินไป");
+  expect(sentence).toBe("งานนี้หยุดกลางทาง: หมดเวลา — ก้าวนี้ใช้เวลานานเกินไป — รอทำต่อ");
+  await page.goto(BOARD);
+  await expect(page.locator("[data-column] [data-card]").first()).toBeVisible();
+  await expect(page.locator("[data-stopped-midway]")).toHaveCount(1);
+  const card = page.locator('[data-card="30000000-0000-4000-8000-000000000001"]');
+  await expect(card.locator("[data-stopped-midway]")).toHaveText(sentence);
+  await expect(card.locator("[data-stopped-midway]")).toHaveAttribute("title", sentence);
+  await card.click();
+  await expect(page.locator("[data-stopped-midway]")).toHaveText(sentence);
+  await expect(page.locator("[data-stopped-midway]")).toHaveCount(1);
 });
