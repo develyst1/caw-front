@@ -10,6 +10,7 @@ import { ModeControl } from "@/components/ModeControl";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { crewState, entryQuestions, entryWaitsInChat, proposalWaits } from "@/lib/crew";
 import { lastSeq } from "@/lib/eventSeq";
+import { blueprintPartHref } from "@/blueprint";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
   ]);
   if (!project) notFound();
   const contexts = await Promise.all(cards.map((c) => api.cardContext(c.id)));
+  // REQ-112 (SPEC-109 D4): advisory — a read that fails draws nothing here
+  const uncovered = (await api.coverage(id).catch(() => null))?.uncovered.map((u) => ({ key: u.key, title: u.title, href: blueprintPartHref(project.blueprintProjectId, u.key) })) ?? [];
   const parts: Record<string, PartRef> = {};
   for (const ctx of contexts) if (ctx) parts[ctx.spec.part.key] = { kind: ctx.spec.part.kind, title: ctx.spec.part.title };
 
@@ -41,7 +44,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
         chatWaits={entry && entryWaitsInChat(team, messages) ? entry : null} entry={entry} tellPrimary={project.workspace.roots.length > 0}
         teamDown={team_.running ? null : team_.startCommand} /* REQ-015 R1 (TASK-B-104) */
         proposalWaits={proposalWaits(team, messages, proposals)} /* D-105 P2 (TASK-B-120) */
-        mode={project.mode} hops={hops} /* ทำต่อ on the workable cards in แบบสั่งทีละขั้น (TASK-B-121) */
+        mode={project.mode} hops={hops} uncovered={uncovered} /* ทำต่อ on the workable cards in แบบสั่งทีละขั้น (TASK-B-121) */
         // a server-built element handed to the client Board needs a key, or React's dev build warns about a list (DEF-6, TASK-B-102)
         modeControl={<ModeControl key="mode" projectId={id} mode={project.mode} hopBudget={project.hopBudget} hopsUsed={project.hopsUsed} lastRun={lastRun} />} />
     </main>

@@ -424,3 +424,26 @@ describe("labels and the latest spec (REQ-105)", () => {
     expect(cards.some((c) => c.specChangedVersion !== null && c.kind === "work" && (c.status === "todo" || c.status === "doing") && c.workable)).toBe(true);
   });
 });
+
+// REQ-112 (TASK-122): the coverage read the board and the open proposal ask for.
+describe("coverage (REQ-112)", () => {
+  test("the board's read (no proposal) answers the seeded uncovered part with the spec revision; shape = SPEC-109 § API", async () => {
+    const api = createMockApi();
+    const c = await api.coverage(PID);
+    expect(c.revision).toBe((await api.project(PID))!.spec.revision);
+    expect(c.uncovered).toEqual([{ key: "SCR-003", kind: "screen", title: "หน้าอนุมัติคำขอ", decisions: ["DEC-001", "DEC-002"] }]);
+  });
+  test("a proposal with an item on that part covers it → []; one without still shows it", async () => {
+    const api = createMockApi();
+    const open = (await api.proposals(PID)).filter((p) => p.status === "open");
+    const [with_, without] = [open.filter((p) => p.items.some((i) => i.anchor.key === "SCR-003")), open.filter((p) => !p.items.some((i) => i.anchor.key === "SCR-003"))];
+    expect([with_.length, without.length]).toEqual([1, 1]); // the seed has one open proposal of each kind
+    expect((await api.coverage(PID, with_[0]!.id)).uncovered).toEqual([]);
+    expect((await api.coverage(PID, without[0]!.id)).uncovered.map((u) => u.key)).toEqual(["SCR-003"]);
+  });
+  test("an unknown project or proposal → 404 not_found", async () => {
+    const api = createMockApi();
+    await expectRefusal(api.coverage("nope"), 404, "not_found");
+    await expectRefusal(api.coverage(PID, "nope"), 404, "not_found");
+  });
+});

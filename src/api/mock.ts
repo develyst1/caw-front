@@ -87,6 +87,9 @@ const SPECS: Record<string, { part: PartContext["part"]; neighbours: PartContext
   "DEC-001": { part: part("DEC-001", "decision", "ห้องที่จุเกิน 10 คนต้องให้ผู้ดูแลอนุมัติ"), neighbours: [nb("covers", "STEP-003", "step", "ส่งคำขอจอง"), nb("covers", "STEP-004", "step", "ผู้ดูแลพิจารณา")] },
 };
 
+/** What the mock's coverage read leaves uncovered (REQ-112): an existing mock part and two rule keys — sample data. */
+const UNCOVERED = { key: "SCR-003", kind: "screen", title: SPECS["SCR-003"]!.part.title, decisions: ["DEC-001", "DEC-002"] };
+
 const actor = (w: string) => `worker:${w}`;
 const NOTES: Record<string, Note[]> = {
   [C(6)]: [
@@ -686,6 +689,13 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       if (hop && hop.endedAt === null) refuse(409, "hop_running", "its chat step is still running");
       // a second retry before the runner picks it up only moves the time (never earlier, even inside the same millisecond)
       m.retryRequestedAt = new Date(Math.max(Date.now(), m.retryRequestedAt ? Date.parse(m.retryRequestedAt) + 1 : 0)).toISOString();
+    },
+    // REQ-112: one rule the team has not taken up — the seeded project answers it; a proposal with an item on that part covers it (`uncovered: []`)
+    coverage: async (pid, proposalId) => {
+      const p = get(pid) ?? refuse(404, "not_found", "no such project");
+      const x = proposalId === undefined ? null : p.proposals.find((q) => q.id === proposalId) ?? refuse(404, "not_found", "no such proposal");
+      const covered = x?.items.some((i) => i.anchor.key === UNCOVERED.key) ?? false;
+      return { revision: p.spec.revision, uncovered: covered ? [] : [structuredClone(UNCOVERED)] };
     },
     proposals: async (pid, query = {}) => {
       const p = get(pid);

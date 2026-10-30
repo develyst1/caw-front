@@ -3,7 +3,7 @@
 // Seed (fixtures.ts reset): M1 → reply M2 (a question + proposal Q2 open, 3 items, 6 hops; Q1 superseded) · M3 → reply M4 (Q3, gone anchor).
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { agreeStart, chat as words, chatRefused, codeMapWords, dependsOnHeading, distill, oneAnswer, partKind, proposedAnswer, section, send, teamDown } from "../src/words";
+import { agreeStart, chat as words, chatRefused, codeMapWords, dependsOnHeading, distill, oneAnswer, partKind, proposedAnswer, section, send, teamDown, uncovered } from "../src/words";
 
 const CHAT = `/p/${MOCK_PROJECT_ID}/chat`;
 
@@ -335,4 +335,15 @@ test.describe("agree and start · nothing open", () => {
     const open = page.locator('[data-proposal="open"]').last();
     await expect(open.locator("[data-agree-what]")).toHaveText(agreeStart.dispatcher(await open.locator("ol > li").count()));
   });
+});
+
+test("REQ-112: an open proposal that leaves a spec part without a card says so before สร้างการ์ด; one that covers it does not; advisory only", async ({ page }) => {
+  await page.goto(CHAT);
+  const left = page.locator('[data-proposal="open"]').filter({ hasText: "ทำหน้าสรุปรายงานรายวัน" }); // no item on SCR-003
+  await expect(left.locator("[data-uncovered-part=SCR-003]")).toHaveText(uncovered.part("SCR-003 หน้าอนุมัติคำขอ"));
+  await expect(left.locator("[data-create]")).toBeEnabled();
+  const covered = page.locator('[data-proposal="open"]').filter({ hasText: "ทำ API แจ้งผลการจอง" }); // has an item on SCR-003
+  await expect(covered).toHaveCount(1);
+  await expect(covered.locator("[data-uncovered]")).toHaveCount(0);
+  await expect(page.locator('[data-proposal="superseded"] [data-uncovered]')).toHaveCount(0); // only an open proposal
 });

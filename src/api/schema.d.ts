@@ -3041,6 +3041,72 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/projects/{projectId}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    proposalId?: string;
+                };
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description the decisions of Blueprint's current spec that no work card (nor the asked-for proposal) covers */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Coverage"];
+                    };
+                };
+                /** @description validation · actor_required · unknown_worker · anchor_required · not_a_member · not_a_question · hop_required */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description blueprint_unreachable */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/proposals/{id}/accept": {
         parameters: {
             query?: never;
@@ -3766,6 +3832,19 @@ export interface components {
             /** @description may be empty — the screen shows ไม่มี */
             rules: string[];
             stack: string[];
+        };
+        Coverage: {
+            /** @description the spec revision the answer was computed on */
+            revision: number;
+            /** @description sorted by key; empty = every rule is covered */
+            uncovered: {
+                /** @description the keys of the uncovered decisions, sorted */
+                decisions: string[];
+                /** @description the part the rules are about (a rule that covers nothing is listed under itself) */
+                key: string;
+                kind: string;
+                title: string;
+            }[];
         };
         Error: {
             error: {

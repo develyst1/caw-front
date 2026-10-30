@@ -2,7 +2,7 @@
 // narrows; plus the 390 sideways columns and the keyboard path.
 import { expect, test } from "./fixtures";
 import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
-import { acceptAnswer, agreeStart, cardMark, column, distill, oneAnswer, section, teamDown } from "../src/words";
+import { acceptAnswer, agreeStart, cardMark, column, distill, oneAnswer, section, teamDown, uncovered } from "../src/words";
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 
@@ -296,4 +296,13 @@ test("หยุดกลางทาง · the one seeded stopped card has the s
   await card.click();
   await expect(page.locator("[data-stopped-midway]")).toHaveText(sentence);
   await expect(page.locator("[data-stopped-midway]")).toHaveCount(1);
+});
+
+test("REQ-112: the board says which spec part no card has taken up, in the PM's sentence, with the key linked to Blueprint", async ({ page }) => {
+  await page.goto(BOARD);
+  const line = page.locator("[data-board] > [data-uncovered] [data-uncovered-part=SCR-003]");
+  await expect(line).toHaveCount(1);
+  await expect(line).toHaveText(uncovered.part("SCR-003 หน้าอนุมัติคำขอ"));
+  expect(await line.getByRole("link").getAttribute("href")).toContain("part=SCR-003");
+  await expect(page.locator("[data-column] [data-card]")).toHaveCount(11); // advisory: the board itself is unchanged
 });

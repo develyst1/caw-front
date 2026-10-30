@@ -16,6 +16,7 @@ import { useEffect, useId, useRef, useState, useTransition, type KeyboardEvent }
 import type { ChatMessage, CodeMap, Mode, Proposal, Worker } from "@/api/caw";
 import { acceptProposal, postMessage, retryMessage, type ChatResult } from "@/app/p/[id]/chat/actions";
 import { Part } from "@/components/card/Part";
+import { Uncovered, type UncoveredItem } from "@/components/Uncovered";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
 import { acceptText, answeredWith } from "@/lib/crew";
@@ -37,8 +38,8 @@ const Refused = ({ text }: { text: string | null }) => (text ? <p className="m-0
 
 /** The proposal is the agreement (D-105 P2, TASK-B-120): `ตกลง เริ่มงาน` accepts it, after one line saying what happens in the project's mode; while the entry
  *  person still has a question open (`waitFor` = their name) it is off, and says why. */
-function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor }: {
-  projectId: string; p: Proposal; byId: Map<string, Worker>; parts: Record<string, PartRef>; primary: boolean; mode: Mode | null; waitFor: string | null;
+function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor, uncovered = [] }: {
+  projectId: string; p: Proposal; byId: Map<string, Worker>; parts: Record<string, PartRef>; primary: boolean; mode: Mode | null; waitFor: string | null; uncovered?: UncoveredItem[];
 }) {
   const reason = useId();
   const router = useRouter();
@@ -54,6 +55,8 @@ function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor }: {
         {old && <span className="rounded-md border border-hair2 px-2 py-0.5 text-sm text-ink2">{words.superseded}</span>}
         {p.status === "accepted" && <span className="rounded-md bg-now-soft px-2 py-0.5 text-sm font-semibold text-now">{words.accepted}</span>}
       </div>
+      {/* REQ-112: the rules this proposal still leaves without a card — advisory, only while it is open, before "ตกลง" */}
+      {p.status === "open" && <Uncovered items={uncovered} />}
       <ol className="m-0 grid list-none gap-2.5 p-0">
         {p.items.map((it, i) => {
           const part = parts[it.anchor.key], w = byId.get(it.workerId);
@@ -107,9 +110,9 @@ function FailedStep({ projectId, messageId }: { projectId: string; messageId: st
  *  `codeMap`: the project's code map (TASK-B-106) — while it is not confirmed, the newest worker reply saved at or after it links to it on ทีม. */
 /** `openId`: the entry worker's reply whose questions are still open (crew.ts `entryQuestions`) — they carry the same `ตามนั้น` / `ตอบเอง…` pair as the
  *  board (D-105 P1, TASK-B-119); questions on any other reply read `ตอบแล้ว`. `focusBox`: arrived by the board's `ตอบเอง…` — the empty box is focused. */
-export function Chat({ projectId, messages, proposals, workers, parts, entry, teamDown = false, codeMap = null, answering = false, openId = null, focusBox = false, mode = null }: {
+export function Chat({ projectId, messages, proposals, workers, parts, entry, teamDown = false, codeMap = null, answering = false, openId = null, focusBox = false, mode = null, uncovered = {} }: {
   projectId: string; messages: ChatMessage[]; proposals: Proposal[]; workers: Worker[]; parts: Record<string, PartRef>; entry: Worker | null; teamDown?: boolean;
-  codeMap?: CodeMap | null; answering?: boolean; openId?: string | null; focusBox?: boolean; mode?: Mode | null;
+  codeMap?: CodeMap | null; answering?: boolean; openId?: string | null; focusBox?: boolean; mode?: Mode | null; uncovered?: Record<string, UncoveredItem[]>; /* by open proposal id (REQ-112) */
 }) {
   const router = useRouter();
   const byId = new Map(workers.map((w) => [w.id, w]));
@@ -190,7 +193,7 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, te
                 {failed && <FailedStep projectId={projectId} messageId={m.id} />}
                 {m.id === mapReply && <a href={`/p/${projectId}/team#code-map`} className="inline-flex min-h-11 items-center text-sm font-semibold text-now underline underline-offset-4" data-see-code-map>{codeMapWords.see}</a>}
                 {!mine && m.replyTo && onMessage(m.replyTo).map((p) => <ProposalCard key={p.id} projectId={projectId} p={p} byId={byId} parts={parts} primary={p.id === newestOpen && !openId}
-                  mode={mode} waitFor={openId ? entry?.name ?? null : null} />)}
+                  mode={mode} waitFor={openId ? entry?.name ?? null : null} uncovered={uncovered[p.id]} />)}
               </li>
             );
           })}

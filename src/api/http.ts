@@ -5,7 +5,7 @@
 // `CawError(0, "unreachable")`. A 404 on a read of one thing is `null` (or an empty list), not an error.
 import createClient from "openapi-fetch";
 import {
-  CawError, isCawError, type Card, type CodeMap, type CardContext, type CawApi, type CawEvent, type Chain, type ChatMessage, type Hop, type HopOutput, type Note, type PartContext, type Project,
+  CawError, isCawError, type Card, type CodeMap, type CardContext, type CawApi, type CawEvent, type Chain, type ChatMessage, type Coverage, type Hop, type HopOutput, type Note, type PartContext, type Project,
   type ProjectSummary, type Proposal, type Run, type TeamStatus, type Worker,
 } from "./caw";
 import type { paths } from "./schema";
@@ -108,6 +108,8 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
     // 200 the map with `confirmedAt`; 404 (no such project) and 409 `no_code_map` are CawErrors
     confirmCodeMap: (id) => ok(client.POST("/v1/projects/{id}/code-map/confirm", { params: { path: { id } } })) as Promise<CodeMap>,
     teamStatus: () => ok(client.GET("/v1/team-status")) as Promise<TeamStatus>,
+    // REQ-112: `proposalId` goes in the query only when given; a refusal stays a CawError (the screens draw nothing for it)
+    coverage: (projectId, proposalId) => ok(client.GET("/v1/projects/{projectId}/coverage", { params: { path: { projectId }, query: proposalId === undefined ? {} : { proposalId } } })) as Promise<Coverage>,
     // REQ-104: 200 `{ hopId, entries, more }`; 404 `not_found` (no such hop) is a CawError — a hop that is not there is a mistake, not an empty list
     hopOutput: (hopId, q = {}) => ok(client.GET("/v1/hops/{hopId}/output", { params: { path: { hopId }, query: q } })) as Promise<HopOutput>,
     // 202 with an empty object: nothing to read back; the refusals (404 too — a message that is not there is a mistake, not an empty list) are CawErrors

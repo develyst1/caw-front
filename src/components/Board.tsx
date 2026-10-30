@@ -16,6 +16,7 @@ import { answerQuestion, startStep } from "@/app/p/[id]/actions";
 import { postMessageFor } from "@/app/p/[id]/chat/actions";
 import { acceptText, canCarryOn } from "@/lib/crew";
 import { CrewStrip, type SeatView } from "@/components/CrewStrip";
+import { Uncovered, type UncoveredItem } from "@/components/Uncovered";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
 import { group, kindGroup } from "@/theme/tokens";
@@ -126,9 +127,9 @@ function AskSheet({ meta, text, proposed, face, onAccept, ownHref, cardId, pendi
  *  `teamDown`: the start command while the team is not running (TASK-B-104) — else null.
  *  `entry`: who takes work first — names the empty board's one button (TASK-B-100, B-2); `tellPrimary`: that button is the screen's primary
  *  unless an earlier first step (the folder) still holds it (B7: one primary per screen). */
-export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = null, chatWaits = null, modeControl = null, entry = null, tellPrimary = true, teamDown = null, proposalWaits = false, mode = "dispatcher", hops = [] }: {
+export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = null, chatWaits = null, modeControl = null, entry = null, tellPrimary = true, teamDown = null, proposalWaits = false, mode = "dispatcher", hops = [], uncovered = [] }: {
   projectId: string; cards: Card[]; workers: Worker[]; parts: Record<string, PartRef>; seats?: SeatView[]; chatAsk?: ChatAsk; chatWaits?: Worker | null; modeControl?: ReactNode;
-  entry?: Worker | null; tellPrimary?: boolean; teamDown?: string | null; proposalWaits?: boolean; mode?: Mode; hops?: Hop[];
+  entry?: Worker | null; tellPrimary?: boolean; teamDown?: string | null; proposalWaits?: boolean; mode?: Mode; hops?: Hop[]; uncovered?: UncoveredItem[]; /* REQ-112: the rules no card covers */
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -173,6 +174,7 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
   return (
     <div className="grid min-w-0 gap-6" data-board>
       {teamDown !== null && <TeamDown startCommand={teamDown} />}
+      {uncovered.length > 0 && <Uncovered items={uncovered} className="rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" />}
       {chatWaits && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" data-chat-waits>
           <Avatar name={chatWaits.name} avatar={chatWaits.avatar} size="md" />

@@ -164,6 +164,12 @@ export const labelWords = {
   anchorRemoved: "ส่วนนี้ถูกลบออกจาก spec แล้ว — งานนี้ทำต่อไม่ได้จนกว่าจะย้ายไปส่วนอื่นหรือปิดงาน", // REQ-105 Q4, PM 2026-10-29
 } as const;
 
+/** REQ-112 (PM, SPEC-109 D3): a rule no card takes up. `part` = the sentence as written; `{part}` = key + title (SA's reading, recorded in SPEC-109 § Questions). `lead` is its words before `{part}`, for the screen that links the key. */
+export const uncovered = {
+  lead: "ส่วนนี้ใน spec ยังไม่มีงานไหนรับไป:",
+  part: (part: string) => `${uncovered.lead} ${part}`,
+} as const;
+
 // ---- the projects list and the start page (TASK-B-040 Q1: the PM approved them 2026-10-13; the card's version line is hers) ----
 /** The projects list. `เสร็จ` and `ติดอยู่` are the table's column words. */
 export const projectCard = {

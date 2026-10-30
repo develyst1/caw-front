@@ -111,6 +111,9 @@ export interface CardContext {
   decisions: { cardId: string; number: number; question: string; answer: string }[]; // answered question cards this card depends on
 }
 
+/** SPEC-109 § API, camelCase as caw-back sends it. `uncovered` is sorted by key; empty = every rule is covered. */
+export interface Coverage { revision: number; uncovered: { key: string; kind: string; title: string; decisions: string[] }[] }
+
 export interface Hop {
   id: string;
   projectId: string;
@@ -290,6 +293,10 @@ export interface CawApi {
   /** POST /v1/projects/{id}/code-map/confirm (operator only) — 200 the code map with `confirmedAt` set. Refused: 404 `not_found` (no such project) · 409 `no_code_map`
    *  (no worker has saved one yet). The screen never writes a map; a worker does. */
   confirmCodeMap(projectId: string): Promise<CodeMap>;
+
+  /** GET /v1/projects/{projectId}/coverage[?proposalId=] (REQ-112, SPEC-109 § API) — the decisions no card (and, with `proposalId`, no item of that proposal) covers, grouped under
+   *  the part they are about. Advisory only: it never blocks anything. A refusal (404 `not_found`, 502 `blueprint_unreachable`) is a CawError; the screens draw nothing then. */
+  coverage(projectId: string, proposalId?: string): Promise<Coverage>;
 
   /** GET /v1/team-status — a read, no actor, not tied to a project: is the team (the runner) checking in right now? `running` = the last check-in was `running` and is ≤ 45 s old. */
   teamStatus(): Promise<TeamStatus>;
