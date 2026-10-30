@@ -3108,6 +3108,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectId}/requirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description the requirements of Blueprint's current spec, with their text */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Requirements"];
+                    };
+                };
+                /** @description not_found · blueprint_project_not_found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description blueprint_unreachable */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/proposals/{id}/accept": {
         parameters: {
             query?: never;
@@ -3982,6 +4037,16 @@ export interface components {
             /** @enum {string} */
             status: "open" | "accepted" | "superseded";
             version: number;
+        };
+        Requirements: {
+            /** @description every `requirement` part of Blueprint's current spec, by key (numeric-aware: REQ-002 before REQ-010); empty = none */
+            requirements: {
+                key: string;
+                text: string;
+                title: string;
+            }[];
+            /** @description the spec revision the answer was read at */
+            revision: number;
         };
         Run: {
             endedAt: string | null;
