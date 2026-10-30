@@ -17,11 +17,11 @@ export default async function ChatPage({ params, searchParams }: { params: Promi
   const { answer } = await searchParams; // `ตอบเอง…` on the board arrives with `?answer=1`: the empty box is focused (D-105 P1, TASK-B-119 — no longer the question as a draft)
   const [project, messages, proposals, workers, chain, seq, team, hops] = await Promise.all([api.project(id), api.chat(id, { limit: 200 }), api.proposals(id), api.workers(), api.chain(id), lastSeq(api, id), api.teamStatus(), api.hops(id, { limit: 20 })]);
   if (!project) notFound();
-  // a proposed item's spec part, by key — one read per distinct (key, version) the items anchor on (v1.7), so a part no card holds yet has
-  // its name too; a part that cannot be read stays out and the item shows its key
-  const anchors = new Map(proposals.flatMap((p) => p.items.map((i) => [`${i.anchor.key}@${i.anchor.version}`, i.anchor] as const)));
+  // a proposed item's spec part, by key — one read per distinct key the items anchor on (v1.7; REQ-105: always the latest spec), so a part no card
+  // holds yet has its name too; a part that cannot be read stays out and the item shows its key
+  const keys = new Set(proposals.flatMap((p) => p.items.map((i) => i.anchor.key)));
   const parts: Record<string, PartRef> = {};
-  const read = await Promise.all([...anchors.values()].map(async (a) => [a.key, await api.part(id, a.key, a.version)] as const));
+  const read = await Promise.all([...keys].map(async (key) => [key, await api.part(id, key)] as const));
   for (const [key, ctx] of read) if (ctx) parts[key] = { kind: ctx.part.kind, title: ctx.part.title };
   return (
     <main>

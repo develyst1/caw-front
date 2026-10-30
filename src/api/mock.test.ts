@@ -26,8 +26,8 @@ describe("projects", () => {
     const [p, cards, hops] = [await summaryOf(api), await api.cards(PID), await api.hops(PID)];
     expect(p.cardsTotal).toBe(cards.length);
     expect(p.cardsDone).toBe(cards.filter((c) => c.status === "done").length);
-    // stuck = status stuck + open question cards + specChangedVersion set
-    expect(p.stuckCount).toBe(cards.filter((c) => c.status === "stuck" || (c.kind === "question" && c.answer === null) || c.specChangedVersion !== null).length);
+    // stuck = status stuck + open question cards (REQ-105 D7: a spec change is only a mark, no longer a stuck card)
+    expect(p.stuckCount).toBe(cards.filter((c) => c.status === "stuck" || (c.kind === "question" && c.answer === null)).length);
     expect(p.hopsUsed).toBe(hops.length);
   });
 
@@ -80,11 +80,11 @@ describe("cards", () => {
     }
   });
 
-  test("`workable` is the server's rule: a work card, todo|doing, every dependency done, no spec change", async () => {
+  test("`workable` is the server's rule: a work card, todo|doing, every dependency done, part still in the spec (REQ-105: a spec change no longer stops a card)", async () => {
     const cards = await createMockApi().cards(PID);
     const done = new Set(cards.filter((c) => c.status === "done").map((c) => c.id));
     for (const c of cards) {
-      const want = c.kind === "work" && (c.status === "todo" || c.status === "doing") && c.specChangedVersion === null && c.dependsOn.every((d) => done.has(d));
+      const want = c.kind === "work" && (c.status === "todo" || c.status === "doing") && !c.anchorRemoved && c.dependsOn.every((d) => done.has(d));
       expect([c.number, c.workable]).toEqual([c.number, want]);
     }
     expect(cards.some((c) => c.workable)).toBe(true);
@@ -128,16 +128,15 @@ describe("cards", () => {
     expect(await api.cardContext("nope")).toBeNull();
   });
 
-  test("part (v1.7): a part by key — its PartContext whether or not a card holds it; a key Blueprint does not have, or an unknown project, is null; a bad version is refused", async () => {
+  test("part (v1.7): a part by key — its PartContext whether or not a card holds it; a key Blueprint does not have, or an unknown project, is null; it is always the latest spec (REQ-105)", async () => {
     const api = createMockApi();
     const ctx = (await api.part(PID, "SCR-003"))!;
     expect([ctx.part.key, ctx.part.kind, ctx.part.title]).toEqual(["SCR-003", "screen", "หน้าอนุมัติคำขอ"]);
-    expect(ctx.version).toBe((await api.project(PID))!.latestSeenVersion); // default = the project's latestSeenVersion
-    expect((await api.part(PID, "SCR-003", 1))!.version).toBe(1);
+    const p = (await api.project(PID))!;
+    expect([ctx.revision, ctx.latestLabel]).toEqual([p.spec.revision, p.latestLabel]); // the latest spec, with the label it carries
     expect(ctx.neighbours.length).toBeGreaterThan(0);
     expect(await api.part(PID, "STEP-099")).toBeNull(); // the part that is gone
     expect(await api.part("nope", "SCR-003")).toBeNull();
-    for (const v of [0, -1, 1.5]) await expectRefusal(api.part(PID, "SCR-003", v), 400, "validation");
   });
 });
 
@@ -381,5 +380,47 @@ describe("POST /test-reset?codeMap=save (TASK-B-110)", () => {
       expect((await api.project(PID))!.codeMap).toBeNull(); // the refused calls changed nothing
       expect((await post("")).status).toBe(204);
     } finally { restore(); }
+  });
+});
+
+// REQ-105 (TASK-116): a version is a label; the spec is read at its latest; Blueprint may be unreachable; a card's part may be gone.
+describe("labels and the latest spec (REQ-105)", () => {
+  test("the project carries its latest label and how fresh the spec is; the seeded cards say where they were cut", async () => {
+    const api = createMockApi();
+    const p = (await api.project(PID))!;
+    expect(p.latestLabel).toEqual({ version: p.latestSeenVersion, label: expect.any(String) });
+    expect(p.spec).toEqual({ revision: expect.any(Number), reachable: true, lastPullAt: expect.any(String) });
+    const cards = await api.cards(PID);
+    const before = cards.filter((c) => c.anchor.version === 0);
+    expect(before.map((c) => [c.anchorLabel, c.anchorRemoved])).toEqual([[null, false]]); // exactly one card was cut before any label
+    expect(cards.filter((c) => c.anchor.version > 0).every((c) => typeof c.anchorLabel === "string" && !c.anchorRemoved)).toBe(true);
+    const ctx = (await api.cardContext(cards[0]!.id))!;
+    expect([ctx.specRead.fromCache, ctx.specRead.pinned, ctx.specRead.revision]).toEqual([false, false, p.spec.revision]);
+    expect([ctx.spec.revision, ctx.spec.latestLabel]).toEqual([p.spec.revision, p.latestLabel]);
+  });
+  test("state no-label: no label anywhere — the project and every card", async () => {
+    const api = createMockApi({ state: "no-label" });
+    const p = (await api.project(PID))!;
+    expect([p.latestLabel, p.version, p.latestSeenVersion]).toEqual([null, 0, 0]);
+    expect((await api.cards(PID)).every((c) => c.anchor.version === 0 && c.anchorLabel === null)).toBe(true);
+  });
+  test("state blueprint-down: the spec is not reachable and a context comes from the cache", async () => {
+    const api = createMockApi({ state: "blueprint-down" });
+    expect((await api.project(PID))!.spec.reachable).toBe(false);
+    expect((await api.cardContext((await api.cards(PID))[0]!.id))!.specRead.fromCache).toBe(true);
+  });
+  test("state anchor-removed (D12): the card is not workable and its context is null (the real answer is 404 anchor_removed); the others are unchanged", async () => {
+    const plain = (await createMockApi().cards(PID)).map((c) => [c.id, c.workable]);
+    const api = createMockApi({ state: "anchor-removed" });
+    const cards = await api.cards(PID);
+    const gone = cards.filter((c) => c.anchorRemoved);
+    expect(gone.map((c) => [c.number, c.workable])).toEqual([[9, false]]);
+    expect(await api.cardContext(gone[0]!.id)).toBeNull();
+    expect((await api.card(gone[0]!.id))!.anchorRemoved).toBe(true);
+    expect(cards.filter((c) => !c.anchorRemoved).map((c) => [c.id, c.workable])).toEqual(plain.filter(([i]) => i !== gone[0]!.id));
+  });
+  test("a spec change is only a mark: the card with specChangedVersion is still workable when nothing else stops it", async () => {
+    const cards = await createMockApi().cards(PID);
+    expect(cards.some((c) => c.specChangedVersion !== null && c.kind === "work" && (c.status === "todo" || c.status === "doing") && c.workable)).toBe(true);
   });
 });

@@ -7,7 +7,7 @@ const W = (n: number, name: string): Worker => ({ id: `w${n}`, name, role: "FE",
 const [pla, fern, bank, mint] = [W(1, "ปลา"), W(2, "ฝน"), W(3, "แบงค์"), W(4, "มิ้นท์")];
 const chain = (entry: string | null = "w1", members = [fern, pla, bank, mint]): Chain => ({ members, edges: [], entryWorkerId: entry });
 const card = (n: number, over: Partial<Card> = {}): Card => ({
-  id: `c${n}`, projectId: "p", number: n, kind: "work", title: `งาน ${n}`, todo: "", status: "todo", assigneeId: null, anchor: { key: "SCR-001", version: 1 },
+  id: `c${n}`, projectId: "p", number: n, kind: "work", title: `งาน ${n}`, todo: "", status: "todo", assigneeId: null, anchor: { key: "SCR-001", version: 1 }, anchorLabel: null, anchorRemoved: false,
   specChangedVersion: null, dependsOn: [], question: null, answer: null, workable: true, stoppedMidway: null, createdAt: "", updatedAt: "", ...over,
 });
 const hop = (n: number, workerId: string, cardId: string, endedAt: string | null): Hop => ({

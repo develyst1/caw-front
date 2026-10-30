@@ -189,12 +189,11 @@ describe("the chat and the proposals (SPEC-A-008 § v1.4)", () => {
 });
 
 describe("a spec part (SPEC-A-008 § v1.7)", () => {
-  const ctx = { projectId: "bp", version: 3, confirmedAt: "2026-10-12T20:00:00+07:00", part: { key: "SCR-003", kind: "screen", title: "หน้าอนุมัติคำขอ" }, neighbours: [], decisions: [], flows: [], questions: [] };
-  test("part: GET /parts/{key}, `version` in the query only when given, the PartContext as it came", async () => {
+  const ctx = { projectId: "bp", revision: 12, savedAt: "2026-10-12T20:00:00+07:00", latestLabel: { version: 3, label: "ฉบับร่างแรก" }, part: { key: "SCR-003", kind: "screen", title: "หน้าอนุมัติคำขอ" }, neighbours: [], decisions: [], flows: [], questions: [] };
+  test("part: GET /parts/{key} with no `version` in the query (REQ-105: always the latest spec), the PartContext as it came", async () => {
     const { api, log } = against(() => json(200, ctx));
     expect(await api.part("p1", "SCR-003")).toEqual(ctx as never);
-    expect(await api.part("p1", "SCR-003", 2)).toEqual(ctx as never);
-    expect(log.map((l) => [l.method, l.path, l.query, l.actor])).toEqual([["GET", "/v1/projects/p1/parts/SCR-003", "", null], ["GET", "/v1/projects/p1/parts/SCR-003", "?version=2", null]]);
+    expect(log.map((l) => [l.method, l.path, l.query, l.actor])).toEqual([["GET", "/v1/projects/p1/parts/SCR-003", "", null]]);
   });
   test("404 (part_not_found or an unknown project) → null; 502 blueprint_unreachable → null; an unreachable caw-back → null; another refusal is a CawError", async () => {
     for (const [status, code] of [[404, "part_not_found"], [404, "not_found"], [502, "blueprint_unreachable"]] as const) {
@@ -202,8 +201,8 @@ describe("a spec part (SPEC-A-008 § v1.7)", () => {
       expect(await api.part("p1", "STEP-099")).toBeNull();
     }
     expect(await createHttpApi({ baseUrl: "http://caw.test", fetch: async () => { throw new Error("down"); } }).part("p1", "SCR-003")).toBeNull();
-    const { api } = against(() => json(400, { error: { code: "validation", message: "version: an integer ≥ 1" } }));
-    const e = (await api.part("p1", "SCR-003", 0).then(() => null, (x: unknown) => x)) as CawError;
+    const { api } = against(() => json(400, { error: { code: "validation", message: "bad request" } })); // any other refusal stays an error
+    const e = (await api.part("p1", "SCR-003").then(() => null, (x: unknown) => x)) as CawError;
     expect([e.status, e.code]).toEqual([400, "validation"]);
   });
 });

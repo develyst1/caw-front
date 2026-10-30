@@ -14,7 +14,7 @@ import { lastSeq } from "@/lib/eventSeq";
 import { ThemeToggle } from "@/theme/ThemeToggle";
 import s from "@/components/projects.module.css";
 import { CawRoot } from "@/theme/CawRoot";
-import { live, mode, projectCard, redesign, section, startRefused } from "@/words";
+import { labelWords, live, mode, projectCard, redesign, section, startRefused } from "@/words";
 
 // Blueprint's own address, from the one place CAW builds Blueprint links (blueprint.ts) — no second copy of the URL
 const blueprintHome = new URL(blueprintPartHref("x", "x")).origin;
@@ -60,7 +60,7 @@ export default async function Home() {
                 <a className={s.project} href={`/p/${p.id}`} data-project>
                   <h2 className={s.name}>{p.name}</h2>
                   <div className={s.meta}>
-                    <span className={s.chip}>{projectCard.blueprintVersion(p.version)}</span>
+                    <span className={s.chip} data-label-tag>{p.latestLabel ? labelWords.tag(p.latestLabel.label) : labelWords.none}</span>
                     {/* P-3: the mode is news only while อัตโนมัติ is running (someone is working); the board says it otherwise */}
                     {p.mode === "dispatcher" && live_[p.id]?.working && <span className={`${s.chip} ${s.chipAuto}`} data-mode-chip>{mode.dispatcher}</span>}
                     {/* C2 (TASK-B-074): stuck = the board's stuck column (homeSummaries), the same number the board shows */}

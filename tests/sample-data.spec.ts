@@ -34,6 +34,6 @@ test("/start with a Blueprint project the mock cannot know says the mark sentenc
 });
 
 test("/start's other refusals are unchanged", async ({ page }) => {
-  await page.goto("/start?project=nope");
+  await page.goto("/start?version=3"); // REQ-105: no project = incomplete (a missing version no longer is)
   await expect(page.getByRole("alert").filter({ hasText: startRefused.incomplete })).toHaveCount(1);
 });

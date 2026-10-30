@@ -19,7 +19,7 @@ import { CrewStrip, type SeatView } from "@/components/CrewStrip";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
 import { group, kindGroup } from "@/theme/tokens";
-import { acceptAnswer, agreeStart, answerOwn, cardMark, live, chatWaits as waitsWords, distill, oneAnswer, teamDown as downWords, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
+import { acceptAnswer, agreeStart, answerOwn, cardMark, labelWords, live, chatWaits as waitsWords, distill, oneAnswer, teamDown as downWords, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
 
 export type PartRef = { kind: string; title: string };
 
@@ -74,9 +74,11 @@ function WorkCard({ card, worker, part, waiting, carry = null }: {
             <span className="name" data-name title={worker.name}>{worker.name}</span>
           </span>
         )}
-        {(card.specChangedVersion !== null || waiting || card.stoppedMidway) && (
+        {(card.specChangedVersion !== null || card.anchorRemoved || waiting || card.stoppedMidway) && (
           <span className="flex min-w-0 flex-wrap gap-1.5">
             {card.specChangedVersion !== null && <span className="inline-flex items-center gap-1 rounded-md bg-stuck-soft px-2 py-0.5 text-sm font-medium text-stuck"><RefreshCw className="size-3.5" aria-hidden />{cardMark.specChanged}</span>}
+            {/* REQ-105 Q4: the part is gone from the spec — one line here, cut with an ellipsis; the whole sentence is in its title and on the card page */}
+            {card.anchorRemoved && <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-stuck-soft px-2 py-0.5 text-sm font-medium text-stuck" title={labelWords.anchorRemoved} data-anchor-removed><CircleAlert className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{labelWords.anchorRemoved}</span></span>}
             {waiting && <span className="inline-flex items-center gap-1 rounded-md bg-now-soft px-2 py-0.5 text-sm font-medium text-now"><CircleHelp className="size-3.5" aria-hidden />{cardMark.waitingAnswer}</span>}
             {/* REQ-111: one line here, cut with an ellipsis when long; the whole sentence is in its title and on the card page */}
             {card.stoppedMidway && <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-stuck-soft px-2 py-0.5 text-sm font-medium text-stuck" title={cardMark.stoppedMidway(card.stoppedMidway.reason)} data-stopped-midway><CircleAlert className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{cardMark.stoppedMidway(card.stoppedMidway.reason)}</span></span>}

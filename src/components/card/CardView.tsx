@@ -9,7 +9,7 @@ import { CircleAlert, CircleHelp, RefreshCw } from "lucide-react";
 import type { Card, CardContext, Worker } from "@/api/caw";
 import {
   card as cardWord, cardMark, column, decisionsHeading, dependsOnHeading, handoffLine, linkKind, linkedWith, operatorName,
-  partKind, proposedAnswer, redesign, refusedHandoff, timelineHeading, todoHeading, toSpec, cardPage,
+  partKind, proposedAnswer, redesign, refusedHandoff, timelineHeading, todoHeading, toSpec, cardPage, labelWords,
 } from "@/words";
 import { Avatar, Person } from "@/components/Person";
 import { AnswerQuestion, CardControls, CommentBox } from "./CardActions";
@@ -18,11 +18,16 @@ import s from "./card.module.css";
 
 const when = (iso: string) => new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(iso));
 
+/** REQ-105 D12: a card whose part is gone from the spec has no context — `spec` and `specRead` are null and the spec section says so in words. */
+export type CardViewCtx = Omit<CardContext, "spec" | "specRead"> & { spec: CardContext["spec"] | null; specRead: CardContext["specRead"] | null };
+
 /** `running`: who runs a hop on this card right now (TASK-B-088) — shown with the same "now" mark as the roster and the board. */
 export function CardView({ projectId, ctx, workers, members, deps, blueprintHref, openQuestions, running = null }: {
-  projectId: string; ctx: CardContext; workers: Worker[]; members: Worker[]; deps: Card[]; blueprintHref: string; openQuestions: string[]; running?: Worker | null;
+  projectId: string; ctx: CardViewCtx; workers: Worker[]; members: Worker[]; deps: Card[]; blueprintHref: string; openQuestions: string[]; running?: Worker | null;
 }) {
-  const { card, spec, notes, decisions } = ctx;
+  const { card, spec, specRead, notes, decisions } = ctx;
+  // REQ-105: where the card was cut — the label's words, else its number, else "before any label" (`anchorLabel`, then `anchor.version` when > 0)
+  const cutAt = card.anchorLabel ?? (card.anchor.version > 0 ? String(card.anchor.version) : null);
   const byId = new Map(workers.map((w) => [w.id, w]));
   const nameOf = (actorOrId: string | null) => {
     if (!actorOrId || actorOrId === "operator") return operatorName;
@@ -33,7 +38,6 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
   // the worker behind a timeline actor (`worker:<id>`); the operator has no face here — the name `คุณ` says it
   const actorWorker = (actor: string | null) => (actor?.startsWith("worker:") ? byId.get(actor.slice(7)) : undefined);
   const waiting = card.dependsOn.some((d) => openQuestions.includes(d));
-  const part = spec.part;
   const blocked = deps.some((d) => d.status !== "done"); // the back end refuses กำลังทำ until every dependency is done
 
   return (
@@ -59,16 +63,24 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
         {/* where it sits in the spec — first in reading order, and the left column at 1440 */}
         <section className={s.spec} aria-labelledby="where">
           <h3 id="where" className={s.h2}>{cardWord.whereInSpec}</h3>
-          <div className={s.partHead}>
-            <PartIcon kind={part.kind} size="lg" />
-            <div className={s.partText}>
-              <span className={s.kind}>{partKind[part.kind] ?? part.kind}</span>
-              <span className={s.partTitle}>{part.title}</span>
-            </div>
-          </div>
-          <a className={s.toSpec} href={blueprintHref} data-blueprint>{toSpec}</a>
+          {spec ? (
+            <>
+              <div className={s.partHead}>
+                <PartIcon kind={spec.part.kind} size="lg" />
+                <div className={s.partText}>
+                  <span className={s.kind}>{partKind[spec.part.kind] ?? spec.part.kind}</span>
+                  <span className={s.partTitle}>{spec.part.title}</span>
+                </div>
+              </div>
+              <a className={s.toSpec} href={blueprintHref} data-blueprint>{toSpec}</a>
+            </>
+          ) : (
+            <p className={s.markStopped} role="status" data-anchor-removed><CircleAlert aria-hidden className="size-3.5" />{labelWords.anchorRemoved}</p>
+          )}
+          <p className={s.cut} data-cut-label>{cutAt === null ? labelWords.cutBefore : labelWords.cutAt(cutAt)}</p>
+          {specRead?.fromCache && <p className={s.markStopped} role="status" data-blueprint-unreachable>{labelWords.blueprintUnreachable}</p>}
 
-          {spec.neighbours.length > 0 && (
+          {spec && spec.neighbours.length > 0 && (
             <div className={s.block}>
               <h4 className={s.h3}>{linkedWith}</h4>
               <ul className={s.links}>
@@ -82,7 +94,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
             </div>
           )}
 
-          {spec.decisions.length > 0 && (
+          {spec && spec.decisions.length > 0 && (
             <div className={s.block}>
               <h4 className={s.h3}>{partKind.decision}</h4>
               <ul className={s.links}>{spec.decisions.map((d) => <li key={d.key}><Part kind={d.kind} title={d.title} /></li>)}</ul>
@@ -133,7 +145,8 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
             </section>
           )}
 
-          <section className={s.panel} aria-labelledby="timeline">
+          {/* no context (the part is gone) = no timeline: the notes come only with the context, so an empty list here would say "no activity" falsely */}
+          {spec && <section className={s.panel} aria-labelledby="timeline">
             <h3 id="timeline" className={s.h2}>{timelineHeading}</h3>
             {notes.length === 0 && <p className={s.none} data-no-activity>{cardPage.noActivity}</p>}
             {notes.length > 0 && <ol className={s.timeline}>
@@ -151,7 +164,7 @@ export function CardView({ projectId, ctx, workers, members, deps, blueprintHref
               ))}
             </ol>}
             <CommentBox projectId={projectId} cardId={card.id} />
-          </section>
+          </section>}
         </div>
       </div>
     </div>

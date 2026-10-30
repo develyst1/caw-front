@@ -1,6 +1,6 @@
 // REQ-011's wording table, row by row: each word is here, verbatim.
 import { describe, expect, test } from "bun:test";
-import { agreeStart, chatRefused, redesign, blueprintBuild, budget, card, cardMark, chatWaits, codeMapWords, distill, folderKind, oneAnswer, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, screen, section, startRefused, stopReason, workspace } from "./words";
+import { agreeStart, chatRefused, redesign, blueprintBuild, budget, card, cardMark, chatWaits, codeMapWords, distill, folderKind, labelWords, oneAnswer, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, screen, section, startRefused, stopReason, workspace } from "./words";
 
 describe("REQ-011 wording table", () => {
   test("columns, in the order they are drawn", () => {
@@ -39,14 +39,20 @@ describe("REQ-011 wording table", () => {
 
   // the projects list and start page words (approved by the PM, TASK-B-040 Q1) — pinned so a change is a decision, not an accident
   test("the projects list's words", () => {
-    expect([projectCard.blueprintVersion(3), projectCard.done(3, 12), projectCard.stuck(4)]).toEqual(["spec เวอร์ชัน 3", "เสร็จ 3 จาก 12", "ติดอยู่ 4"]);
+    expect([projectCard.done(3, 12), projectCard.stuck(4)]).toEqual(["เสร็จ 3 จาก 12", "ติดอยู่ 4"]);
     expect(projectCard.none).toBe("ยังไม่มีโปรเจกต์ — เริ่มจากปุ่ม ส่งไปสร้างที่ CAW ในหน้าพร้อมสร้างของ Blueprint");
   });
   test("the start page's refusals", () => {
     expect(startRefused).toEqual({
-      blueprint_project_not_found: "ไม่พบโปรเจกต์นี้ใน Blueprint", version_not_confirmed: "เวอร์ชันนี้ยังไม่ได้ยืนยันใน Blueprint",
-      unreachable: "ต่อระบบไม่ได้ตอนนี้", incomplete: "ลิงก์นี้ไม่ครบ ต้องมีโปรเจกต์และเวอร์ชัน", other: "เริ่มโปรเจกต์ไม่สำเร็จ",
+      blueprint_project_not_found: "ไม่พบโปรเจกต์นี้ใน Blueprint",
+      unreachable: "ต่อระบบไม่ได้ตอนนี้", incomplete: "ลิงก์นี้ไม่ครบ ต้องมีโปรเจกต์", other: "เริ่มโปรเจกต์ไม่สำเร็จ", // REQ-105 Q3: no version in the link, none refused
     });
+  });
+  test("REQ-105: the label words (PM, REQ-105 § User-facing wording and Q4) — pinned", () => {
+    expect([labelWords.tag("ฉบับร่างแรก"), labelWords.none, labelWords.cutAt("ฉบับร่างแรก"), labelWords.cutBefore]).toEqual(["ป้าย ฉบับร่างแรก", "ยังไม่มีป้าย", "ตัดงานที่ป้าย ฉบับร่างแรก", "ตัดงานก่อนมีป้าย"]);
+    expect(labelWords.blueprintUnreachable).toBe("ติดต่อ Blueprint ไม่ได้ตอนนี้ — ทำงานต่อจาก spec ล่าสุดที่อ่านได้");
+    expect(labelWords.anchorRemoved).toBe("ส่วนนี้ถูกลบออกจาก spec แล้ว — งานนี้ทำต่อไม่ได้จนกว่าจะย้ายไปส่วนอื่นหรือปิดงาน");
+    expect(chatRefused.anchor_not_in_version).toBe("บางงานในข้อเสนอนี้ไม่มีใน spec แล้ว — เริ่มงานไม่ได้");
   });
 
   // the runs screen's words (approved by the PM, TASK-B-043 Q1) — pinned

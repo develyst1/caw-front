@@ -1,5 +1,6 @@
-// เริ่มโปรเจกต์ (REQ-011 R1): the page Blueprint's "ส่งไปสร้างที่ CAW" opens with `?project=<Blueprint project id>&version=<n>`. It asks the
-// back end to make the project and goes to its board; if one already exists for that version (409 already_exists) it goes to that one.
+// เริ่มโปรเจกต์ (REQ-011 R1): the page Blueprint's "ส่งไปสร้างที่ CAW" opens with `?project=<Blueprint project id>` (REQ-105: `&version=<n>` may come too and is
+// passed on, but the project alone is enough — CAW follows the latest spec). It asks the back end to make the project and goes to its board; if one already
+// exists (409 already_exists) it goes to that one.
 // Anything else is said in words with the way back. The POST is idempotent, so a reload or a prefetch does no harm. The header is the home's shell
 // (S-1, P-4, TASK-B-100): no CAW mark, and no heading of its own — this page is not the projects list; the button says where it goes.
 import { redirect } from "next/navigation";
@@ -17,17 +18,18 @@ type Refusal = keyof typeof startRefused;
 const refusalOf = (e: unknown): Refusal => {
   if (!isCawError(e)) throw e; // a bug, not a refusal: let Next show it
   if (e.code === "unreachable" || e.status >= 500) return "unreachable";
-  return e.code === "blueprint_project_not_found" || e.code === "version_not_confirmed" ? e.code : "other";
+  return e.code === "blueprint_project_not_found" ? e.code : "other";
 };
 
 export default async function Start({ searchParams }: { searchParams: Promise<{ project?: string; version?: string }> }) {
   const { project, version } = await searchParams;
   const n = Number(version);
+  const label = Number.isInteger(n) && n >= 1 ? n : undefined; // only a whole label number is passed on; anything else is left out (the back end ignores it either way)
   let target: string | null = null;
   let refused: Refusal | null = null;
-  if (!project || !Number.isInteger(n) || n < 1) refused = "incomplete";
+  if (!project) refused = "incomplete";
   else {
-    try { target = (await api.createProject({ blueprintProjectId: project, version: n })).id; }
+    try { target = (await api.createProject(label === undefined ? { blueprintProjectId: project } : { blueprintProjectId: project, version: label })).id; }
     catch (e) {
       if (isCawError(e) && e.code === "already_exists" && typeof (e.details as { id?: unknown } | undefined)?.id === "string") target = (e.details as { id: string }).id;
       else refused = refusalOf(e);

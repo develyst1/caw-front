@@ -4,7 +4,7 @@
 // seed (tests/fixtures.ts), so none has to put anything back.
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { acceptAnswer, assigneeLabel, card as cardWord, cardMark, column, commentPlaceholder, distill, linkedWith, section, send, statusLabel, timelineHeading, toSpec } from "../src/words";
+import { acceptAnswer, assigneeLabel, card as cardWord, cardMark, column, labelWords, commentPlaceholder, distill, linkedWith, section, send, statusLabel, timelineHeading, toSpec } from "../src/words";
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 
@@ -144,4 +144,29 @@ test("a question card's own answer is sent with ตอบ — not the comment bo
   await page.locator('[data-ask="card"] [data-question]').first().click();
   await expect(page.getByRole("button", { name: distill.answer, exact: true })).toHaveCount(1);
   await expect(page.getByRole("button", { name: send, exact: true })).toHaveCount(1); // the comment box's
+});
+
+// ---- REQ-105 (TASK-116): where the card was cut, and a card whose part has gone from the spec ----
+test("REQ-105: a card says where it was cut — at a label, or before any label", async ({ page }) => {
+  await page.goto(BOARD);
+  await page.locator("[data-card]", { hasText: "ทำ API ค้นหาห้องว่าง" }).first().click();
+  await expect(page.locator("main [data-cut-label]")).toHaveText(labelWords.cutAt("ฉบับร่างแรก"));
+  await page.goBack();
+  await page.locator("[data-card]", { hasText: "ตั้งข้อมูล Room" }).first().click(); // the one seeded card cut before any label
+  await expect(page.locator("main [data-cut-label]")).toHaveText(labelWords.cutBefore);
+});
+
+test.describe("the card's part is gone from the spec (REQ-105 Q4)", () => {
+  test.use({ seedState: "anchor-removed" });
+  test("the board still loads and marks the card; the card page says so in place of the context, whole", async ({ page }) => {
+    await page.goto(BOARD);
+    const gone = page.locator("[data-card]", { has: page.locator("[data-anchor-removed]") });
+    await expect(gone).toHaveCount(1);
+    await expect(gone.locator("[data-anchor-removed]")).toHaveAttribute("title", labelWords.anchorRemoved);
+    await expect(page.locator("[data-card]")).toHaveCount(12); // every other card is drawn too
+    await gone.click();
+    await expect(page).toHaveURL(new RegExp(`/p/${MOCK_PROJECT_ID}/c/`));
+    await expect(page.locator("main [data-anchor-removed]")).toHaveText(labelWords.anchorRemoved);
+    await expect(page.locator("main [data-blueprint]")).toHaveCount(0); // no part to open in Blueprint
+  });
 });

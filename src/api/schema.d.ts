@@ -1144,7 +1144,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            /** @description Blueprint's notice */
+            /** @description Blueprint's notice: version.confirmed, spec.changed, or any other event (accepted, ignored) */
             requestBody: {
                 content: {
                     "application/json": {
@@ -1153,11 +1153,20 @@ export interface paths {
                         event: "version.confirmed";
                         projectId: string;
                         version: number;
+                    } | {
+                        at: string;
+                        /** @enum {string} */
+                        event: "spec.changed";
+                        projectId: string;
+                        revision: number;
+                    } | {
+                        event: string;
+                        projectId: string;
                     };
                 };
             };
             responses: {
-                /** @description accepted — the pull for that Blueprint project runs now, in the background */
+                /** @description accepted — for version.confirmed and spec.changed the pull for that Blueprint project runs now, in the background; any other event does nothing */
                 202: {
                     headers: {
                         [name: string]: unknown;
@@ -1259,12 +1268,12 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            /** @description a confirmed Blueprint version — one CAW project per Blueprint project: 409 already_exists { id } when one exists, at any version (the project follows newer versions itself) */
+            /** @description a Blueprint project — one CAW project per Blueprint project: 409 already_exists { id } when one exists (the project follows the spec itself) */
             requestBody: {
                 content: {
                     "application/json": {
                         blueprintProjectId: string;
-                        version: number;
+                        version?: number;
                     };
                 };
             };
@@ -1522,13 +1531,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            /** @description a card, anchored to a part of a confirmed Blueprint version */
+            /** @description a card, anchored to a part of Blueprint's current spec */
             requestBody: {
                 content: {
                     "application/json": {
                         anchor?: {
                             key: string;
-                            version: number;
+                            version?: number;
                         };
                         assigneeId?: string;
                         dependsOn?: string[];
@@ -2600,7 +2609,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    version?: number;
+                    version?: number | null;
                 };
                 header?: never;
                 path: {
@@ -2611,7 +2620,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description the part at that version */
+                /** @description the part in the current spec */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2716,7 +2725,7 @@ export interface paths {
                         items: {
                             anchor: {
                                 key: string;
-                                version: number;
+                                version?: number;
                             };
                             /**
                              * @description indexes into the proposal's items
@@ -3634,8 +3643,13 @@ export interface components {
         Card: {
             anchor: {
                 key: string;
+                /** @description from REQ-105 on: the LABEL number when the card was cut (0 = no label then) */
                 version: number;
             };
+            /** @description the label's words when the card was cut (REQ-105); null = none */
+            anchorLabel: string | null;
+            /** @description true while the card's anchor part is not in Blueprint's spec (REQ-105 D12): the card is not workable and its context answers 404 anchor_removed */
+            anchorRemoved: boolean;
             answer: string | null;
             assigneeId: string | null;
             createdAt: string;
@@ -3675,8 +3689,19 @@ export interface components {
                 question: string;
             }[];
             notes: components["schemas"]["Note"][];
-            /** @description Blueprint's PartContext, exactly as its seam returned it */
+            /** @description Blueprint's v2 part context (SPEC-106 route 2: `revision`, `savedAt`, `latestLabel`, …), exactly as returned — the text the hop was pinned with when `specRead.pinned` */
             spec?: unknown;
+            /** @description where `spec` came from (REQ-105) */
+            specRead: {
+                /** @description Blueprint could not be reached and the last body read was served */
+                fromCache: boolean;
+                /** @description this is the text the calling hop was given at its start */
+                pinned: boolean;
+                /** @description when CAW read it */
+                readAt: string;
+                /** @description the spec revision `spec` was read at */
+                revision: number;
+            };
         };
         Chain: {
             edges: {
@@ -3812,10 +3837,26 @@ export interface components {
             hopBudget: number;
             hopsUsed: number;
             id: string;
+            /** @description the latest label Blueprint showed: its number and words; null = none (REQ-105) */
+            latestLabel: {
+                label: string;
+                version: number;
+            } | null;
+            /** @description the latest label number seen (0 = none) */
             latestSeenVersion: number;
             /** @enum {string} */
             mode: "manual" | "dispatcher";
             name: string;
+            /** @description REQ-105: how up to date CAW's view of the spec is */
+            spec: {
+                /** @description when a pull last got through; null = never */
+                lastPullAt: string | null;
+                /** @description false when the last pull could not reach Blueprint; it catches up on its own when Blueprint is back */
+                reachable: boolean;
+                /** @description the spec revision the follower has pulled to (0 = nothing pulled yet) */
+                revision: number;
+            };
+            /** @description from REQ-105 on: the LABEL number when the project started (0 = no label then) */
             version: number;
             workspace: {
                 /** @description ⊆ roots; workers read every root and write only the others (D-100) */

@@ -138,7 +138,7 @@ export const chat = {
 /** A chat write the back end refused — REQ-013 (PM 2026-10-14); `other` = cardRefused.other. */
 export const chatRefused: Record<string, string> = {
   not_open: "ข้อเสนอนี้ปิดไปแล้ว",
-  anchor_not_in_version: "บางงานในข้อเสนอนี้ไม่มีใน spec เวอร์ชันนี้แล้ว — เริ่มงานไม่ได้",  // D-110 (was — สร้างการ์ดไม่ได้; follows D-105's rename)
+  anchor_not_in_version: "บางงานในข้อเสนอนี้ไม่มีใน spec แล้ว — เริ่มงานไม่ได้",  // D-110 (was — สร้างการ์ดไม่ได้; follows D-105's rename)
   validation: "ข้อความยาวเกินไป หรือยังว่างอยู่",
   unreachable: "ต่อระบบไม่ได้ตอนนี้",
   other: "ทำไม่สำเร็จ ลองอีกครั้ง",
@@ -153,10 +153,20 @@ export const workspace = {
   none: "ยังไม่ได้กำหนดโฟลเดอร์ — ทีมจะยังเริ่มทำงานไม่ได้",
 } as const;
 
+// ---- REQ-105 (PM, 2026-10-29): a version is a label now — a tag on the project and on the card; Blueprint's state is said in words ----
+/** The project's latest label (header, projects list) and the card's cut point (REQ-105 § User-facing wording; Q3's four are `startRefused.incomplete`, `chatRefused.anchor_not_in_version` and the chip). */
+export const labelWords = {
+  tag: (label: string) => `ป้าย ${label}`,
+  none: "ยังไม่มีป้าย",
+  cutAt: (label: string) => `ตัดงานที่ป้าย ${label}`,
+  cutBefore: "ตัดงานก่อนมีป้าย",
+  blueprintUnreachable: "ติดต่อ Blueprint ไม่ได้ตอนนี้ — ทำงานต่อจาก spec ล่าสุดที่อ่านได้",
+  anchorRemoved: "ส่วนนี้ถูกลบออกจาก spec แล้ว — งานนี้ทำต่อไม่ได้จนกว่าจะย้ายไปส่วนอื่นหรือปิดงาน", // REQ-105 Q4, PM 2026-10-29
+} as const;
+
 // ---- the projects list and the start page (TASK-B-040 Q1: the PM approved them 2026-10-13; the card's version line is hers) ----
 /** The projects list. `เสร็จ` and `ติดอยู่` are the table's column words. */
 export const projectCard = {
-  blueprintVersion: (n: number) => `spec เวอร์ชัน ${n}`,
   done: (done: number, total: number) => `เสร็จ ${done} จาก ${total}`,
   stuck: (n: number) => `ติดอยู่ ${n}`,
   none: "ยังไม่มีโปรเจกต์ — เริ่มจากปุ่ม ส่งไปสร้างที่ CAW ในหน้าพร้อมสร้างของ Blueprint",
@@ -255,9 +265,8 @@ export const sampleDataHint = "ใช้ข้อมูลจริง: bun run 
 /** The start-project page, when it cannot start. `apiDown` is Blueprint's own sentence, so the two apps say it the same way. */
 export const startRefused = {
   blueprint_project_not_found: "ไม่พบโปรเจกต์นี้ใน Blueprint",
-  version_not_confirmed: "เวอร์ชันนี้ยังไม่ได้ยืนยันใน Blueprint",
   unreachable: "ต่อระบบไม่ได้ตอนนี้",
-  incomplete: "ลิงก์นี้ไม่ครบ ต้องมีโปรเจกต์และเวอร์ชัน",
+  incomplete: "ลิงก์นี้ไม่ครบ ต้องมีโปรเจกต์",
   other: "เริ่มโปรเจกต์ไม่สำเร็จ",
 } as const;
 

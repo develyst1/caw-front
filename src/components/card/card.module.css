@@ -14,6 +14,7 @@
 /* REQ-111: the whole sentence, wrapping inside the page's width (the board's chip cuts it on one line; here it is shown whole) */
 .markStopped { display: inline-flex; align-items: flex-start; gap: 4px; max-width: 100%; min-height: 26px; padding: 2px 8px; border-radius: var(--caw-r-tag); font-size: 14px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; background: var(--caw-stuckSoft); color: var(--caw-stuck); }
 .markStopped svg { flex: none; margin-top: 3px; }
+.cut { margin: 0; color: var(--caw-ink2); font-size: 14px; } /* REQ-105: where the card was cut — plain text under the part */
 .now { display: inline-flex; align-items: center; gap: 8px; color: var(--caw-blue); font-size: 14px; font-weight: 600; }
 .none { margin: 0; color: var(--caw-ink2); font-size: 15px; }
 .worker { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--caw-ink2); }

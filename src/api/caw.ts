@@ -20,8 +20,10 @@ export interface Project {
   id: string;
   name: string;                  // Blueprint's project name at creation, for display
   blueprintProjectId: string;
-  version: number;               // the confirmed Blueprint version it was made from
-  latestSeenVersion: number;
+  version: number;               // the LABEL number when the project started (0 = no label then) — REQ-105
+  latestSeenVersion: number;     // the latest label number seen (0 = none)
+  latestLabel: { version: number; label: string } | null; // REQ-105: the latest label's number and words; null = none yet
+  spec: { revision: number; reachable: boolean; lastPullAt: string | null }; // REQ-105: how up to date CAW's view of the spec is
   mode: Mode;
   hopBudget: number;
   hopsUsed: number;
@@ -64,7 +66,9 @@ export interface Card {
   todo: string;                   // what to do
   status: CardStatus;
   assigneeId: string | null;      // a question card's assignee is null = the operator
-  anchor: { key: string; version: number }; // the Blueprint part it is about, at the version it was cut from
+  anchor: { key: string; version: number }; // the Blueprint part it is about; `version` = the LABEL number when the card was cut (0 = no label then)
+  anchorLabel: string | null;               // REQ-105: that label's words; null = none
+  anchorRemoved: boolean;                   // REQ-105 D12: the part is no longer in the spec — the card is not workable and its context answers 404 `anchor_removed`
   specChangedVersion: number | null;        // set when that part changed in a newer version
   dependsOn: string[];            // card ids
   question: null | { text: string; proposedDefault: string; cases: string[] }; // for `kind: "question"`
@@ -86,11 +90,12 @@ export interface Note {
   at: string;
 }
 
-/** Blueprint's `PartContext`, as caw-back returns it inside `CardContext.spec` — untouched (copied from blueprint-back's OpenAPI). */
+/** Blueprint's v2 `PartContext` (SPEC-106 route 2), as caw-back returns it inside `CardContext.spec` — untouched. REQ-105: `revision`, `savedAt` and `latestLabel` replace `version`, `confirmedAt`. */
 export interface PartContext {
   projectId: string;
-  version: number;
-  confirmedAt: string;
+  revision: number;
+  savedAt: string | null;
+  latestLabel: { version: number; label: string } | null;
   part: { key: string; kind: string; title: string; body: Record<string, unknown>; origin: { stamp: string; date: string; channel?: string; note?: string; sourceId?: string }; createdIn?: string };
   neighbours: { direction: "out" | "in"; linkKind: string; label: string | null; position: number | null; part: { key: string; kind: string; title: string } }[];
   decisions: PartContext["part"][];
@@ -101,6 +106,7 @@ export interface PartContext {
 export interface CardContext {
   card: Card;
   spec: PartContext;
+  specRead: { revision: number; readAt: string; fromCache: boolean; pinned: boolean }; // REQ-105: where `spec` came from; `fromCache` = Blueprint could not be reached
   notes: Note[];                  // oldest first
   decisions: { cardId: string; number: number; question: string; answer: string }[]; // answered question cards this card depends on
 }
@@ -182,7 +188,7 @@ export interface ChatMessage {
 export interface ProposalItem {
   title: string;
   todo: string;
-  anchor: { key: string; version: number };
+  anchor: { key: string; version?: number }; // REQ-105: `version` is optional and ignored by the back end
   workerId: string;
   dependsOn: number[];
   hops: number;                    // ≥ 1: what the item is expected to cost
@@ -220,10 +226,9 @@ export interface CawApi {
   cards(projectId: string, query?: { assigneeId?: string; status?: CardStatus; workable?: boolean }): Promise<Card[]>; // GET …/cards
   card(cardId: string): Promise<Card | null>;                                   // GET /v1/cards/{cardId}
   cardContext(cardId: string): Promise<CardContext | null>;                     // GET /v1/cards/{cardId}/context
-  /** GET /v1/projects/{id}/parts/{key}?version= (v1.7) — a spec part by key, whether or not a card holds it. `version` defaults to the project's
-   *  `latestSeenVersion`; 400 on a version that is not an integer ≥ 1. `null` when the project or the part is not there — and, over http, when
-   *  Blueprint cannot be reached (the caller draws the key instead). */
-  part(projectId: string, key: string, version?: number): Promise<PartContext | null>;
+  /** GET /v1/projects/{id}/parts/{key} (v1.7) — a spec part by key, whether or not a card holds it; always the latest spec (REQ-105 D4). `null` when the
+   *  project or the part is not there — and, over http, when Blueprint cannot be reached (the caller draws the key instead). */
+  part(projectId: string, key: string): Promise<PartContext | null>;
   workers(): Promise<Worker[]>;                                                 // GET /v1/workers (global)
   chain(projectId: string): Promise<Chain | null>;                              // GET /v1/projects/{id}/chain
   hops(projectId: string, query?: { limit?: number; runId?: string }): Promise<Hop[]>;  // GET …/hops (newest first)
@@ -240,8 +245,9 @@ export interface CawApi {
   startHop(projectId: string, cardId: string, workerId: string): Promise<Hop>;
 
   // ---- the operator's other writes (SPEC-A-008 § API v1; every one carries `X-CAW-Actor: operator` in the http implementation) ----
-  /** POST /v1/projects — 201, or 409 `already_exists` (`details.id` = the existing project — v1.15: for the same Blueprint project at ANY version), 404 `blueprint_project_not_found`, 409 `version_not_confirmed`, 502 `blueprint_unreachable`. */
-  createProject(input: { blueprintProjectId: string; version: number }): Promise<Project>;
+  /** POST /v1/projects — 201, or 409 `already_exists` (`details.id` = the existing project — v1.15: for the same Blueprint project at ANY version), 404 `blueprint_project_not_found`, 502 `blueprint_unreachable`.
+   *  REQ-105: `version` is optional and ignored by the back end; a project starts with no label too. */
+  createProject(input: { blueprintProjectId: string; version?: number }): Promise<Project>;
   /** POST /v1/cards/{id}/comments */
   comment(cardId: string, text: string): Promise<Note>;
   /** PATCH /v1/cards/{id}/status — 409 `waiting_on_question` (to `doing` while a dependency is open). */

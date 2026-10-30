@@ -1,16 +1,16 @@
 // The projects list and the start-project page (TASK-B-040, REQ-011 R1), on the mock (each test starts from its seed).
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { distill, mode, projectCard, sampleData, section, startRefused } from "../src/words";
+import { distill, labelWords, mode, projectCard, sampleData, section, startRefused } from "../src/words";
 
 const BP = "11111111-2222-4333-8444-555555555555"; // the one Blueprint project the mock knows
 
-test("/ lists the project: name, Blueprint version, cards done of all, stuck — and the card opens its board", async ({ page }) => {
+test("/ lists the project: name, label tag, cards done of all, stuck — and the card opens its board", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: section.projects })).toBeVisible();
   const card = page.locator("ul a").first();
   await expect(card.getByRole("heading", { level: 2, name: "จองห้องประชุม" })).toBeVisible();
-  await expect(card).toContainText(projectCard.blueprintVersion(3));
+  await expect(card).toContainText(labelWords.tag("ฉบับตรวจรอบแรก")); // REQ-105: the latest label, not "spec เวอร์ชัน n"
   await expect(card).not.toContainText(mode.manual); // P-3 (TASK-B-100): the mode chip shows only while อัตโนมัติ is running
   await expect(card).toContainText(projectCard.done(3, 12));
   // C2 (TASK-B-074): the home's stuck number is the board's stuck column (was the core's stuckCount, 4) — the same-number check is in project-screen.spec
@@ -52,13 +52,11 @@ test("/start for a Blueprint version that already has a project goes to that pro
   await expect(page).toHaveURL(`/p/${MOCK_PROJECT_ID}`);
 });
 
-test("/start says why it cannot start, in words, with the way back — unknown Blueprint project, unconfirmed version, incomplete link", async ({ page }) => {
+test("/start says why it cannot start, in words, with the way back — unknown Blueprint project, incomplete link (no project)", async ({ page }) => {
   const cases: [string, string][] = [
     ["/start?project=nope&version=1", sampleData], // D-058: on sample data the mock cannot know real Blueprint projects
-    [`/start?project=${BP}&version=99`, startRefused.version_not_confirmed],
-    [`/start?project=${BP}`, startRefused.incomplete],
-    ["/start?version=3", startRefused.incomplete],
-    [`/start?project=${BP}&version=abc`, startRefused.incomplete],
+    ["/start?version=3", startRefused.incomplete], // REQ-105: only a missing project is incomplete now
+    ["/start", startRefused.incomplete],
   ];
   for (const [url, words] of cases) {
     await page.goto(url);
@@ -78,4 +76,42 @@ test("/start for ANOTHER version of a Blueprint project that already has a proje
   await expect(page).toHaveURL(`/p/${MOCK_PROJECT_ID}`);
   await page.goto("/");
   await expect(page.locator("ul a")).toHaveCount(1);
+});
+
+// ---- REQ-105 (TASK-116): the label is a tag; a project starts without a version; Blueprint may be unreachable ----
+test("REQ-105: /start works with the Blueprint project alone, and with a version that was never a label (no version_not_confirmed)", async ({ page }) => {
+  for (const url of [`/start?project=${BP}`, `/start?project=${BP}&version=99`, `/start?project=${BP}&version=abc`]) {
+    await page.goto(url);
+    await expect(page, url).toHaveURL(`/p/${MOCK_PROJECT_ID}`); // the project exists already (409 already_exists) → its board
+  }
+});
+
+test("REQ-105: the project header and the projects list show the latest label as `ป้าย {label}`", async ({ page }) => {
+  await page.goto(`/p/${MOCK_PROJECT_ID}`);
+  await expect(page.locator("header [data-label-tag]")).toHaveText(labelWords.tag("ฉบับตรวจรอบแรก"));
+  await expect(page.locator("[data-blueprint-unreachable]")).toHaveCount(0);
+  await page.goto("/");
+  await expect(page.locator("a[data-project] [data-label-tag]")).toHaveText(labelWords.tag("ฉบับตรวจรอบแรก"));
+});
+
+test.describe("no label yet", () => {
+  test.use({ seedState: "no-label" });
+  test("the header and the list say ยังไม่มีป้าย", async ({ page }) => {
+    await page.goto(`/p/${MOCK_PROJECT_ID}`);
+    await expect(page.locator("header [data-label-tag]")).toHaveText(labelWords.none);
+    await page.goto("/");
+    await expect(page.locator("a[data-project] [data-label-tag]")).toHaveText(labelWords.none);
+  });
+});
+
+test.describe("Blueprint unreachable", () => {
+  test.use({ seedState: "blueprint-down" });
+  test("the project says it works from the last spec read — on the board and on a card", async ({ page }) => {
+    await page.goto(`/p/${MOCK_PROJECT_ID}`);
+    await expect(page.locator("[data-blueprint-unreachable]")).toHaveText(labelWords.blueprintUnreachable);
+    await page.locator("[data-card]").first().click();
+    await expect(page).toHaveURL(new RegExp(`/p/${MOCK_PROJECT_ID}/c/`));
+    await expect(page.locator("[data-blueprint-unreachable]")).toHaveCount(2); // the project's line, and the card's own (its context came from the cache)
+    await expect(page.locator("main [data-blueprint-unreachable]")).toHaveText(labelWords.blueprintUnreachable);
+  });
 });

@@ -8,11 +8,15 @@
 import { STARTING_FACES } from "@/lib/faces"; // the one list of faces: the seed's starting-team workers carry the approved ones (TASK-B-072)
 import {
   CawError, type Avatar, type Card, type CardContext, type CardStatus, type CawApi, type CodeMap, type Chain, type CawEvent, type ChatMessage, type Effort, type Hop, type HopOutcome, type HopOutputEntry, type Mode,
-  type ModelName, type Note, type PartContext, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker, type WorkerRole,
+  type ModelName, type Note, type PartContext, type Project, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker, type WorkerRole,
 } from "./caw";
 
-const BLUEPRINT_VERSION = 3;        // the confirmed version the project was made from
-const BLUEPRINT_LATEST = 4;         // the newest version CAW has seen (two cards' parts changed in it)
+const BLUEPRINT_VERSION = 3;        // the LABEL number the project was made at (REQ-105: a version is a label now)
+const BLUEPRINT_LATEST = 4;         // the newest label number CAW has seen (two cards' parts changed after the first)
+/** Sample labels, to look at — mock data like the rest of this file, not copy: Blueprint's own people choose the words of a real one. */
+const LABEL_WORDS: Record<number, string> = { 3: "ฉบับร่างแรก", 4: "ฉบับตรวจรอบแรก" };
+const labelOf = (n: number) => (n > 0 ? LABEL_WORDS[n] ?? null : null);
+const SPEC_READ_AT = "2026-10-13T09:00:00+07:00";
 const BLUEPRINT_PROJECT = "11111111-2222-4333-8444-555555555555"; // a stand-in id: the mock has no Blueprint behind it
 
 // deterministic uuid-shaped ids: a prefix per kind, then a counter
@@ -39,7 +43,7 @@ const EDGES = [
 type Seed = Omit<Card, "projectId" | "workable" | "createdAt" | "updatedAt">;
 const C = (n: number) => id("c", n);
 const seed = (n: number, title: string, todo: string, status: CardStatus, assigneeId: string | null, key: string, rest: Partial<Seed> = {}): Seed => ({
-  id: C(n), number: n, kind: "work", title, todo, status, assigneeId, anchor: { key, version: BLUEPRINT_VERSION },
+  id: C(n), number: n, kind: "work", title, todo, status, assigneeId, anchor: { key, version: BLUEPRINT_VERSION }, anchorLabel: labelOf(BLUEPRINT_VERSION), anchorRemoved: false,
   specChangedVersion: null, dependsOn: [], question: null, answer: null, stoppedMidway: null, ...rest,
 });
 const SEEDS: Seed[] = [
@@ -52,7 +56,8 @@ const SEEDS: Seed[] = [
   seed(5, "ต่อขั้นส่งคำขอจองเข้ากับกฎห้องใหญ่", "ขั้นส่งคำขอจองต้องใช้กฎห้องที่จุเกิน 10 คน", "doing", W.ploy, "STEP-003", { dependsOn: [C(12)] }),
   seed(6, "ทำ API อนุมัติการจอง", "ผู้ดูแลอนุมัติหรือปฏิเสธคำขอ แล้วอัปเดตสถานะการจอง", "review", W.bank, "API-003", { specChangedVersion: BLUEPRINT_LATEST }),
   seed(7, "ทำหน้าอนุมัติคำขอ", "ทำหน้าเปิดคำขอและปุ่มอนุมัติ/ปฏิเสธ แสดง Booking", "review", W.fern, "SCR-003"),
-  seed(8, "ตั้งข้อมูล Room", "กำหนดข้อมูล Room ที่ API ค้นหาห้องว่างอ่าน", "done", W.bank, "DATA-001"),
+  seed(8, "ตั้งข้อมูล Room", "กำหนดข้อมูล Room ที่ API ค้นหาห้องว่างอ่าน", "done", W.bank, "DATA-001",
+    { anchor: { key: "DATA-001", version: 0 }, anchorLabel: null }), // REQ-105: the one seeded card cut before any label (the project's first card has no label behind it)
   seed(9, "ขั้นค้นหาห้องว่าง", "ต่อขั้นค้นหาห้องว่างเข้ากับขั้นเลือกห้องและเวลา", "done", W.ploy, "STEP-001"),
   seed(10, "ขั้นเลือกห้องและเวลา", "ทำขั้นเลือกห้องและช่วงเวลา", "done", W.fern, "STEP-002"),
   seed(11, "ผู้ดูแลไม่ตอบใน 24 ชม. ทำอย่างไร", "", "todo", null, "Q-001", {
@@ -196,7 +201,7 @@ const STATUSES: CardStatus[] = ["todo", "doing", "review", "done", "stuck"];
 
 /** One project's state. Workers are global (below); a project uses them through its chain. */
 interface Proj {
-  id: string; name: string; blueprintProjectId: string; version: number; latestSeenVersion: number;
+  id: string; name: string; blueprintProjectId: string; version: number; latestSeenVersion: number; latestLabel: Project["latestLabel"]; spec: Project["spec"];
   mode: Mode; hopBudget: number; roots: string[]; readOnly: string[]; codeMap: CodeMap | null; createdAt: string;
   cards: Seed[]; notes: Record<string, Note[]>; hops: Hop[]; runs: Omit<Run, "hopsUsed">[]; chat: StoredMessage[]; proposals: StoredProposal[];
   /** the hops of the chat steps (SPEC-A-008 § v1.4 puts them in the hop list, `Hop.messageId`; the mock keeps them apart — `Hop` does not model it yet) */
@@ -208,12 +213,12 @@ const refuse = (status: number, code: string, message: string, details?: unknown
 
 /** a project with nothing in it yet (what `createProject` makes; also the `new-project` state) */
 const blank = (version: number, n: number): Proj => ({
-  id: id("p", n), name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version, latestSeenVersion: BLUEPRINT_LATEST,
+  id: id("p", n), name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version, latestSeenVersion: BLUEPRINT_LATEST, latestLabel: { version: BLUEPRINT_LATEST, label: LABEL_WORDS[BLUEPRINT_LATEST]! }, spec: { revision: 12, reachable: true, lastPullAt: SPEC_READ_AT },
   mode: "manual", hopBudget: 0, roots: [], readOnly: [], codeMap: null, createdAt: NOW, cards: [], notes: {}, hops: [], runs: [], chat: [], proposals: [], chatHops: [], members: [], edges: [], entry: null,
 });
 
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
+export const MOCK_STATES = ["no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
@@ -261,7 +266,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   const workers: Worker[] = structuredClone(WORKERS);
   let nextHop = 100, nextWorker = workers.length, nextProject = 1, nextNote = 100, nextRun = 2, nextCard = SEEDS.length, nextMessage = CHAT.length; // runs r-1 and r-2, 12 cards and 4 messages are seeded
   const projects: Proj[] = [{
-    id: PROJECT_ID, name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version: BLUEPRINT_VERSION, latestSeenVersion: BLUEPRINT_LATEST,
+    id: PROJECT_ID, name: "จองห้องประชุม", blueprintProjectId: BLUEPRINT_PROJECT, version: BLUEPRINT_VERSION, latestSeenVersion: BLUEPRINT_LATEST, latestLabel: { version: BLUEPRINT_LATEST, label: LABEL_WORDS[BLUEPRINT_LATEST]! }, spec: { revision: 12, reachable: opts.state !== "blueprint-down", lastPullAt: SPEC_READ_AT },
     mode: opts.state === "dispatcher-stopped" ? "dispatcher" : "manual", hopBudget: 40, roots: [], readOnly: [], codeMap: null, createdAt: "2026-10-12T20:00:00+07:00", // a new project has no folders yet (REQ-011: the warning)
     cards: structuredClone(SEEDS), notes: structuredClone(NOTES), hops: structuredClone(SEEDED_HOPS), chat: structuredClone(CHAT), proposals: structuredClone(PROPOSALS), chatHops: [],
     runs: [{
@@ -343,6 +348,14 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     }
   }
   if (opts.state === "new-project") projects.push(blank(1, ++nextProject));
+  // REQ-105 states. `no-label`: the project was started and Blueprint has no label yet (every card was cut before one). `anchor-removed` (D12): card 9's part has gone
+  // from the spec — the card is not workable and its context answers 404 (null here), as the real back end does.
+  if (opts.state === "no-label") {
+    const p = projects[0]!;
+    p.version = 0; p.latestSeenVersion = 0; p.latestLabel = null;
+    for (const c of p.cards) { c.anchor.version = 0; c.anchorLabel = null; }
+  }
+  if (opts.state === "anchor-removed") { const c = projects[0]!.cards.find((x) => x.id === C(9))!; c.anchor.key = "STEP-099"; c.anchorRemoved = true; }
   // C5 (TASK-B-073): the seed has one running card hop — ฝน's, started now (so she reads `working`, not quiet); `working-quiet` is the same hop started 12 minutes
   // before the seed was made, with no sign of life since (so `lastActivityAt` is 12 minutes old); `working-now` moves the running hop to แบงค์ on card 4 (a project has one running hop at a time).
   if (opts.state !== "chat-running" && opts.state !== "operator-like" && opts.state !== "code-map" && opts.state !== "manual-idle") { // (`operator-like` has its own running hop; `manual-idle` has none)
@@ -379,12 +392,12 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   const text = (t: string, max = 8000) => { if (t.length < 1 || t.length > max) refuse(400, "validation", `text: 1–${max} characters`); return t; };
 
   /** The server's `workable`: a work card, todo|doing, every dependency done, no spec change waiting. */
-  const workable = (p: Proj, c: Seed) => c.kind === "work" && (c.status === "todo" || c.status === "doing") && c.specChangedVersion === null
+  const workable = (p: Proj, c: Seed) => c.kind === "work" && (c.status === "todo" || c.status === "doing") && !c.anchorRemoved // REQ-105 D7: a spec change only shows a mark (it no longer stops a card); D12: a card whose part is gone cannot be worked
     && c.dependsOn.every((d) => p.cards.find((x) => x.id === d)?.status === "done");
   const full = (p: Proj, c: Seed): Card => ({ ...structuredClone(c), projectId: p.id, workable: workable(p, c), createdAt: "2026-10-12T20:00:00+07:00", updatedAt: "2026-10-13T09:00:00+07:00" });
-  const isStuck = (c: Seed) => c.status === "stuck" || (c.kind === "question" && c.answer === null) || c.specChangedVersion !== null;
+  const isStuck = (c: Seed) => c.status === "stuck" || (c.kind === "question" && c.answer === null);
   const summary = (p: Proj): ProjectSummary => ({
-    id: p.id, name: p.name, blueprintProjectId: p.blueprintProjectId, version: p.version, latestSeenVersion: p.latestSeenVersion,
+    id: p.id, name: p.name, blueprintProjectId: p.blueprintProjectId, version: p.version, latestSeenVersion: p.latestSeenVersion, latestLabel: p.latestLabel ? { ...p.latestLabel } : null, spec: { ...p.spec },
     mode: p.mode, hopBudget: p.hopBudget, hopsUsed: p.hops.length, entryWorkerId: p.entry, workspace: { roots: [...p.roots], readOnly: [...p.readOnly] }, codeMap: structuredClone(p.codeMap), createdAt: p.createdAt,
     cardsDone: p.cards.filter((c) => c.status === "done").length, cardsTotal: p.cards.length, stuckCount: p.cards.filter(isStuck).length,
   });
@@ -448,26 +461,26 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       (query.assigneeId === undefined || c.assigneeId === query.assigneeId) && (query.status === undefined || c.status === query.status)
       && (query.workable === undefined || c.workable === query.workable)).sort(byNumber); },
     card: async (cardId) => { const f = locate(cardId); return f ? full(f.p, f.c) : null; },
-    part: async (pid, key, version) => {
-      if (version !== undefined && (!Number.isInteger(version) || version < 1)) refuse(400, "validation", "version: an integer ≥ 1");
+    part: async (pid, key) => {
       const p = get(pid), spec = SPECS[key];
       if (!p || !spec) return null;
       return {
-        projectId: p.blueprintProjectId, version: version ?? p.latestSeenVersion, confirmedAt: "2026-10-12T20:00:00+07:00", part: structuredClone(spec.part),
+        projectId: p.blueprintProjectId, revision: p.spec.revision, savedAt: SPEC_READ_AT, latestLabel: p.latestLabel ? { ...p.latestLabel } : null, part: structuredClone(spec.part),
         neighbours: structuredClone(spec.neighbours), decisions: spec.part.kind === "decision" ? [] : [structuredClone(SPECS["DEC-001"]!.part)], flows: [], questions: [],
       };
     },
     cardContext: async (cardId): Promise<CardContext | null> => {
       const f = locate(cardId);
       const spec = f ? SPECS[f.c.anchor.key] : undefined;
-      if (!f || !spec) return null;
+      if (!f || !spec || f.c.anchorRemoved) return null; // a removed part: the real answer is 404 `anchor_removed` (REQ-105 D12), which the http api reads as null
       const decisionPart = SPECS["DEC-001"]!.part;
       return {
         card: full(f.p, f.c),
         spec: {
-          projectId: f.p.blueprintProjectId, version: f.c.anchor.version, confirmedAt: "2026-10-12T20:00:00+07:00", part: spec.part,
+          projectId: f.p.blueprintProjectId, revision: f.p.spec.revision, savedAt: SPEC_READ_AT, latestLabel: f.p.latestLabel ? { ...f.p.latestLabel } : null, part: spec.part,
           neighbours: spec.neighbours, decisions: spec.part.kind === "decision" ? [] : [decisionPart], flows: [], questions: [],
         },
+        specRead: { revision: f.p.spec.revision, readAt: SPEC_READ_AT, fromCache: !f.p.spec.reachable, pinned: false },
         notes: structuredClone(f.p.notes[f.c.id] ?? []),
         // the answered question cards this card depends on, directly
         decisions: f.c.dependsOn.flatMap((d) => { const q = f.p.cards.find((x) => x.id === d); return q && q.kind === "question" && q.answer !== null ? [{ cardId: q.id, number: q.number, question: q.question!.text, answer: q.answer }] : []; }),
@@ -503,12 +516,11 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       return run(found.p, found.r);
     },
 
-    createProject: async ({ blueprintProjectId, version }) => {
+    createProject: async ({ blueprintProjectId }) => { // REQ-105: a project starts from the Blueprint project alone; `version` is ignored
       if (blueprintProjectId !== BLUEPRINT_PROJECT) refuse(404, "blueprint_project_not_found", "Blueprint has no such project");
-      if (!Number.isInteger(version) || version < 1 || version > BLUEPRINT_LATEST) refuse(409, "version_not_confirmed", "that version is not confirmed in Blueprint");
       const there = projects.find((p) => p.blueprintProjectId === blueprintProjectId); // v1.15: one project per Blueprint project, whatever the version
       if (there) refuse(409, "already_exists", "a project already exists for this Blueprint project", { id: there.id });
-      const p = blank(version, ++nextProject);
+      const p = blank(BLUEPRINT_LATEST, ++nextProject);
       projects.push(p);
       return summary(p);
     },
@@ -691,7 +703,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       const base = Math.max(0, ...p.cards.map((c) => c.number)); // numbers run on from the project's own last card
       const made = x.items.map((i, k): Seed => ({
         id: ids[k]!, number: base + k + 1, kind: "work", title: i.title, todo: i.todo, status: "todo", assigneeId: i.workerId,
-        anchor: { ...i.anchor }, specChangedVersion: null, dependsOn: i.dependsOn.map((d) => ids[d]!), question: null, answer: null, stoppedMidway: null,
+        anchor: { key: i.anchor.key, version: i.anchor.version ?? BLUEPRINT_LATEST }, anchorLabel: labelOf(i.anchor.version ?? BLUEPRINT_LATEST), anchorRemoved: false, specChangedVersion: null, dependsOn: i.dependsOn.map((d) => ids[d]!), question: null, answer: null, stoppedMidway: null,
       }));
       p.cards.push(...made);
       x.status = "accepted";

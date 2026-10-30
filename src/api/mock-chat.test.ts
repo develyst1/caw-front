@@ -117,7 +117,7 @@ describe("accepting a proposal", () => {
     expect(cards).toHaveLength(3);
     expect(cards.map((c) => c.title)).toEqual(open.items.map((i) => i.title));
     expect(cards.map((c) => c.assigneeId)).toEqual(open.items.map((i) => i.workerId));
-    expect(cards.map((c) => c.anchor)).toEqual(open.items.map((i) => i.anchor));
+    expect(cards.map((c) => c.anchor)).toEqual(open.items.map((i) => ({ key: i.anchor.key, version: i.anchor.version ?? 4 })));
     expect(cards.map((c) => c.dependsOn)).toEqual([[], [cards[0]!.id], [cards[0]!.id, cards[1]!.id]]);
     expect(cards.every((c) => c.kind === "work" && c.status === "todo" && c.projectId === PID && c.question === null && c.answer === null)).toBe(true);
     expect(cards.map((c) => c.number)).toEqual([before + 1, before + 2, before + 3]);

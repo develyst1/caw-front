@@ -6,7 +6,7 @@ import { readiness, type ReadinessItem } from "./readiness";
 
 const W = (id: string, roles: WorkerRole[]): Worker => ({ id, name: id, role: roles[0]!, roles, skills: ["x"], model: "sonnet", effort: "medium", combinedFrom: null, avatar: null, deletedAt: null });
 const project = (over: Partial<Project> = {}): Project => ({
-  id: "p", name: "n", blueprintProjectId: "b", version: 1, latestSeenVersion: 1, mode: "manual", hopBudget: 0, hopsUsed: 0, entryWorkerId: null,
+  id: "p", name: "n", blueprintProjectId: "b", version: 1, latestSeenVersion: 1, latestLabel: null, spec: { revision: 0, reachable: true, lastPullAt: null }, mode: "manual", hopBudget: 0, hopsUsed: 0, entryWorkerId: null,
   workspace: { roots: ["/work/app"], readOnly: [] }, codeMap: null, createdAt: "", ...over,
 });
 const pm = W("pm", ["PM"]), sa = W("sa", ["SA"]), fe = W("fe", ["FE"]), be = W("be", ["BE"]), qa = W("qa", ["QA"]);

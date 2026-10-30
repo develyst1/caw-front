@@ -63,10 +63,10 @@ export function createHttpApi(opts: { baseUrl?: string; fetch?: Fetcher } = {}):
       return c ? ({ ...c, spec: c.spec as PartContext } as CardContext) : null;
     },
     // the page still draws without the name (the key is its fallback), so a part that is gone, a project that is not there and a
-    // Blueprint that is down are all `null`; a 400 (a bad version) is the caller's mistake and stays an error
-    part: async (id, key, version) => {
+    // Blueprint that is down are all `null` (REQ-105: the route always answers the latest spec; the old `version` query is gone)
+    part: async (id, key) => {
       let r: Settled<PartContext>;
-      try { r = await call(client.GET("/v1/projects/{id}/parts/{key}", { params: { path: { id, key }, query: version === undefined ? {} : { version } } }) as Promise<Settled<PartContext>>); }
+      try { r = await call(client.GET("/v1/projects/{id}/parts/{key}", { params: { path: { id, key } } }) as Promise<Settled<PartContext>>); }
       catch (e) { if (isCawError(e) && e.status === 0) return null; throw e; }
       if (r.response.status === 404 || r.response.status === 502) return null;
       return r.data !== undefined ? r.data : refusal(r);

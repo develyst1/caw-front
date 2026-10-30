@@ -44,17 +44,16 @@ describe("createProject", () => {
     expect((await api.projects()).map((x) => x.id)).toEqual([PID]);
   });
 
-  test("the refusals keep their order: an unknown Blueprint project 404 and an unconfirmed version 409 version_not_confirmed come before already_exists", async () => {
+  test("the refusals keep their order: an unknown Blueprint project 404 comes before already_exists", async () => {
     const { api } = await setup();
-    await expectRefusal(api.createProject({ blueprintProjectId: BP, version: 99 }), 409, "version_not_confirmed");
-    await expectRefusal(api.createProject({ blueprintProjectId: "nope", version: 3 }), 404, "blueprint_project_not_found");
+    await expectRefusal(api.createProject({ blueprintProjectId: "nope" }), 404, "blueprint_project_not_found");
+    await expectRefusal(api.createProject({ blueprintProjectId: BP }), 409, "already_exists");
   });
 
-  test("an unknown Blueprint project → 404 blueprint_project_not_found; an unconfirmed version → 409 version_not_confirmed", async () => {
+  test("REQ-105: a version is not checked any more — any `version`, or none, only meets already_exists; there is no version_not_confirmed", async () => {
     const { api } = await setup();
     await expectRefusal(api.createProject({ blueprintProjectId: "nope", version: 1 }), 404, "blueprint_project_not_found");
-    await expectRefusal(api.createProject({ blueprintProjectId: BP, version: 99 }), 409, "version_not_confirmed");
-    await expectRefusal(api.createProject({ blueprintProjectId: BP, version: 0 }), 409, "version_not_confirmed");
+    for (const version of [99, 0, undefined]) await expectRefusal(api.createProject({ blueprintProjectId: BP, version }), 409, "already_exists");
     expect(await api.projects()).toHaveLength(1);
   });
 });
@@ -113,15 +112,15 @@ describe("a card's writes", () => {
     await expectRefusal(api.answer(q.id, "อีกที"), 409, "already_answered");
     const ctx = (await api.cardContext(waiting.id))!;
     expect(ctx.decisions).toEqual([{ cardId: q.id, number: 11, question: q.question!.text, answer: "เตือนก่อน แล้วปฏิเสธเมื่อครบ 48 ชม." }]);
-    expect((await summaryOf(api)).stuckCount).toBe(3); // the open question is no longer stuck
+    expect((await summaryOf(api)).stuckCount).toBe(1); // the open question is no longer stuck (REQ-105 D7: a spec change no longer counts as stuck — it was 3 with it)
   });
 
-  test("clearSpecChange: the card is no longer stuck by a spec change", async () => {
+  test("clearSpecChange: the mark goes; REQ-105 D7 — the mark never counted as stuck, so the count does not move", async () => {
     const { api, card } = await setup();
     const before = (await summaryOf(api)).stuckCount;
     const c = await api.clearSpecChange(card(6).id);
     expect(c.specChangedVersion).toBeNull();
-    expect((await summaryOf(api)).stuckCount).toBe(before - 1);
+    expect((await summaryOf(api)).stuckCount).toBe(before);
   });
 });
 
