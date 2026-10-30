@@ -3918,7 +3918,8 @@ export interface components {
             id: string;
             /** @description the latest label Blueprint showed: its number and words; null = none (REQ-105) */
             latestLabel: {
-                label: string;
+                /** @description its words, or null when Blueprint's label has none (a version from before named labels) */
+                label: string | null;
                 version: number;
             } | null;
             /** @description the latest label number seen (0 = none) */

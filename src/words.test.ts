@@ -50,6 +50,7 @@ describe("REQ-011 wording table", () => {
   });
   test("REQ-105: the label words (PM, REQ-105 § User-facing wording and Q4) — pinned", () => {
     expect([labelWords.tag("ฉบับร่างแรก"), labelWords.none, labelWords.cutAt("ฉบับร่างแรก"), labelWords.cutBefore]).toEqual(["ป้าย ฉบับร่างแรก", "ยังไม่มีป้าย", "ตัดงานที่ป้าย ฉบับร่างแรก", "ตัดงานก่อนมีป้าย"]);
+    expect([labelWords.tagOf({ version: 3, label: null }), labelWords.tagOf({ version: 1, label: "v1" })]).toEqual(["ป้าย 3", "ป้าย v1"]); // Q6: no name → the version
     expect(labelWords.blueprintUnreachable).toBe("ติดต่อ Blueprint ไม่ได้ตอนนี้ — ทำงานต่อจาก spec ล่าสุดที่อ่านได้");
     expect(labelWords.anchorRemoved).toBe("ส่วนนี้ถูกลบออกจาก spec แล้ว — งานนี้ทำต่อไม่ได้จนกว่าจะย้ายไปส่วนอื่นหรือปิดงาน");
     expect(chatRefused.anchor_not_in_version).toBe("บางงานในข้อเสนอนี้ไม่มีใน spec แล้ว — เริ่มงานไม่ได้");

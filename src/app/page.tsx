@@ -60,7 +60,7 @@ export default async function Home() {
                 <a className={s.project} href={`/p/${p.id}`} data-project>
                   <h2 className={s.name}>{p.name}</h2>
                   <div className={s.meta}>
-                    <span className={s.chip} data-label-tag>{p.latestLabel ? labelWords.tag(p.latestLabel.label) : labelWords.none}</span>
+                    <span className={s.chip} data-label-tag>{p.latestLabel ? labelWords.tagOf(p.latestLabel) : labelWords.none}</span>
                     {/* P-3: the mode is news only while อัตโนมัติ is running (someone is working); the board says it otherwise */}
                     {p.mode === "dispatcher" && live_[p.id]?.working && <span className={`${s.chip} ${s.chipAuto}`} data-mode-chip>{mode.dispatcher}</span>}
                     {/* C2 (TASK-B-074): stuck = the board's stuck column (homeSummaries), the same number the board shows */}

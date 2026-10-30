@@ -22,7 +22,7 @@ export interface Project {
   blueprintProjectId: string;
   version: number;               // the LABEL number when the project started (0 = no label then) — REQ-105
   latestSeenVersion: number;     // the latest label number seen (0 = none)
-  latestLabel: { version: number; label: string } | null; // REQ-105: the latest label's number and words; null = none yet
+  latestLabel: { version: number; label: string | null } | null; // REQ-105: the latest label's number and words (`label` null = a label with no name, Q6); null = none yet
   spec: { revision: number; reachable: boolean; lastPullAt: string | null }; // REQ-105: how up to date CAW's view of the spec is
   mode: Mode;
   hopBudget: number;
@@ -95,7 +95,7 @@ export interface PartContext {
   projectId: string;
   revision: number;
   savedAt: string | null;
-  latestLabel: { version: number; label: string } | null;
+  latestLabel: { version: number; label: string | null } | null;
   part: { key: string; kind: string; title: string; body: Record<string, unknown>; origin: { stamp: string; date: string; channel?: string; note?: string; sourceId?: string }; createdIn?: string };
   neighbours: { direction: "out" | "in"; linkKind: string; label: string | null; position: number | null; part: { key: string; kind: string; title: string } }[];
   decisions: PartContext["part"][];

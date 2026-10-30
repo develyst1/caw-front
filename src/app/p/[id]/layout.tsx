@@ -25,7 +25,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         <div className="mx-auto flex min-h-[72px] max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 max-md:gap-x-3 max-md:px-4 max-md:pb-0">
           <a className="inline-flex min-h-11 items-center text-sm text-ink3 no-underline hover:text-ink" href="/">{section.projects}</a>
           <h1 className="name m-0 max-w-[36ch] text-[26px] font-semibold leading-tight tracking-[-0.01em] max-md:max-w-none max-md:flex-1 max-md:text-[22px]" title={p.name}>{p.name}</h1>
-          <span className="inline-flex min-h-[26px] items-center rounded-md border border-hair px-2 text-sm text-ink2 max-md:order-[9998] max-md:basis-full max-md:border-0 max-md:px-0" data-label-tag>{p.latestLabel ? labelWords.tag(p.latestLabel.label) : labelWords.none}</span>
+          <span className="inline-flex min-h-[26px] items-center rounded-md border border-hair px-2 text-sm text-ink2 max-md:order-[9998] max-md:basis-full max-md:border-0 max-md:px-0" data-label-tag>{p.latestLabel ? labelWords.tagOf(p.latestLabel) : labelWords.none}</span>
           <div className="max-md:order-last max-md:-mx-1 max-md:w-full">
             <ProjectNav projectId={p.id} waiting={summary[p.id]?.waitingOnYou ?? 0} />
           </div>

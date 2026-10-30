@@ -221,7 +221,7 @@ const blank = (version: number, n: number): Proj => ({
 });
 
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
+export const MOCK_STATES = ["nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
@@ -353,6 +353,8 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   if (opts.state === "new-project") projects.push(blank(1, ++nextProject));
   // REQ-105 states. `no-label`: the project was started and Blueprint has no label yet (every card was cut before one). `anchor-removed` (D12): card 9's part has gone
   // from the spec — the card is not workable and its context answers 404 (null here), as the real back end does.
+  // `nameless-label` (REQ-105 Q6, TASK-139): Blueprint's latest label has a number but no name (a version from before named labels)
+  if (opts.state === "nameless-label") { const p = projects[0]!; p.latestSeenVersion = BLUEPRINT_VERSION; p.latestLabel = { version: BLUEPRINT_VERSION, label: null }; }
   if (opts.state === "no-label") {
     const p = projects[0]!;
     p.version = 0; p.latestSeenVersion = 0; p.latestLabel = null;

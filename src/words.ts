@@ -157,6 +157,7 @@ export const workspace = {
 /** The project's latest label (header, projects list) and the card's cut point (REQ-105 § User-facing wording; Q3's four are `startRefused.incomplete`, `chatRefused.anchor_not_in_version` and the chip). */
 export const labelWords = {
   tag: (label: string) => `ป้าย ${label}`,
+  tagOf: (l: { version: number; label: string | null }) => labelWords.tag(l.label ?? String(l.version)), // REQ-105 Q6 (PM, 2026-10-30): a label with no name reads `ป้าย {version}`
   none: "ยังไม่มีป้าย",
   cutAt: (label: string) => `ตัดงานที่ป้าย ${label}`,
   cutBefore: "ตัดงานก่อนมีป้าย",

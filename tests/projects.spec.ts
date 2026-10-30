@@ -115,3 +115,14 @@ test.describe("Blueprint unreachable", () => {
     await expect(page.locator("main [data-blueprint-unreachable]")).toHaveText(labelWords.blueprintUnreachable);
   });
 });
+
+test.describe("a label with no name (REQ-105 Q6)", () => {
+  test.use({ seedState: "nameless-label" });
+  test("the header and the list read ป้าย 3 — never null", async ({ page }) => {
+    await page.goto(`/p/${MOCK_PROJECT_ID}`);
+    await expect(page.locator("header [data-label-tag]")).toHaveText("ป้าย 3");
+    await page.goto("/");
+    await expect(page.locator("a[data-project] [data-label-tag]")).toHaveText("ป้าย 3");
+    await expect(page.locator("body")).not.toContainText("null");
+  });
+});
