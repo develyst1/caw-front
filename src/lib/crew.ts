@@ -25,22 +25,60 @@ export function entryQuestions(chain: Chain, chat: ChatMessage[]): { message: Ch
   return { message: reply, questions: reply.questions };
 }
 
-/** What `ตามนั้น` posts for him (D-105 P1, TASK-B-119): `ตามนั้น — {answer}` per question, in question order, one per line — so `ตามนั้นทุกข้อ` is one message. */
-export const acceptText = (answers: string[]) => answers.map(oneAnswer.posted).join("\n");
+/** The ONE message the operator's answers make (REQ-126 D1): `ข้อ {n}: {answer}` per question, n from 1 in question order, one per line. `from` is the number
+ *  of the first answer (the board's single question posts its own number). */
+export const acceptText = (answers: string[], from = 1) => answers.map((a, i) => oneAnswer.line(from + i, a)).join("\n");
 
-/** What an answered question shows (D-105): its proposed answer, but only when the operator's NEXT message after the asking reply has the line
- *  `ตามนั้น — {answer}` (he took it); otherwise null — he answered in his own words, so the screen says only `ตอบแล้ว`. */
-export function answeredWith(chat: ChatMessage[], asked: ChatMessage, q: ChatQuestion): string | null {
-  const next = chat.slice(chat.indexOf(asked) + 1).find((m) => m.author === "operator");
-  return next && next.text.split("\n").some((l) => l.trim() === oneAnswer.posted(q.proposedDefault)) ? q.proposedDefault : null;
+const ANSWER_LINE = /^ข้อ (\d+): ?/;
+/** The answers a message carries as `ข้อ {n}: …` lines, by n. An answer typed on several lines keeps them: a line that does not start a new `ข้อ {n}:` belongs to the one before. */
+function answerLines(text: string): Map<number, string> {
+  const found = new Map<number, string>();
+  let at: number | null = null;
+  for (const line of text.split("\n")) {
+    const m = ANSWER_LINE.exec(line.trim());
+    if (m) { at = Number(m[1]); found.set(at, line.trim().slice(m[0].length)); } else if (at !== null) found.set(at, `${found.get(at)}\n${line}`);
+  }
+  for (const [n, a] of found) found.set(n, a.trim());
+  return found;
 }
+
+/** What question `i` (from 0) of `asked` shows once answered (D-105, REQ-126 D2), read from the operator's NEXT message after the asking reply:
+ *  1. the line `ข้อ {i+1}: {text}` → `{text}`;
+ *  2. else the old form, a line `ตามนั้น — {its proposed answer}` → that answer;
+ *  3. else, when the message has neither form and `asked` had exactly one question, the whole text (typed before this change);
+ *  4. else null — answered, in words the screen cannot attribute: it says only `ตอบแล้ว`. */
+export function answeredWith(chat: ChatMessage[], asked: ChatMessage, i: number): string | null {
+  const next = chat.slice(chat.indexOf(asked) + 1).find((m) => m.author === "operator");
+  const q: ChatQuestion | undefined = asked.questions?.[i];
+  if (!next || !q) return null;
+  const lines = answerLines(next.text);
+  const mine = lines.get(i + 1);
+  if (mine) return mine;
+  const old = next.text.split("\n").map((l) => l.trim());
+  if (old.some((l) => l === oneAnswer.posted(q.proposedDefault))) return q.proposedDefault;
+  const oldForm = old.some((l) => l.startsWith(oneAnswer.posted("")));
+  return lines.size === 0 && !oldForm && asked.questions?.length === 1 ? next.text.trim() || null : null;
+}
+
+/** Are two proposals the same plan (REQ-126 D5, the back end's rule of D4)? Same number of items, and at each place the same title (trimmed), the same spec
+ *  part and the same worker. */
+export function samePlan(a: Pick<Proposal, "items">, b: Pick<Proposal, "items">): boolean {
+  return a.items.length === b.items.length && a.items.every((x, i) => {
+    const y = b.items[i]!;
+    return x.title.trim() === y.title.trim() && x.anchor.key === y.anchor.key && x.workerId === y.workerId;
+  });
+}
+
+/** An OPEN proposal that is the same plan as an accepted one (REQ-126 D5): the screen says `แผนนี้ตกลงไปแล้ว` and gives it no button. */
+export const isPlanCopy = (p: Proposal, all: Proposal[]) => p.status === "open" && all.some((a) => a.status === "accepted" && samePlan(p, a));
 
 /** The board says the entry worker's proposal waits for his agreement (D-105 P2, TASK-B-120): the newest message is the entry worker's reply, no question is
  *  open on it, and an OPEN proposal answers the operator message it replies to (a proposal hangs on the operator message, `Proposal.messageId`). */
 export function proposalWaits(chain: Chain, chat: ChatMessage[], proposals: Proposal[]): boolean {
   const last = chat.at(-1);
   if (!chain.entryWorkerId || !last || last.author !== `worker:${chain.entryWorkerId}` || last.questions?.length || !last.replyTo) return false;
-  return proposals.some((p) => p.status === "open" && p.messageId === last.replyTo);
+  // REQ-126 (TASK-169 step 8): an open copy of a plan that was already accepted is not waiting for the agreement — the chat says `แผนนี้ตกลงไปแล้ว` and gives it no button
+  return proposals.some((p) => p.status === "open" && p.messageId === last.replyTo && !isPlanCopy(p, proposals));
 }
 
 /** Can this card's step be started from the board (D-105, TASK-B-121, SPEC-B-005 Q-1)? Only in แบบสั่งทีละขั้น, on a card the core calls workable, with someone

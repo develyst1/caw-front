@@ -180,7 +180,7 @@ test("the team stops while the board is open → the line appears within 4 s, no
 // D-105 P1 (TASK-B-119): one question, one way to answer — the board's ตามนั้น lands in the chat on his own message
 test.describe("one answer pair · entry-asked", () => {
   test.use({ seedState: "entry-asked" });
-  test("the board's ตามนั้น on Paul's question → the chat, at his message ตามนั้น — …, in view; the box empty", async ({ page }) => {
+  test("the board's ตามนั้น on Paul's question → the chat, at his message ข้อ 1: …, in view; the box empty", async ({ page }) => {
     await page.goto(BOARD);
     const sheet = page.locator('[data-ask="chat"]');
     const proposed = (await sheet.locator("b").first().textContent())!.trim();
@@ -189,7 +189,7 @@ test.describe("one answer pair · entry-asked", () => {
     const id = new URL(page.url()).hash.slice(1);
     const mine = page.locator(`#${id}`);
     await expect(mine).toHaveAttribute("data-message", "operator");
-    await expect(mine).toContainText(oneAnswer.posted(proposed));
+    await expect(mine).toContainText(oneAnswer.line(1, proposed)); // REQ-126: the line form, was `ตามนั้น — …`
     await expect(mine).toBeInViewport();
     await expect(page.locator("[data-box] textarea")).toHaveValue("");
   });
@@ -214,7 +214,7 @@ test.describe("one answer pair · two open questions", () => {
     await all.locator("[data-accept-all]").click();
     await expect(page).toHaveURL(/\/chat#m-/);
     const mine = page.locator(`#${new URL(page.url()).hash.slice(1)}`);
-    await expect(mine.locator("p").last()).toHaveText(answers.map((a) => oneAnswer.posted(a.trim())).join("\n"));
+    await expect(mine.locator("p").last()).toHaveText(answers.map((a, i) => oneAnswer.line(i + 1, a.trim())).join("\n")); // REQ-126: `ข้อ n: …`, was `ตามนั้น — …`
   });
 });
 

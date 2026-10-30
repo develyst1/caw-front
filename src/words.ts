@@ -399,6 +399,11 @@ export const oneAnswer = {
   posted: (answer: string) => `ตามนั้น — ${answer}`,                            // D-105 — the line ตามนั้น posts for him
   asks: (entry: string, n: number) => `${entry} ถาม ${n} ข้อ`,                   // D-105 — the board's header row over 2+ questions
   answered: (answer: string | null) => (answer ? `ตอบแล้ว · ${answer}` : "ตอบแล้ว"), // D-105 — an answered question in the chat
+  // REQ-126 (PM 01:4x): the questions are answered one by one on the screen and sent as ONE message, a line per question
+  line: (n: number, answer: string) => `ข้อ ${n}: ${answer}`,                      // REQ-126 — one line of that message
+  ownPlaceholder: "พิมพ์คำตอบของข้อนี้",                                           // REQ-126 — the small box under a question
+  useOwn: "ใช้คำตอบนี้",                                                          // REQ-126 — its button
+  edit: "แก้",                                                                    // REQ-126 — change an answer before it is sent
 } as const;
 
 /** One clear moment the work starts (REQ-016 P2, TASK-B-120) — approved by D-105. */
@@ -408,6 +413,8 @@ export const agreeStart = {
   manual: (n: number) => `จะได้ ${n} การ์ดบนบอร์ด แล้วคุณกดให้ทีละขั้น`,             // D-105 — above the button, mode แบบสั่งทีละขั้น
   dispatcher: (n: number) => `ทีมจะเริ่มทำ ${n} การ์ดเองจนครบงบ`,                   // D-105 — above the button, mode อัตโนมัติ
   waiting: (entry: string) => `${entry} เสนองานไว้ รอคุณตกลง`,                     // D-105 — the board's line while the proposal waits
+  left: (n: number) => `ยังตอบคำถามไม่ครบ — เหลืออีก ${n} ข้อ`,                     // REQ-126 — beside the button while questions are unanswered
+  alreadyAccepted: "แผนนี้ตกลงไปแล้ว",                                              // REQ-126 — an open copy of a plan that was already accepted
 } as const;
 
 /** A worker's read-only "screen" (REQ-104 § User-facing wording, the PM; the last two rows added 2026-10-29 from SPEC-103 Q1). `time` is already formatted. */

@@ -221,7 +221,7 @@ const blank = (version: number, n: number): Proj => ({
 });
 
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["review-holds", "nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle", "idle-session"] as const;
+export const MOCK_STATES = ["review-holds", "nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle", "idle-session", "entry-asked-four"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
@@ -334,10 +334,14 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   }
   // TASK-B-075: the entry worker's newest chat reply (M4, which already carries a proposal and an amendment) also asks the operator something, and no operator
   // message comes after it — so `entryAsked` holds and the entry seat waits on you. Everything else in the thread is the plain seed's.
-  if (opts.state === "entry-asked" || opts.state === "entry-asked-two") {
+  if (opts.state === "entry-asked" || opts.state === "entry-asked-two" || opts.state === "entry-asked-four") {
     projects[0]!.chat.find((m) => m.id === M(4))!.questions = [{ text: "นับการจองที่ยกเลิกในสรุปรายวันด้วยไหม", proposedDefault: "ไม่นับ", cases: ["นับ", "ไม่นับ"] }];
     // TASK-B-117: `entry-asked-two` — the same reply asks a second thing, so the sheet can be seen taking two answers (TASK-B-119)
-    if (opts.state === "entry-asked-two") projects[0]!.chat.find((m) => m.id === M(4))!.questions!.push({ text: "สรุปรายวันส่งให้ใครทุกเช้า", proposedDefault: "ผู้จัดการอาคาร", cases: ["ผู้จัดการอาคาร", "ทุกคนในทีม"] });
+    if (opts.state === "entry-asked-two" || opts.state === "entry-asked-four") projects[0]!.chat.find((m) => m.id === M(4))!.questions!.push({ text: "สรุปรายวันส่งให้ใครทุกเช้า", proposedDefault: "ผู้จัดการอาคาร", cases: ["ผู้จัดการอาคาร", "ทุกคนในทีม"] });
+    // REQ-126 (TASK-169): `entry-asked-four` — four questions, so answering them one by one and sending them as one message can be seen
+    if (opts.state === "entry-asked-four") projects[0]!.chat.find((m) => m.id === M(4))!.questions!.push(
+      { text: "ผู้เข้าร่วมต้องยืนยันก่อนวันประชุมไหม", proposedDefault: "ไม่ต้อง", cases: ["ต้อง", "ไม่ต้อง"] },
+      { text: "ห้องที่ถูกจองแล้วแสดงในปฏิทินอย่างไร", proposedDefault: "แสดงเป็นสีเทา", cases: ["แสดงเป็นสีเทา", "ซ่อนไว้"] });
   }
   if (opts.state === "chat-failed" || opts.state === "chat-running") {
     const p = projects[0]!, failed = opts.state === "chat-failed";

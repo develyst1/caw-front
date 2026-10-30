@@ -113,7 +113,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -394,7 +394,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -611,7 +611,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -765,7 +765,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -838,7 +838,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -919,7 +919,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -990,7 +990,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1321,7 +1321,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1726,7 +1726,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1933,7 +1933,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2010,7 +2010,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2257,7 +2257,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2436,7 +2436,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2959,7 +2959,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3227,7 +3227,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3382,7 +3382,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3516,7 +3516,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3599,7 +3599,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3671,7 +3671,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -3746,7 +3746,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing */
+                /** @description version_not_confirmed · already_exists · name_taken · already_member · edge_exists · is_entry · has_open_cards · chain_broken · waiting_on_question · already_answered · hop_not_running · worker_in_chain · hop_running · no_code_map · wrong_role · review_note_missing · plan_already_accepted · temp_folder_in_work */
                 409: {
                     headers: {
                         [name: string]: unknown;

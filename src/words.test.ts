@@ -105,6 +105,9 @@ describe("D-105 P1 — one answer pair (TASK-B-119)", () => {
     expect(oneAnswer.posted("ไม่นับ")).toBe("ตามนั้น — ไม่นับ");
     expect(oneAnswer.asks("Paul", 2)).toBe("Paul ถาม 2 ข้อ");
     expect([oneAnswer.answered("ไม่นับ"), oneAnswer.answered(null)]).toEqual(["ตอบแล้ว · ไม่นับ", "ตอบแล้ว"]);
+    // REQ-126 (PM 01:4x)
+    expect(oneAnswer.line(2, "ไม่นับ")).toBe("ข้อ 2: ไม่นับ");
+    expect([oneAnswer.ownPlaceholder, oneAnswer.useOwn, oneAnswer.edit]).toEqual(["พิมพ์คำตอบของข้อนี้", "ใช้คำตอบนี้", "แก้"]);
   });
 });
 
@@ -114,6 +117,7 @@ describe("D-105 P2 / D-106 — agree and start (TASK-B-120)", () => {
     expect(agreeStart.answerFirst("Paul")).toBe("ตอบคำถามของ Paul ก่อน");
     expect([agreeStart.manual(3), agreeStart.dispatcher(3)]).toEqual(["จะได้ 3 การ์ดบนบอร์ด แล้วคุณกดให้ทีละขั้น", "ทีมจะเริ่มทำ 3 การ์ดเองจนครบงบ"]);
     expect(agreeStart.waiting("Paul")).toBe("Paul เสนองานไว้ รอคุณตกลง");
+    expect([agreeStart.left(3), agreeStart.alreadyAccepted]).toEqual(["ยังตอบคำถามไม่ครบ — เหลืออีก 3 ข้อ", "แผนนี้ตกลงไปแล้ว"]);
     expect(redesign.emptyBoard).toBe("บอร์ดยังว่าง — การ์ดจะขึ้นที่นี่เมื่อคุณกดตกลง เริ่มงานในแชต");
   });
 });

@@ -285,13 +285,17 @@ test.describe("the chat page scrolls as a page; the box stays pinned", () => {
 // D-105 P1 (TASK-B-119): the chat's open question carries the board's pair
 test.describe("one answer pair in the chat · entry-asked", () => {
   test.use({ seedState: "entry-asked" });
-  test("the open question shows ตามนั้น (filled) and ตอบเอง…; ตอบเอง… focuses the empty box", async ({ page }) => {
+  test("the open question shows ตามนั้น (filled) and ตอบเอง…; ตอบเอง… opens a small empty box under that question, focused (REQ-126: the main box is not used)", async ({ page }) => {
     await page.goto(CHAT);
     const pair = page.locator("[data-chat-answer]").first();
     await expect(pair.locator("[data-accept]")).toHaveAttribute("data-variant", "default");
     await expect(pair.locator("[data-answer-own]")).toBeVisible();
     await pair.locator("[data-answer-own]").click();
-    await expect(page.locator("[data-box] textarea")).toBeFocused();
+    const own = page.locator("[data-question] [data-own-box] textarea");
+    await expect(own).toBeFocused();
+    await expect(own).toHaveValue("");
+    await expect(own).toHaveAttribute("placeholder", oneAnswer.ownPlaceholder);
+    await expect(page.locator("[data-box] textarea")).not.toBeFocused();
   });
 });
 
@@ -304,7 +308,7 @@ test.describe("agree and start · a question is open", () => {
     await expect(agree).toHaveText(agreeStart.agree);
     await expect(agree).toBeDisabled();
     const why = page.locator('[data-proposal="open"] [data-agree-why]').last();
-    await expect(why).toHaveText(agreeStart.answerFirst("ปลา"));
+    await expect(why).toHaveText(agreeStart.left(1)); // REQ-126: while a question has no answer on the screen it says how many are left (was `ตอบคำถามของ ปลา ก่อน`)
     expect(await agree.getAttribute("aria-describedby")).toBe(await why.getAttribute("id"));
   });
 });
@@ -346,4 +350,60 @@ test("REQ-112: an open proposal that leaves a spec part without a card says so b
   await expect(covered).toHaveCount(1);
   await expect(covered.locator("[data-uncovered]")).toHaveCount(0);
   await expect(page.locator('[data-proposal="superseded"] [data-uncovered]')).toHaveCount(0); // only an open proposal
+});
+
+// REQ-126 (TASK-169, SPEC-125 D1–D3): the open message's questions are answered one by one on the screen and sent as ONE message
+test.describe("answers together · four open questions", () => {
+  test.use({ seedState: "entry-asked-four" });
+  const DEFAULTS = ["ไม่นับ", "ผู้จัดการอาคาร", "ไม่ต้อง", "แสดงเป็นสีเทา"];
+  // the open message is the last worker reply (M4); the seed's M2 has a question of its own, answered long ago
+  const q = (page: import("@playwright/test").Page, i: number) => page.locator('[data-message="worker"]').last().locator("[data-question]").nth(i);
+  const agreeWhy = (page: import("@playwright/test").Page) => page.locator('[data-proposal="open"] [data-agree-why]').last();
+
+  test("ตามนั้น on q1 posts nothing: q1 reads ตอบแล้ว · its answer with แก้, q2–q4 keep their pair, and ตกลง เริ่มงาน says เหลืออีก 3 ข้อ", async ({ page }) => {
+    await page.goto(CHAT);
+    await expect(page.locator('[data-message="worker"]').last().locator("[data-question]")).toHaveCount(4);
+    const operatorBefore = await page.locator('[data-message="operator"]').count();
+    await q(page, 0).locator("[data-accept]").click();
+    await expect(q(page, 0).locator("[data-kept]")).toHaveText(`${oneAnswer.answered(DEFAULTS[0]!)}${oneAnswer.edit}`);
+    await expect(q(page, 0).locator("[data-edit]")).toBeVisible();
+    for (const i of [1, 2, 3]) await expect(q(page, i).locator("[data-chat-answer]")).toBeVisible();
+    await expect(page.locator("[data-chat-answer] [data-accept][data-variant='default']")).toHaveCount(1); // one filled button: the first unanswered question's
+    await expect(agreeWhy(page)).toHaveText(agreeStart.left(3));
+    await expect(page.locator('[data-proposal="open"] [data-create]').last()).toBeDisabled();
+    await expect(page.locator('[data-message="operator"]')).toHaveCount(operatorBefore); // nothing was sent
+  });
+
+  test("แก้ takes an answer back: the pair returns and the count goes up again", async ({ page }) => {
+    await page.goto(CHAT);
+    await q(page, 0).locator("[data-accept]").click();
+    await expect(agreeWhy(page)).toHaveText(agreeStart.left(3));
+    await q(page, 0).locator("[data-edit]").click();
+    await expect(q(page, 0).locator("[data-chat-answer]")).toBeVisible();
+    await expect(q(page, 0).locator("[data-kept]")).toHaveCount(0);
+    await expect(agreeWhy(page)).toHaveText(agreeStart.left(4));
+  });
+
+  test("the 4th answer sends ONE message with the four ข้อ n: lines (q2 in his own words); then every question reads ตอบแล้ว · its answer", async ({ page }) => {
+    await page.goto(CHAT);
+    const operatorBefore = await page.locator('[data-message="operator"]').count();
+    await q(page, 0).locator("[data-accept]").click();
+    await q(page, 1).locator("[data-answer-own]").click();
+    const own = q(page, 1).locator("[data-own-box] textarea");
+    await expect(own).toBeFocused();
+    await expect(q(page, 1).locator("[data-use-own]")).toBeDisabled(); // empty text is no answer
+    await own.fill("  ส่งให้ทุกคน  ");
+    await q(page, 1).locator("[data-use-own]").click();
+    await expect(q(page, 1).locator("[data-kept]")).toContainText(oneAnswer.answered("ส่งให้ทุกคน"));
+    await expect(page.locator('[data-message="operator"]')).toHaveCount(operatorBefore); // three still to go: nothing sent yet
+    await q(page, 2).locator("[data-accept]").click();
+    await expect(agreeWhy(page)).toHaveText(agreeStart.left(1));
+    await q(page, 3).locator("[data-accept]").click();
+    await expect(page.locator('[data-message="operator"]')).toHaveCount(operatorBefore + 1);
+    const sent = page.locator('[data-message="operator"]').last();
+    const answers = [DEFAULTS[0]!, "ส่งให้ทุกคน", DEFAULTS[2]!, DEFAULTS[3]!];
+    await expect(sent.locator("p").first()).toHaveText(answers.map((a, i) => oneAnswer.line(i + 1, a)).join("\n"));
+    for (const [i, a] of answers.entries()) await expect(q(page, i)).toContainText(oneAnswer.answered(a));
+    await expect(page.locator("[data-chat-answer]")).toHaveCount(0);
+  });
 });

@@ -94,7 +94,7 @@ describe("crewState", () => {
 // ---- the home's one line per project: who is working, how many seats are stuck, how many wait on you (D-066 C4) ----
 import type { CawApi, ProjectSummary } from "@/api/caw";
 import { createMockApi, MOCK_PROJECT_ID } from "@/api/mock";
-import { acceptText, answeredWith, canCarryOn, crewSummary, entryAnswering, proposalWaits, entryAsked, entryQuestions, entryWaitsInChat, homeSummaries } from "./crew";
+import { acceptText, answeredWith, canCarryOn, crewSummary, entryAnswering, proposalWaits, entryAsked, entryQuestions, entryWaitsInChat, homeSummaries, isPlanCopy, samePlan } from "./crew";
 
 describe("crewSummary", () => {
   test("working = the name of the first working seat in chain order (null when nobody), stuck and waitingOnYou are counts of seats", () => {
@@ -330,21 +330,71 @@ describe("entryAnswering", () => {
   });
 });
 
-// D-105 P1 (TASK-B-119): one answer pair — the text `ตามนั้น` posts, and what an answered question shows
+// D-105 P1 (TASK-B-119) + REQ-126 D1/D2: the one message the answers make (`ข้อ {n}: {answer}` per question), and what an answered question shows
 describe("acceptText / answeredWith", () => {
-  test("one answer → one line; several → one line each, in question order, joined by a newline", () => {
-    expect(acceptText(["เกิน 10 คน"])).toBe("ตามนั้น — เกิน 10 คน");
-    expect(acceptText(["เกิน 10 คน", "ไม่นับ"])).toBe("ตามนั้น — เกิน 10 คน\nตามนั้น — ไม่นับ");
+  test("one answer → one line; several → one line each, numbered from 1 in question order, joined by a newline; a single question can post its own number", () => {
+    expect(acceptText(["เกิน 10 คน"])).toBe("ข้อ 1: เกิน 10 คน");
+    expect(acceptText(["เกิน 10 คน", "ไม่นับ"])).toBe("ข้อ 1: เกิน 10 คน\nข้อ 2: ไม่นับ");
+    expect(acceptText(["a", "b", "c", "d"])).toBe("ข้อ 1: a\nข้อ 2: b\nข้อ 3: c\nข้อ 4: d");
+    expect(acceptText(["ไม่นับ"], 2)).toBe("ข้อ 2: ไม่นับ");
   });
   const q = (text: string, proposedDefault: string) => ({ text, proposedDefault, cases: [] });
-  test("an answered question shows its answer only when the operator's next message has the line `ตามนั้น — {answer}`", () => {
-    const chat = [msg(1, "worker:w1", { questions: [q("ห้องใหญ่?", "เกิน 10 คน"), q("นับยกเลิก?", "ไม่นับ")] }), msg(2, "operator", { text: "ตามนั้น — เกิน 10 คน\nอีกเรื่องหนึ่ง" })];
-    expect(answeredWith(chat, chat[0]!, chat[0]!.questions![0]!)).toBe("เกิน 10 คน");
-    expect(answeredWith(chat, chat[0]!, chat[0]!.questions![1]!)).toBeNull(); // he answered that one in his own words
+  const four = () => msg(1, "worker:w1", { questions: [q("q1?", "d1"), q("q2?", "d2"), q("q3?", "d3"), q("q4?", "d4")] });
+  test("result table: `ข้อ 2: x` for a 4-question message → q2 is x, the others by their own lines", () => {
+    const chat = [four(), msg(2, "operator", { text: "ข้อ 1: a\nข้อ 2: x\nข้อ 3: c\nข้อ 4: d" })];
+    expect([0, 1, 2, 3].map((i) => answeredWith(chat, chat[0]!, i))).toEqual(["a", "x", "c", "d"]);
+    const some = [four(), msg(2, "operator", { text: "ข้อ 2: x" })];
+    expect([0, 1, 2, 3].map((i) => answeredWith(some, some[0]!, i))).toEqual([null, "x", null, null]);
   });
-  test("no operator message after it → null", () => {
-    const chat = [msg(1, "worker:w1", { questions: [q("ห้องใหญ่?", "เกิน 10 คน")] })];
-    expect(answeredWith(chat, chat[0]!, chat[0]!.questions![0]!)).toBeNull();
+  test("result table: the old `ตามนั้น — d1` only → q1 is d1, q2–q4 null", () => {
+    const chat = [four(), msg(2, "operator", { text: "ตามนั้น — d1" })];
+    expect([0, 1, 2, 3].map((i) => answeredWith(chat, chat[0]!, i))).toEqual(["d1", null, null, null]);
+  });
+  test("result table: a typed text to ONE question → that text; a typed text to FOUR → all null (the old chats read ตอบแล้ว)", () => {
+    const one = [msg(1, "worker:w1", { questions: [q("ห้องใหญ่?", "เกิน 10 คน")] }), msg(2, "operator", { text: "สิบห้าคน" })];
+    expect(answeredWith(one, one[0]!, 0)).toBe("สิบห้าคน");
+    const many = [four(), msg(2, "operator", { text: "ตามใจ" })];
+    expect([0, 1, 2, 3].map((i) => answeredWith(many, many[0]!, i))).toEqual([null, null, null, null]);
+  });
+  test("an answer typed on several lines keeps them; a question that does not exist, or no operator message after it → null", () => {
+    const chat = [four(), msg(2, "operator", { text: "ข้อ 1: บรรทัดแรก\nบรรทัดสอง\nข้อ 2: b" })];
+    expect(answeredWith(chat, chat[0]!, 0)).toBe("บรรทัดแรก\nบรรทัดสอง");
+    expect(answeredWith(chat, chat[0]!, 1)).toBe("b");
+    expect(answeredWith(chat, chat[0]!, 9)).toBeNull();
+    const none = [four()];
+    expect(answeredWith(none, none[0]!, 0)).toBeNull();
+  });
+});
+
+// REQ-126 D5: the same plan twice
+describe("samePlan", () => {
+  const item = (title: string, key = "SCR-001", workerId = "w2") => ({ title, anchor: { key, version: 1 }, workerId, dependsOn: [] });
+  const plan = (...items: ReturnType<typeof item>[]) => ({ items }) as unknown as Proposal;
+  test("equal: the same titles (trimmed), spec parts and workers, in the same order", () => {
+    expect(samePlan(plan(item("ทำหน้า"), item("ทำ API", "API-001", "w3")), plan(item(" ทำหน้า "), item("ทำ API", "API-001", "w3")))).toBe(true);
+  });
+  test("a title differs, a part differs, a worker differs, the length differs → not the same", () => {
+    const base = plan(item("ทำหน้า"), item("ทำ API"));
+    expect(samePlan(base, plan(item("ทำหน้า"), item("ทำ API ใหม่")))).toBe(false);
+    expect(samePlan(base, plan(item("ทำหน้า", "SCR-002"), item("ทำ API")))).toBe(false);
+    expect(samePlan(base, plan(item("ทำหน้า"), item("ทำ API", "SCR-001", "w9")))).toBe(false);
+    expect(samePlan(base, plan(item("ทำหน้า")))).toBe(false);
+  });
+  test("order differs → not the same", () => {
+    expect(samePlan(plan(item("ก"), item("ข")), plan(item("ข"), item("ก")))).toBe(false);
+  });
+  const prop = (id: string, status: "open" | "accepted" | "superseded", ...items: ReturnType<typeof item>[]) => ({ id, status, items }) as unknown as Proposal;
+  test("isPlanCopy: an open proposal equal to an accepted one is a copy; an accepted one, a superseded one, or an open one with no accepted twin is not", () => {
+    const accepted = prop("a", "accepted", item("ก"), item("ข"));
+    expect(isPlanCopy(prop("o", "open", item("ก"), item("ข")), [accepted])).toBe(true);
+    expect(isPlanCopy(accepted, [accepted])).toBe(false);
+    expect(isPlanCopy(prop("s", "superseded", item("ก"), item("ข")), [accepted])).toBe(false);
+    expect(isPlanCopy(prop("o", "open", item("ก"), item("ค")), [accepted])).toBe(false);
+    expect(isPlanCopy(prop("o", "open", item("ก"), item("ข")), [prop("a2", "superseded", item("ก"), item("ข"))])).toBe(false);
+  });
+  test("isPlanCopy: the twin may be any accepted proposal of the thread, not only the newest", () => {
+    const older = prop("a1", "accepted", item("ก")), newer = prop("a2", "accepted", item("ข"));
+    expect(isPlanCopy(prop("o", "open", item("ก")), [older, newer])).toBe(true);
   });
 });
 
@@ -362,6 +412,14 @@ describe("proposalWaits", () => {
     expect(proposalWaits(chain(), [msg(1, "operator"), reply({ questions: [{ text: "?", proposedDefault: "a", cases: [] }] })], [prop("q1", "m1", "open")])).toBe(false);
     expect(proposalWaits(chain(), [msg(1, "operator"), reply(), msg(3, "operator")], [prop("q1", "m1", "open")])).toBe(false);
     expect(proposalWaits(chain(null), [msg(1, "operator"), reply()], [prop("q1", "m1", "open")])).toBe(false);
+  });
+  test("REQ-126: the newest reply's only open proposal is a copy of an accepted plan → false; the same plan changed (or another open one) → true", () => {
+    const withItems = (id: string, messageId: string, status: "open" | "accepted", title: string) =>
+      ({ ...prop(id, messageId, status), items: [{ title, anchor: { key: "SCR-001", version: 1 }, workerId: "w2", dependsOn: [] }] }) as unknown as Proposal;
+    const chat = [msg(1, "operator"), reply()];
+    expect(proposalWaits(chain(), chat, [withItems("a", "m0", "accepted", "ทำหน้า"), withItems("o", "m1", "open", "ทำหน้า")])).toBe(false);
+    expect(proposalWaits(chain(), chat, [withItems("a", "m0", "accepted", "ทำหน้า"), withItems("o", "m1", "open", "ทำหน้าใหม่")])).toBe(true);
+    expect(proposalWaits(chain(), chat, [withItems("a", "m0", "accepted", "ทำหน้า"), withItems("o", "m1", "open", "ทำหน้า"), withItems("o2", "m1", "open", "อีกแผน")])).toBe(true);
   });
 });
 

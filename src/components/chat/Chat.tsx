@@ -19,7 +19,7 @@ import { Part } from "@/components/card/Part";
 import { Uncovered, type UncoveredItem } from "@/components/Uncovered";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
-import { acceptText, answeredWith } from "@/lib/crew";
+import { acceptText, answeredWith, isPlanCopy } from "@/lib/crew";
 import { acceptAnswer, agreeStart, answerOwn, chatHead, chat as words, chatRefused, codeMapWords, distill, live, oneAnswer, operatorName, proposedAnswer, section, send, teamDown as downWords } from "@/words";
 
 export type PartRef = { kind: string; title: string };
@@ -37,9 +37,10 @@ const refusal = (r: ChatResult) => (r.ok ? null : chatRefused[r.code] ?? chatRef
 const Refused = ({ text }: { text: string | null }) => (text ? <p className="m-0 rounded-md bg-stuck-soft px-3 py-2 text-sm font-semibold text-stuck" role="alert">{text}</p> : null);
 
 /** The proposal is the agreement (D-105 P2, TASK-B-120): `ตกลง เริ่มงาน` accepts it, after one line saying what happens in the project's mode; while the entry
- *  person still has a question open (`waitFor` = their name) it is off, and says why. */
-function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor, uncovered = [] }: {
-  projectId: string; p: Proposal; byId: Map<string, Worker>; parts: Record<string, PartRef>; primary: boolean; mode: Mode | null; waitFor: string | null; uncovered?: UncoveredItem[];
+ *  person still has a question open (`waitFor` = their name) it is off, and says why. REQ-126: while `unanswered` > 0 of the open message's questions have no answer
+ *  on the screen yet it is off and says how many are left; an open proposal that is the same plan as an accepted one (`copy`) shows `แผนนี้ตกลงไปแล้ว` and no button. */
+function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor, unanswered, copy, uncovered = [] }: {
+  projectId: string; p: Proposal; byId: Map<string, Worker>; parts: Record<string, PartRef>; primary: boolean; mode: Mode | null; waitFor: string | null; unanswered: number; copy: boolean; uncovered?: UncoveredItem[];
 }) {
   const reason = useId();
   const router = useRouter();
@@ -75,13 +76,18 @@ function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor, uncov
           );
         })}
       </ol>
-      {p.status === "open" && (
+      {p.status === "open" && copy && (
+        <div className="border-t border-hair pt-3" data-agree-copy>
+          <span className="inline-flex min-h-[26px] items-center rounded-md bg-now-soft px-2 text-sm font-semibold text-now">{agreeStart.alreadyAccepted}</span>
+        </div>
+      )}
+      {p.status === "open" && !copy && (
         <div className="grid gap-2 border-t border-hair pt-3" data-agree>
           {mode && <p className="m-0 text-sm text-ink2" data-agree-what>{mode === "dispatcher" ? agreeStart.dispatcher(p.items.length) : agreeStart.manual(p.items.length)}</p>}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Button variant={primary && !waitFor ? "default" : "outline"} className="min-h-11 px-5 font-semibold" onClick={create} disabled={pending || !!waitFor}
-              aria-describedby={waitFor ? reason : undefined} data-create>{agreeStart.agree}</Button>
-            {waitFor && <span id={reason} className="text-sm font-semibold text-stuck" data-agree-why>{agreeStart.answerFirst(waitFor)}</span>}
+            <Button variant={primary && !waitFor && unanswered === 0 ? "default" : "outline"} className="min-h-11 px-5 font-semibold" onClick={create} disabled={pending || !!waitFor || unanswered > 0}
+              aria-describedby={waitFor || unanswered > 0 ? reason : undefined} data-create>{agreeStart.agree}</Button>
+            {(unanswered > 0 || waitFor) && <span id={reason} className="text-sm font-semibold text-stuck" data-agree-why>{unanswered > 0 ? agreeStart.left(unanswered) : agreeStart.answerFirst(waitFor!)}</span>}
             <Refused text={error} />
           </div>
         </div>
@@ -118,7 +124,9 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, te
   const byId = new Map(workers.map((w) => [w.id, w]));
   const workerOf = (a: ChatMessage["author"]) => (a === "operator" ? undefined : byId.get(a.slice("worker:".length)));
   // one primary per screen (B7): only the newest open proposal's สร้างการ์ด is primary
-  const newestOpen = [...proposals].filter((p) => p.status === "open").sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.id;
+  // REQ-126 D5: an open proposal that is the same plan as an accepted one is a copy — it has no button, so it is never the primary one
+  const isCopy = (p: Proposal) => isPlanCopy(p, proposals);
+  const newestOpen = [...proposals].filter((p) => p.status === "open" && !isCopy(p)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.id;
   // the core sends no "this reply delivered a map" flag: the setup step saves the map, then replies — so the newest worker reply at or after the map's time
   // is the one that delivered it (interpreted in TASK-B-106)
   const newestWorker = messages.findLast((m) => m.author !== "operator");
@@ -142,8 +150,24 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, te
     landed.current = true;
     if (target) target.scrollIntoView({ block: "center" }); else window.scrollTo({ top: document.documentElement.scrollHeight });
   }, [messages.length]);
-  // the open questions' own answer: `ตามนั้น` posts `ตามนั้น — {answer}` (the board's text); `ตอบเอง…` focuses the box
-  const accept = (answer: string) => start(async () => { const r = await postMessage(projectId, acceptText([answer])); setError(refusal(r)); router.refresh(); });
+  // REQ-126 D1: the open message's questions are answered one by one and kept here (lost on reload); when the LAST one has its answer the screen posts ONE message,
+  // `ข้อ {n}: {answer}` per question. `ตามนั้น` sets the proposed answer, `ตอบเอง…` opens a small box under that question, `แก้` takes an answer back.
+  const openMsg = openId ? messages.find((m) => m.id === openId) : undefined;
+  const asked = openMsg?.questions?.length ?? 0;
+  const [kept, setKept] = useState<{ id: string | null; map: Record<number, string> }>({ id: null, map: {} });
+  const answers = kept.id === openId ? kept.map : {};
+  const [own, setOwn] = useState<{ i: number; text: string } | null>(null);
+  const answered = Object.keys(answers).length;
+  const setAnswer = (i: number, answer: string | null) => {
+    const map = { ...answers };
+    if (answer === null) delete map[i]; else map[i] = answer;
+    setKept({ id: openId, map });
+    setOwn(null);
+    if (answer !== null && asked > 0 && Object.keys(map).length === asked) {
+      const lines = Array.from({ length: asked }, (_, k) => map[k]!);
+      start(async () => { const r = await postMessage(projectId, acceptText(lines)); setError(refusal(r)); router.refresh(); });
+    }
+  };
   useEffect(() => { if (focusBox) box.current?.focus(); }, [focusBox]);
   // the box grows with the text up to about 6 lines (its CSS max-height), then scrolls inside itself — no resize grip
   const box = useRef<HTMLTextAreaElement>(null);
@@ -172,17 +196,30 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, te
                     // C-3: no frame — an indent, with the ? icon hanging in it
                     <div key={i} className="mt-1.5 grid gap-1 pl-6" data-question data-chat-question>
                       <p className="m-0 -ml-6 flex items-start gap-2 font-semibold leading-normal"><CircleHelp className="mt-1 size-4 shrink-0 text-now" aria-hidden />{q.text}</p>
-                      {m.id === openId ? (<>
+                      {m.id === openId && answers[i] !== undefined ? (
+                        // REQ-126: answered on the screen, not sent yet — `แก้` takes it back
+                        <p className="m-0 flex flex-wrap items-center gap-x-3 text-sm text-ink2" data-answered data-kept>
+                          <span className="[overflow-wrap:anywhere]">{oneAnswer.answered(answers[i]!)}</span>
+                          <Button variant="ghost" className="min-h-11 px-2 text-sm font-semibold text-now" disabled={pending} onClick={() => setAnswer(i, null)} data-edit>{oneAnswer.edit}</Button>
+                        </p>
+                      ) : m.id === openId ? (<>
                         <p className="m-0 mt-1 text-sm text-ink2">{proposedAnswer}</p>
                         <p className="m-0 font-semibold">{q.proposedDefault}</p>
                         {q.cases.length > 0 && <ul className="m-0 mt-0.5 grid gap-0.5 pl-5 text-ink2">{q.cases.map((c) => <li key={c}>{c}</li>)}</ul>}
-                        {/* the board's pair, here too (D-105 P1): the first open question's ตามนั้น is the screen's one filled button */}
+                        {/* the board's pair, here too (D-105 P1): the first unanswered question's ตามนั้น is the screen's one filled button */}
                         <span className="mt-2 flex flex-wrap gap-2" data-chat-answer>
-                          <Button variant={i === 0 ? "default" : "outline"} className="min-h-11 px-5 font-semibold" disabled={pending} onClick={() => accept(q.proposedDefault)} data-accept>{acceptAnswer}</Button>
-                          <Button variant="outline" className="min-h-11" onClick={() => box.current?.focus()} data-answer-own>{answerOwn}</Button>
+                          <Button variant={i === Math.min(...Array.from({ length: asked }, (_, k) => k).filter((k) => answers[k] === undefined)) ? "default" : "outline"} className="min-h-11 px-5 font-semibold" disabled={pending} onClick={() => setAnswer(i, q.proposedDefault)} data-accept>{acceptAnswer}</Button>
+                          <Button variant="outline" className="min-h-11" disabled={pending} onClick={() => setOwn({ i, text: "" })} data-answer-own>{answerOwn}</Button>
                         </span>
+                        {own?.i === i && (
+                          <span className="mt-2 grid gap-2" data-own-box>
+                            <textarea autoFocus rows={2} value={own.text} onChange={(e) => setOwn({ i, text: e.target.value })} placeholder={oneAnswer.ownPlaceholder} aria-label={oneAnswer.ownPlaceholder}
+                              className="block min-h-[52px] w-full resize-none rounded-[10px] border border-hair2 bg-sheet px-3 py-2 text-[15px] leading-[1.6] text-ink outline-none placeholder:text-ink3 focus:border-now" />
+                            <span className="flex"><Button variant="outline" className="min-h-11" disabled={pending || !own.text.trim()} onClick={() => setAnswer(i, own.text.trim())} data-use-own>{oneAnswer.useOwn}</Button></span>
+                          </span>
+                        )}
                       </>) : (
-                        <p className="m-0 text-sm text-ink2" data-answered>{oneAnswer.answered(answeredWith(messages, m, q))}</p>
+                        <p className="m-0 text-sm text-ink2" data-answered>{oneAnswer.answered(answeredWith(messages, m, i))}</p>
                       )}
                     </div>
                   ))}
@@ -193,7 +230,7 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, te
                 {failed && <FailedStep projectId={projectId} messageId={m.id} />}
                 {m.id === mapReply && <a href={`/p/${projectId}/team#code-map`} className="inline-flex min-h-11 items-center text-sm font-semibold text-now underline underline-offset-4" data-see-code-map>{codeMapWords.see}</a>}
                 {!mine && m.replyTo && onMessage(m.replyTo).map((p) => <ProposalCard key={p.id} projectId={projectId} p={p} byId={byId} parts={parts} primary={p.id === newestOpen && !openId}
-                  mode={mode} waitFor={openId ? entry?.name ?? null : null} uncovered={uncovered[p.id]} />)}
+                  mode={mode} waitFor={openId ? entry?.name ?? null : null} unanswered={openId ? Math.max(0, asked - answered) : 0} copy={isCopy(p)} uncovered={uncovered[p.id]} />)}
               </li>
             );
           })}

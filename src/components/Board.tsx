@@ -150,9 +150,10 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
     router.refresh();
   });
   // D-105 P1: the entry person's questions are answered IN the chat — the post lands him there, on his own message (`/chat#m-{id}`), with Paul answering under it
-  const acceptInChat = (key: string, answers: string[]) => start(async () => {
+  // REQ-126: the message is `ข้อ {n}: {answer}` per question (`from` = the number of the first one — a single question posts its own number)
+  const acceptInChat = (key: string, answers: string[], from = 1) => start(async () => {
     setErrors((e) => ({ ...e, [key]: null }));
-    const r = await postMessageFor(projectId, acceptText(answers));
+    const r = await postMessageFor(projectId, acceptText(answers, from));
     if (!r.ok) { setErrors((e) => ({ ...e, [key]: cardRefused[(r as { code: string }).code] ?? cardRefused.other! })); router.refresh(); return; }
     router.push(`/p/${projectId}/chat${r.id ? `#m-${r.id}` : ""}`);
   });
@@ -211,7 +212,7 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
           {chatAsk?.questions.map((q, i) => (
             <AskSheet key={`chat-${i}`} face={chatAsk.entry} meta={redesign.asks(chatAsk.entry.name, section.chat)} text={q.text} proposed={q.proposedDefault}
               ownHref={`/p/${projectId}/chat?answer=1`} /* an EMPTY box, focused, under the question — not the question as his draft (D-105) */
-              onAccept={() => acceptInChat(`chat-${i}`, [q.proposedDefault])} pending={pending} error={errors[`chat-${i}`] ?? null}
+              onAccept={() => acceptInChat(`chat-${i}`, [q.proposedDefault], i + 1)} pending={pending} error={errors[`chat-${i}`] ?? null}
               primary={!askAll && questions.length === 0 && i === 0} />
           ))}
         </ul>
