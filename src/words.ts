@@ -112,6 +112,7 @@ export const stopReason: Record<StopReason, string> = {
   limit_reached: "ถึงลิมิตการใช้งาน Claude",
   operator_stopped: "คุณสั่งหยุด",
   error: "หยุดเพราะเกิดข้อผิดพลาด",
+  no_progress: "มีงานที่ยังทำต่อได้ แต่ไม่คืบ",
 };
 export const runRunning = "กำลังรัน";
 /** Switching to อัตโนมัติ while a run is still open (REQ-011 table, TASK-B-047 DEF-2) — nothing changes. */

@@ -350,6 +350,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         text: string;
+                        /** @description the worker's id or name (see `handOffTo` in your card context) */
                         toWorkerId: string;
                     };
                 };
@@ -3287,7 +3288,7 @@ export interface paths {
                     "application/json": {
                         report: string;
                         /** @enum {string} */
-                        stopReason: "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error";
+                        stopReason: "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error" | "no_progress";
                     };
                 };
             };
@@ -3754,6 +3755,12 @@ export interface components {
                 number: number;
                 question: string;
             }[];
+            /** @description who the card's worker may hand it to, by name and role */
+            handOffTo: {
+                id: string;
+                name: string;
+                roles: string[];
+            }[];
             notes: components["schemas"]["Note"][];
             /** @description Blueprint's v2 part context (SPEC-106 route 2: `revision`, `savedAt`, `latestLabel`, …), exactly as returned — the text the hop was pinned with when `specRead.pinned` */
             spec?: unknown;
@@ -3988,7 +3995,7 @@ export interface components {
             report: string | null;
             startedAt: string;
             /** @enum {string|null} */
-            stopReason: "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error" | null;
+            stopReason: "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error" | "no_progress" | null;
         };
         TeamStatus: {
             /** @description the last check-in, kept after the team goes quiet */

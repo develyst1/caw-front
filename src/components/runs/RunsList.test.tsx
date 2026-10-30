@@ -10,7 +10,7 @@ const card: Card = {
   id: "c1", projectId: "p", number: 7, kind: "work", title: "ทำหน้าค้นหา", todo: "", status: "todo", assigneeId: "w1", anchor: { key: "SCR-001", version: 3 }, anchorLabel: null, anchorRemoved: false,
   specChangedVersion: null, dependsOn: [], question: null, answer: null, workable: true, stoppedMidway: null, createdAt: "", updatedAt: "",
 };
-const REASONS: StopReason[] = ["budget_spent", "nothing_workable", "failed_review_twice", "limit_reached", "operator_stopped", "error"];
+const REASONS: StopReason[] = ["budget_spent", "nothing_workable", "failed_review_twice", "limit_reached", "operator_stopped", "error", "no_progress"];
 const run = (id: string, over: Partial<Run> = {}): Run => ({
   id, projectId: "p", mode: "dispatcher", hopBudget: 3, startedAt: "2026-10-13T08:00:00+07:00", endedAt: "2026-10-13T08:06:00+07:00",
   stopReason: "budget_spent", report: null, hopsUsed: 0, ...over,
@@ -27,7 +27,7 @@ describe("RunsList", () => {
     for (const r of REASONS) {
       expect(html).toContain(`data-stop="${r}">${stopReason[r]}<`);
     }
-    expect(html.match(/data-run=/g)).toHaveLength(6);
+    expect(html.match(/data-run=/g)).toHaveLength(REASONS.length);
   });
 
   test("a run with no end reads กำลังรัน and no stop reason; a finished one does not", () => {

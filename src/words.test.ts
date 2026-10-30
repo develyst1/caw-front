@@ -27,6 +27,7 @@ describe("REQ-011 wording table", () => {
       limit_reached: "ถึงลิมิตการใช้งาน Claude",
       operator_stopped: "คุณสั่งหยุด",
       error: "หยุดเพราะเกิดข้อผิดพลาด",
+      no_progress: "มีงานที่ยังทำต่อได้ แต่ไม่คืบ",
     });
     expect(runRunning).toBe("กำลังรัน");
   });

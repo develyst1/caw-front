@@ -13,7 +13,7 @@ export type WorkerRole = "PM" | "BA" | "SA" | "FE" | "BE" | "QA" | "other"; // v
 export type Role = WorkerRole;
 export type ModelName = "opus" | "sonnet" | "haiku";
 export type Effort = "low" | "medium" | "high";
-export type StopReason = "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error";
+export type StopReason = "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error" | "no_progress";
 export type HopOutcome = "commented" | "handed_off" | "status" | "asked" | "failed" | "stopped" | "interrupted";
 
 export interface Project {
