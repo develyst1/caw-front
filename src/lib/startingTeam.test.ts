@@ -14,19 +14,19 @@ const WANT = ["ใบเตย", "ฝน", "ปลา", "มิ้นท์", "�
 describe("the starting team", () => {
   test("the five seats and the chain between them, as the spec writes them", () => {
     expect(STARTING_TEAM.map((s) => [s.name, s.role])).toEqual([["ปลา", "PM"], ["ใบเตย", "SA"], ["ฝน", "FE"], ["แบงค์", "BE"], ["มิ้นท์", "QA"]]);
-    expect(STARTING_EDGES).toEqual([["PM", "SA"], ["SA", "FE"], ["SA", "BE"], ["FE", "QA"], ["BE", "QA"], ["QA", "PM"]]);
+    expect(STARTING_EDGES).toEqual([["PM", "SA"], ["SA", "FE"], ["SA", "BE"], ["BE", "FE"], ["FE", "BE"], ["FE", "QA"], ["BE", "QA"], ["QA", "PM"]]);
   });
 
-  test("on an empty project: five members, six edges, entry = the PM; a worker that already exists is reused, the missing one is made with its role and skills", async () => {
+  test("on an empty project: five members, eight edges, entry = the PM; a worker that already exists is reused, the missing one is made with its role and skills", async () => {
     const { api, id } = await fresh();
     const before = (await api.workers()).length;
     const chain = await ensureStartingTeam(api, id);
     expect(names(chain)).toEqual(WANT);
-    expect(chain.edges).toHaveLength(6);
+    expect(chain.edges).toHaveLength(8);
     const by = Object.fromEntries(chain.members.map((m) => [m.name, m]));
     expect(chain.entryWorkerId).toBe(by["ปลา"]!.id);
     const has = (a: string, b: string) => chain.edges.some((e) => e.from === by[a]!.id && e.to === by[b]!.id);
-    for (const [a, b] of [["ปลา", "ใบเตย"], ["ใบเตย", "ฝน"], ["ใบเตย", "แบงค์"], ["ฝน", "มิ้นท์"], ["แบงค์", "มิ้นท์"], ["มิ้นท์", "ปลา"]] as const) expect(has(a, b)).toBe(true);
+    for (const [a, b] of [["ปลา", "ใบเตย"], ["ใบเตย", "ฝน"], ["ใบเตย", "แบงค์"], ["แบงค์", "ฝน"], ["ฝน", "แบงค์"], ["ฝน", "มิ้นท์"], ["แบงค์", "มิ้นท์"], ["มิ้นท์", "ปลา"]] as const) expect(has(a, b)).toBe(true);
     expect((await api.workers()).length).toBe(before + 1); // only ใบเตย was missing
     expect(by["ใบเตย"]).toMatchObject({ role: "SA", roles: ["SA"], skills: ["role-sa"] });
     expect(by["ปลา"]!.skills).toEqual(["role-pm"]); // the seeded one, untouched
@@ -46,7 +46,7 @@ describe("the starting team", () => {
     const pla = (await half.api.workers()).find((w) => w.name === "ปลา")!;
     await half.api.addMember(half.id, pla.id);
     expect(names(await ensureStartingTeam(half.api, half.id))).toEqual(WANT);
-    expect((await half.api.chain(half.id))!.edges).toHaveLength(6);
+    expect((await half.api.chain(half.id))!.edges).toHaveLength(8);
 
     // the network drops on the third edge
     const real = createMockApi({ state: "new-project" });
@@ -56,7 +56,7 @@ describe("the starting team", () => {
     await expect(ensureStartingTeam(flaky, id)).rejects.toBeInstanceOf(CawError);
     expect((await real.chain(id))!.edges).toHaveLength(2);
     const done = await ensureStartingTeam(flaky, id); // the retry
-    expect([names(done), done.edges.length]).toEqual([WANT, 6]);
+    expect([names(done), done.edges.length]).toEqual([WANT, 8]);
   });
 
   test("a project that is not there is the back end's error, not a crash", async () => {

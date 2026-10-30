@@ -8,8 +8,8 @@ import { skillsFor } from "./roles";
 export const STARTING_TEAM: { name: string; role: WorkerRole }[] = [
   { name: "ปลา", role: "PM" }, { name: "ใบเตย", role: "SA" }, { name: "ฝน", role: "FE" }, { name: "แบงค์", role: "BE" }, { name: "มิ้นท์", role: "QA" },
 ];
-/** who hands work to whom, by role: PM → SA · SA → FE · SA → BE · FE → QA · BE → QA · QA → PM */
-export const STARTING_EDGES: [WorkerRole, WorkerRole][] = [["PM", "SA"], ["SA", "FE"], ["SA", "BE"], ["FE", "QA"], ["BE", "QA"], ["QA", "PM"]];
+/** who hands work to whom, by role: PM → SA · SA → FE · SA → BE · BE ↔ FE (REQ-121: the BE hands the page to the FE, and back) · FE → QA · BE → QA · QA → PM */
+export const STARTING_EDGES: [WorkerRole, WorkerRole][] = [["PM", "SA"], ["SA", "FE"], ["SA", "BE"], ["BE", "FE"], ["FE", "BE"], ["FE", "QA"], ["BE", "QA"], ["QA", "PM"]];
 const ENTRY: WorkerRole = "PM";
 
 /** Runs `step`; a refusal that only says "already there" is success, any other error is the caller's. */
