@@ -414,6 +414,7 @@ export const agreeStart = {
   dispatcher: (n: number) => `ทีมจะเริ่มทำ ${n} การ์ดเองจนครบงบ`,                   // D-105 — above the button, mode อัตโนมัติ
   waiting: (entry: string) => `${entry} เสนองานไว้ รอคุณตกลง`,                     // D-105 — the board's line while the proposal waits
   left: (n: number) => `ยังตอบคำถามไม่ครบ — เหลืออีก ${n} ข้อ`,                     // REQ-126 — beside the button while questions are unanswered
+  partly: (n: number, m: number) => `มีงานนี้บนบอร์ดแล้ว ${n} งาน — จะเพิ่มเฉพาะงานใหม่ ${m} งาน`, // REQ-126 r2 — above the button when some of the plan's work is already on the board
   alreadyAccepted: "แผนนี้ตกลงไปแล้ว",                                              // REQ-126 — an open copy of a plan that was already accepted
 } as const;
 

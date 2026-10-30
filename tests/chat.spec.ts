@@ -3,7 +3,7 @@
 // Seed (fixtures.ts reset): M1 → reply M2 (a question + proposal Q2 open, 3 items, 6 hops; Q1 superseded) · M3 → reply M4 (Q3, gone anchor).
 import { expect, test } from "./fixtures";
 import { MOCK_PROJECT_ID } from "../src/api/mock";
-import { agreeStart, chat as words, chatRefused, codeMapWords, dependsOnHeading, distill, oneAnswer, partKind, proposedAnswer, section, send, teamDown, uncovered } from "../src/words";
+import { agreeStart, chat as words, chatRefused, codeMapWords, distill, oneAnswer, partKind, proposedAnswer, section, send, teamDown, uncovered } from "../src/words";
 
 const CHAT = `/p/${MOCK_PROJECT_ID}/chat`;
 
@@ -37,17 +37,17 @@ test("chat: the open proposal shows its estimate; a superseded one reads as old 
   await expect(old.locator("[data-create]")).toHaveCount(0);
 });
 
-test("chat: สร้างการ์ด makes the proposal's cards — on the board, with their dependencies", async ({ page }) => {
+// REQ-126 r2: Q(2) has three items, but two of its parts (SCR-003, DEC-001) already have live work cards — accepting makes only the new one
+test("chat: สร้างการ์ด makes cards for the plan's NEW items only — here one, on the board; the two already on the board get none", async ({ page }) => {
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
   const before = await page.locator("[data-column] [data-card]").count();
   await page.goto(CHAT);
   await page.locator('[data-proposal="open"]').first().locator("[data-create]").click();
   await expect(page.locator('[data-proposal="accepted"]')).toContainText(words.accepted);
   await page.goto(`/p/${MOCK_PROJECT_ID}`);
-  await expect(page.locator("[data-column] [data-card]")).toHaveCount(before + 3);
-  await page.locator("[data-card]").filter({ hasText: "ทำหน้าอนุมัติคำขอ (แจ้งผล)" }).click();
-  await expect(page.getByRole("heading", { name: dependsOnHeading })).toBeVisible();
-  await expect(page.locator(`a[href*="/c/"]`).filter({ hasText: "ทำ API แจ้งผลการจอง" })).toHaveCount(1);
+  await expect(page.locator("[data-column] [data-card]")).toHaveCount(before + 1);
+  await expect(page.locator("[data-card]").filter({ hasText: "ทำ API แจ้งผลการจอง" })).toHaveCount(1);
+  await expect(page.locator("[data-card]").filter({ hasText: "ทำหน้าอนุมัติคำขอ (แจ้งผล)" })).toHaveCount(0); // its part, SCR-003, was on the board already
 });
 
 test("chat: a proposal whose part has left Blueprint is refused in words, and nothing is made", async ({ page }) => {
@@ -75,7 +75,7 @@ test("chat: a proposed item shows its spec part's kind word and name (read by ke
   const open = page.locator('[data-proposal="open"]').filter({ hasText: words.estimate(3, 6) });
   await expect(open).toContainText(partKind.screen!); // SCR-003 — หน้าจอ · หน้าอนุมัติคำขอ
   await expect(open).toContainText("หน้าอนุมัติคำขอ");
-  await expect(open).toContainText("อนุมัติการจอง"); // API-003's name
+  await expect(open.locator("li").first().getByText("แจ้งผลการจอง", { exact: true })).toBeVisible(); // API-004's name (REQ-126 r2: item 1 moved from API-003 to the new part; the title is longer, so the exact match is the part's own name)
   await expect(open).not.toContainText("SCR-003");
   const gone = page.locator('[data-proposal="open"]').filter({ hasText: "ทำหน้าสรุปรายงานรายวัน" });
   await expect(gone).toContainText("STEP-099");
@@ -328,7 +328,7 @@ test.describe("agree and start · nothing open", () => {
     await three.locator("[data-create]").click();
     await expect(page.locator('[data-proposal="accepted"]').filter({ hasText: words.estimate(3, 6) })).toBeVisible();
     await page.goto(`/p/${MOCK_PROJECT_ID}`);
-    await expect(page.locator("[data-column] [data-card]")).toHaveCount(before + 3);
+    await expect(page.locator("[data-column] [data-card]")).toHaveCount(before + 1); // REQ-126 r2: the seed's 3-item plan has two items already on the board
   });
   test("อัตโนมัติ: the line says the team starts the cards itself", async ({ page }) => {
     await page.goto(`/p/${MOCK_PROJECT_ID}`);
@@ -405,5 +405,34 @@ test.describe("answers together · four open questions", () => {
     await expect(sent.locator("p").first()).toHaveText(answers.map((a, i) => oneAnswer.line(i + 1, a)).join("\n"));
     for (const [i, a] of answers.entries()) await expect(q(page, i)).toContainText(oneAnswer.answered(a));
     await expect(page.locator("[data-chat-answer]")).toHaveCount(0);
+  });
+});
+
+// REQ-126 r2 (TASK-171, SPEC-126 D3): a plan with some of its work already on the board says how many, and counts only the cards it will make
+test("REQ-126 r2: the seed's 3-item plan has 2 items on the board → `data-agree-onboard` says so, and the line above the button counts the 1 new card", async ({ page }) => {
+  await page.goto(CHAT);
+  const three = page.locator('[data-proposal="open"]').filter({ hasText: words.estimate(3, 6) }); // the estimate still describes the whole plan
+  await expect(three.locator("[data-agree-onboard]")).toHaveText(agreeStart.partly(2, 1));
+  await expect(three.locator("[data-agree-what]")).toHaveText(agreeStart.manual(1));
+  await expect(three.locator("[data-create]")).toBeEnabled();
+  await expect(three.locator("[data-agree-copy]")).toHaveCount(0);
+  const one = page.locator('[data-proposal="open"]').filter({ hasText: words.estimate(1, 2) }); // the other open plan (one item, nothing on the board)
+  await expect(one).toHaveCount(1);
+  await expect(one.locator("[data-agree-onboard]")).toHaveCount(0); // a plan with nothing on the board shows no such line
+  await expect(one.locator("[data-agree-what]")).toHaveText(agreeStart.manual(1));
+});
+
+// REQ-126 r2: the open plan whose every item is already on the board is a copy — the badge in place of the agree block, no button
+test.describe("a plan with all of its work on the board · plan-on-board", () => {
+  test.use({ seedState: "plan-on-board" });
+  test("the 3-item plan reads แผนนี้ตกลงไปแล้ว and has no ตกลง เริ่มงาน, no partly line and no what-line; the other open plan keeps its button", async ({ page }) => {
+    await page.goto(CHAT);
+    const copy = page.locator('[data-proposal="open"]').filter({ hasText: words.estimate(3, 6) });
+    await expect(copy.locator("[data-agree-copy]")).toHaveText(agreeStart.alreadyAccepted);
+    await expect(copy.locator("[data-create]")).toHaveCount(0);
+    await expect(copy.locator("[data-agree-onboard]")).toHaveCount(0);
+    await expect(copy.locator("[data-agree]")).toHaveCount(0);
+    const other = page.locator('[data-proposal="open"]').filter({ hasText: words.estimate(1, 2) });
+    await expect(other.locator("[data-create]")).toHaveCount(1);
   });
 });

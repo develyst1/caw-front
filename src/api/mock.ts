@@ -78,6 +78,7 @@ const SPECS: Record<string, { part: PartContext["part"]; neighbours: PartContext
   "SCR-003": { part: part("SCR-003", "screen", "หน้าอนุมัติคำขอ"), neighbours: [nb("to", "INT-010", "interaction", "เปิดคำขอแล้วกดอนุมัติหรือปฏิเสธ"), nb("shows", "DATA-002", "data", "Booking")] },
   "API-001": { part: part("API-001", "api", "ค้นหาห้องว่าง"), neighbours: [nb("reads", "DATA-001", "data", "Room"), nb("to", "INT-002", "interaction", "ขอรายการห้องว่าง")] },
   "API-002": { part: part("API-002", "api", "สร้างการจอง"), neighbours: [nb("writes", "DATA-002", "data", "Booking"), nb("to", "INT-007", "interaction", "ส่ง Booking")] },
+  "API-004": { part: part("API-004", "api", "แจ้งผลการจอง"), neighbours: [] }, // REQ-126 r2: Q(2)'s first item — a part with no card yet, so Q(2) is the partly-on-board plan
   "API-003": { part: part("API-003", "api", "อนุมัติการจอง"), neighbours: [nb("writes", "DATA-002", "data", "Booking"), nb("to", "INT-011", "interaction", "ส่งผลการพิจารณา")] },
   "DATA-001": { part: part("DATA-001", "data", "Room"), neighbours: [nb("reads", "API-001", "api", "ค้นหาห้องว่าง"), nb("shows", "SCR-001", "screen", "หน้าค้นหาห้อง")] },
   "STEP-001": { part: part("STEP-001", "step", "ค้นหาห้องว่าง"), neighbours: [nb("has_interaction", "INT-001", "interaction", "เลือกวันที่"), nb("next", "STEP-002", "step", "เลือกห้องและเวลา")] },
@@ -160,13 +161,13 @@ const CHAT: StoredMessage[] = [
 
 const item = (title: string, todo: string, key: string, workerId: string, dependsOn: number[], hops: number): ProposalItem =>
   ({ title, todo, anchor: { key, version: BLUEPRINT_VERSION }, workerId, dependsOn, hops });
-type StoredProposal = Omit<Proposal, "hopsTotal">;
+type StoredProposal = Omit<Proposal, "hopsTotal" | "onBoard">;
 const PROPOSALS: StoredProposal[] = [
   { id: Q(1), projectId: PROJECT_ID, messageId: M(1), version: BLUEPRINT_VERSION, status: "superseded", cardIds: null, createdAt: "2026-10-14T09:00:40+07:00", items: [
     item("ทำหน้าอนุมัติคำขอ", "ทำหน้าอนุมัติตาม spec", "SCR-003", W.fern, [], 2), item("ตรวจหน้าอนุมัติ", "ตรวจหน้าอนุมัติกับกฎห้องใหญ่", "DEC-001", W.mint, [0], 1),
   ] },
   { id: Q(2), projectId: PROJECT_ID, messageId: M(1), version: BLUEPRINT_VERSION, status: "open", cardIds: null, createdAt: "2026-10-14T09:01:30+07:00", items: [
-    item("ทำ API แจ้งผลการจอง", "แจ้งผู้ขอเมื่อผู้ดูแลอนุมัติหรือปฏิเสธ", "API-003", W.bank, [], 2),
+    item("ทำ API แจ้งผลการจอง", "แจ้งผู้ขอเมื่อผู้ดูแลอนุมัติหรือปฏิเสธ", "API-004", W.bank, [], 2),
     item("ทำหน้าอนุมัติคำขอ (แจ้งผล)", "หน้าอนุมัติเรียก API แจ้งผล แล้วแสดงว่าแจ้งแล้ว", "SCR-003", W.fern, [0], 3),
     item("ตรวจการแจ้งผล", "ตรวจว่าแจ้งผลครบทุกกรณีของกฎห้องใหญ่", "DEC-001", W.mint, [0, 1], 1),
   ] },
@@ -221,7 +222,7 @@ const blank = (version: number, n: number): Proj => ({
 });
 
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["review-holds", "nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle", "idle-session", "entry-asked-four"] as const;
+export const MOCK_STATES = ["review-holds", "nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle", "idle-session", "entry-asked-four", "plan-on-board"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
@@ -343,6 +344,9 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       { text: "ผู้เข้าร่วมต้องยืนยันก่อนวันประชุมไหม", proposedDefault: "ไม่ต้อง", cases: ["ต้อง", "ไม่ต้อง"] },
       { text: "ห้องที่ถูกจองแล้วแสดงในปฏิทินอย่างไร", proposedDefault: "แสดงเป็นสีเทา", cases: ["แสดงเป็นสีเทา", "ซ่อนไว้"] });
   }
+  // REQ-126 r2 (TASK-171): `plan-on-board` — the open plan Q(2) as it was before the fixture moved its first item to API-004: all three of its parts have live work cards,
+  // so every item is on the board — a copy (`แผนนี้ตกลงไปแล้ว`, no button), and accepting it is refused 409 `plan_already_accepted`
+  if (opts.state === "plan-on-board") projects[0]!.proposals.find((x) => x.id === Q(2))!.items[0]!.anchor.key = "API-003";
   if (opts.state === "chat-failed" || opts.state === "chat-running") {
     const p = projects[0]!, failed = opts.state === "chat-failed";
     p.chat.find((m) => m.id === M(3))!.replyHopId = null;
@@ -397,7 +401,10 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     const h = p.chatHops.filter((x) => x.messageId === m.id).at(-1); // the newest
     return { ...structuredClone(m), chatHop: h ? { id: h.id, endedAt: h.endedAt, outcome: h.outcome } : null };
   };
-  const withTotal = (x: StoredProposal): Proposal => ({ ...structuredClone(x), hopsTotal: x.items.reduce((s, i) => s + i.hops, 0) });
+  /** REQ-126 r2, caw-back's rule: for an OPEN proposal, the indexes of the items whose spec part is the part of a work card that is not done and whose part is still in Blueprint. */
+  const liveWork = (p: Proj, key: string) => p.cards.filter((c) => c.kind === "work" && c.status !== "done" && !c.anchorRemoved && c.anchor.key === key);
+  const onBoardOf = (p: Proj, x: StoredProposal): number[] => (x.status === "open" ? x.items.flatMap((i, k) => (liveWork(p, i.anchor.key).length > 0 ? [k] : [])) : []);
+  const withTotal = (p: Proj, x: StoredProposal): Proposal => ({ ...structuredClone(x), hopsTotal: x.items.reduce((s, i) => s + i.hops, 0), onBoard: onBoardOf(p, x) });
   const get = (pid: string) => projects.find((p) => p.id === pid) ?? null;
   const need = (pid: string) => get(pid) ?? refuse(404, "not_found", "no such project");
   const locate = (cardId: string) => {
@@ -714,7 +721,7 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     proposals: async (pid, query = {}) => {
       const p = get(pid);
       return !p ? [] : p.proposals.filter((x) => query.messageId === undefined || x.messageId === query.messageId)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(withTotal);
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((x) => withTotal(p, x));
     },
     acceptProposal: async (proposalId) => {
       const found = projects.flatMap((p) => p.proposals.map((x) => ({ p, x }))).find(({ x }) => x.id === proposalId);
@@ -723,15 +730,24 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
       if (x.status !== "open") refuse(409, "not_open", "this proposal is no longer open (accepted or superseded)");
       // the anchors are checked against Blueprint again first; one part gone and nothing is written
       if (x.items.some((i) => !SPECS[i.anchor.key])) refuse(422, "anchor_not_in_version", "a part of this proposal is not in Blueprint's version any more");
-      const ids = x.items.map(() => id("c", ++nextCard));
+      // REQ-126 r2: items whose part is already on a live work card make no card; every item on the board → refused, nothing is written
+      const onBoard = new Set(onBoardOf(p, x));
+      if (x.items.length > 0 && onBoard.size === x.items.length) refuse(409, "plan_already_accepted", "แผนนี้ตกลงไปแล้ว");
+      const fresh = x.items.map((_, k) => k).filter((k) => !onBoard.has(k));
+      const ids = new Map(fresh.map((k) => [k, id("c", ++nextCard)] as const));
       const base = Math.max(0, ...p.cards.map((c) => c.number)); // numbers run on from the project's own last card
-      const made = x.items.map((i, k): Seed => ({
-        id: ids[k]!, number: base + k + 1, kind: "work", title: i.title, todo: i.todo, status: "todo", assigneeId: i.workerId,
-        anchor: { key: i.anchor.key, version: i.anchor.version ?? BLUEPRINT_LATEST }, anchorLabel: labelOf(i.anchor.version ?? BLUEPRINT_LATEST), anchorRemoved: false, specChangedVersion: null, dependsOn: i.dependsOn.map((d) => ids[d]!), question: null, answer: null, stoppedMidway: null,
-      }));
+      // a fresh item waits on the fresh items it depends on, and on the open cards already carrying the part of an item it depends on that is on the board
+      const waitsOn = (d: number) => (ids.has(d) ? [ids.get(d)!] : liveWork(p, x.items[d]!.anchor.key).map((c) => c.id));
+      const made = fresh.map((k, n): Seed => {
+        const i = x.items[k]!;
+        return {
+          id: ids.get(k)!, number: base + n + 1, kind: "work", title: i.title, todo: i.todo, status: "todo", assigneeId: i.workerId,
+          anchor: { key: i.anchor.key, version: i.anchor.version ?? BLUEPRINT_LATEST }, anchorLabel: labelOf(i.anchor.version ?? BLUEPRINT_LATEST), anchorRemoved: false, specChangedVersion: null, dependsOn: i.dependsOn.flatMap(waitsOn), question: null, answer: null, stoppedMidway: null,
+        };
+      });
       p.cards.push(...made);
       x.status = "accepted";
-      x.cardIds = ids;
+      x.cardIds = made.map((c) => c.id);
       return made.map((c) => full(p, c));
     },
   };

@@ -110,25 +110,52 @@ describe("proposals", () => {
 });
 
 describe("accepting a proposal", () => {
-  test("it makes one card per item — assignee = the item's worker, anchor as given, dependencies mapped from indexes to the new ids — on the board, and the proposal is accepted with their ids", async () => {
+  // REQ-126 r2: the seed's open plan has three items, two of whose parts (SCR-003, DEC-001) already have a live work card — only the first (API-004) is new
+  test("it makes a card for each NEW item — here one: assignee = the item's worker, anchor as given — on the board, and the proposal is accepted with its id; the two items already on the board get none", async () => {
     const { api, open } = await seeded();
+    expect(open.onBoard).toEqual([1, 2]);
     const before = (await api.cards(PID)).length;
     const cards = await api.acceptProposal(open.id);
-    expect(cards).toHaveLength(3);
-    expect(cards.map((c) => c.title)).toEqual(open.items.map((i) => i.title));
-    expect(cards.map((c) => c.assigneeId)).toEqual(open.items.map((i) => i.workerId));
-    expect(cards.map((c) => c.anchor)).toEqual(open.items.map((i) => ({ key: i.anchor.key, version: i.anchor.version ?? 4 })));
-    expect(cards.map((c) => c.dependsOn)).toEqual([[], [cards[0]!.id], [cards[0]!.id, cards[1]!.id]]);
-    expect(cards.every((c) => c.kind === "work" && c.status === "todo" && c.projectId === PID && c.question === null && c.answer === null)).toBe(true);
-    expect(cards.map((c) => c.number)).toEqual([before + 1, before + 2, before + 3]);
-    // the first has nothing it waits for; the others wait for the ones before them (still todo)
-    expect(cards.map((c) => c.workable)).toEqual([true, false, false]);
+    const item = open.items[0]!;
+    expect(cards).toHaveLength(1);
+    expect(cards[0]!.title).toBe(item.title);
+    expect(cards[0]!.assigneeId).toBe(item.workerId);
+    expect(cards[0]!.anchor).toEqual({ key: "API-004", version: item.anchor.version ?? 4 });
+    expect(cards[0]!.dependsOn).toEqual([]);
+    expect(cards[0]!).toMatchObject({ kind: "work", status: "todo", projectId: PID, question: null, answer: null, number: before + 1, workable: true });
     const board = await api.cards(PID);
-    expect(board).toHaveLength(before + 3);
-    for (const c of cards) expect(board.find((b) => b.id === c.id)?.title).toBe(c.title);
+    expect(board).toHaveLength(before + 1);
+    expect(board.find((b) => b.id === cards[0]!.id)?.title).toBe(cards[0]!.title);
     const [after] = await api.proposals(PID, { messageId: open.messageId });
-    expect([after!.status, after!.cardIds]).toEqual(["accepted", cards.map((c) => c.id)]);
-    expect((await api.projects())[0]!.cardsTotal).toBe(before + 3);
+    expect([after!.status, after!.cardIds, after!.onBoard]).toEqual(["accepted", [cards[0]!.id], []]); // `onBoard` is [] unless open
+    expect((await api.projects())[0]!.cardsTotal).toBe(before + 1);
+  });
+
+  // SPEC-126 D2 step 3: a fresh item waits on the fresh items it depends on, and on the open cards already holding the part of an item it depends on that is on the board.
+  // The seed's card 12 (DEC-001) is set done, so item 3 of the open plan is new too, and depends on item 1 (new, API-004) and item 2 (SCR-003, on the board: card 7)
+  test("a new item that depends on an item already on the board waits on that part's open card(s) as well as on the new item before it", async () => {
+    const { api, open } = await seeded();
+    const cards0 = await api.cards(PID);
+    const dec = cards0.find((c) => c.anchor.key === "DEC-001")!, scr = cards0.filter((c) => c.anchor.key === "SCR-003" && c.kind === "work");
+    await api.setStatus(dec.id, "done");
+    const [fresh] = (await api.proposals(PID, { messageId: open.messageId })).filter((p) => p.id === open.id);
+    expect(fresh!.onBoard).toEqual([1]);
+    const cards = await api.acceptProposal(open.id);
+    expect(cards.map((c) => c.anchor.key)).toEqual(["API-004", "DEC-001"]);
+    expect(cards.map((c) => c.number)).toEqual([cards0.length + 1, cards0.length + 2]);
+    expect(cards[1]!.dependsOn).toEqual([cards[0]!.id, ...scr.map((c) => c.id)]);
+    expect(cards[0]!.dependsOn).toEqual([]);
+  });
+
+  test("a plan whose every item is on the board (state `plan-on-board`) is a copy: onBoard lists them all, accepting is refused 409 plan_already_accepted, no card is written and it stays open", async () => {
+    const api = createMockApi({ state: "plan-on-board" });
+    const open = (await api.proposals(PID)).find((p) => p.status === "open" && p.items.length === 3)!;
+    expect(open.onBoard).toEqual([0, 1, 2]);
+    const n = (await api.cards(PID)).length;
+    await expectRefusal(api.acceptProposal(open.id), 409, "plan_already_accepted");
+    expect(await api.cards(PID)).toHaveLength(n);
+    const again = (await api.proposals(PID)).find((p) => p.id === open.id)!;
+    expect([again.status, again.cardIds]).toEqual(["open", null]);
   });
 
   test("a second accept of the same proposal → 409 not_open and no more cards", async () => {

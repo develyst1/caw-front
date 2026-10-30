@@ -118,6 +118,7 @@ describe("D-105 P2 / D-106 — agree and start (TASK-B-120)", () => {
     expect([agreeStart.manual(3), agreeStart.dispatcher(3)]).toEqual(["จะได้ 3 การ์ดบนบอร์ด แล้วคุณกดให้ทีละขั้น", "ทีมจะเริ่มทำ 3 การ์ดเองจนครบงบ"]);
     expect(agreeStart.waiting("Paul")).toBe("Paul เสนองานไว้ รอคุณตกลง");
     expect([agreeStart.left(3), agreeStart.alreadyAccepted]).toEqual(["ยังตอบคำถามไม่ครบ — เหลืออีก 3 ข้อ", "แผนนี้ตกลงไปแล้ว"]);
+    expect(agreeStart.partly(2, 1)).toBe("มีงานนี้บนบอร์ดแล้ว 2 งาน — จะเพิ่มเฉพาะงานใหม่ 1 งาน"); // REQ-126 r2
     expect(redesign.emptyBoard).toBe("บอร์ดยังว่าง — การ์ดจะขึ้นที่นี่เมื่อคุณกดตกลง เริ่มงานในแชต");
   });
 });

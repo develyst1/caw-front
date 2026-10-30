@@ -94,7 +94,7 @@ describe("crewState", () => {
 // ---- the home's one line per project: who is working, how many seats are stuck, how many wait on you (D-066 C4) ----
 import type { CawApi, ProjectSummary } from "@/api/caw";
 import { createMockApi, MOCK_PROJECT_ID } from "@/api/mock";
-import { acceptText, answeredWith, canCarryOn, crewSummary, entryAnswering, proposalWaits, entryAsked, entryQuestions, entryWaitsInChat, homeSummaries, isPlanCopy, samePlan } from "./crew";
+import { acceptText, answeredWith, canCarryOn, crewSummary, entryAnswering, proposalWaits, entryAsked, entryQuestions, entryWaitsInChat, homeSummaries, isPlanCopy } from "./crew";
 
 describe("crewSummary", () => {
   test("working = the name of the first working seat in chain order (null when nobody), stuck and waitingOnYou are counts of seats", () => {
@@ -366,35 +366,24 @@ describe("acceptText / answeredWith", () => {
   });
 });
 
-// REQ-126 D5: the same plan twice
-describe("samePlan", () => {
-  const item = (title: string, key = "SCR-001", workerId = "w2") => ({ title, anchor: { key, version: 1 }, workerId, dependsOn: [] });
-  const plan = (...items: ReturnType<typeof item>[]) => ({ items }) as unknown as Proposal;
-  test("equal: the same titles (trimmed), spec parts and workers, in the same order", () => {
-    expect(samePlan(plan(item("ทำหน้า"), item("ทำ API", "API-001", "w3")), plan(item(" ทำหน้า "), item("ทำ API", "API-001", "w3")))).toBe(true);
+// REQ-126 r2: a plan is a copy when the back end says every item is already on the board (`Proposal.onBoard`)
+describe("isPlanCopy", () => {
+  const prop = (status: "open" | "accepted" | "superseded", items: number, onBoard: number[]) =>
+    ({ id: "p", status, items: Array.from({ length: items }, (_, i) => ({ title: `t${i}`, anchor: { key: `K-${i}`, version: 1 }, workerId: "w2", dependsOn: [] })), onBoard }) as unknown as Proposal;
+  test("open and every item on the board → a copy", () => {
+    expect(isPlanCopy(prop("open", 3, [0, 1, 2]))).toBe(true);
+    expect(isPlanCopy(prop("open", 1, [0]))).toBe(true);
   });
-  test("a title differs, a part differs, a worker differs, the length differs → not the same", () => {
-    const base = plan(item("ทำหน้า"), item("ทำ API"));
-    expect(samePlan(base, plan(item("ทำหน้า"), item("ทำ API ใหม่")))).toBe(false);
-    expect(samePlan(base, plan(item("ทำหน้า", "SCR-002"), item("ทำ API")))).toBe(false);
-    expect(samePlan(base, plan(item("ทำหน้า"), item("ทำ API", "SCR-001", "w9")))).toBe(false);
-    expect(samePlan(base, plan(item("ทำหน้า")))).toBe(false);
+  test("open and only some on the board, or none → not a copy", () => {
+    expect(isPlanCopy(prop("open", 3, [1, 2]))).toBe(false);
+    expect(isPlanCopy(prop("open", 3, []))).toBe(false);
   });
-  test("order differs → not the same", () => {
-    expect(samePlan(plan(item("ก"), item("ข")), plan(item("ข"), item("ก")))).toBe(false);
+  test("accepted or superseded, even with a full onBoard → not a copy", () => {
+    expect(isPlanCopy(prop("accepted", 2, [0, 1]))).toBe(false);
+    expect(isPlanCopy(prop("superseded", 2, [0, 1]))).toBe(false);
   });
-  const prop = (id: string, status: "open" | "accepted" | "superseded", ...items: ReturnType<typeof item>[]) => ({ id, status, items }) as unknown as Proposal;
-  test("isPlanCopy: an open proposal equal to an accepted one is a copy; an accepted one, a superseded one, or an open one with no accepted twin is not", () => {
-    const accepted = prop("a", "accepted", item("ก"), item("ข"));
-    expect(isPlanCopy(prop("o", "open", item("ก"), item("ข")), [accepted])).toBe(true);
-    expect(isPlanCopy(accepted, [accepted])).toBe(false);
-    expect(isPlanCopy(prop("s", "superseded", item("ก"), item("ข")), [accepted])).toBe(false);
-    expect(isPlanCopy(prop("o", "open", item("ก"), item("ค")), [accepted])).toBe(false);
-    expect(isPlanCopy(prop("o", "open", item("ก"), item("ข")), [prop("a2", "superseded", item("ก"), item("ข"))])).toBe(false);
-  });
-  test("isPlanCopy: the twin may be any accepted proposal of the thread, not only the newest", () => {
-    const older = prop("a1", "accepted", item("ก")), newer = prop("a2", "accepted", item("ข"));
-    expect(isPlanCopy(prop("o", "open", item("ก")), [older, newer])).toBe(true);
+  test("no items → not a copy (an empty plan is not 'all on the board')", () => {
+    expect(isPlanCopy(prop("open", 0, []))).toBe(false);
   });
 });
 
@@ -413,13 +402,14 @@ describe("proposalWaits", () => {
     expect(proposalWaits(chain(), [msg(1, "operator"), reply(), msg(3, "operator")], [prop("q1", "m1", "open")])).toBe(false);
     expect(proposalWaits(chain(null), [msg(1, "operator"), reply()], [prop("q1", "m1", "open")])).toBe(false);
   });
-  test("REQ-126: the newest reply's only open proposal is a copy of an accepted plan → false; the same plan changed (or another open one) → true", () => {
-    const withItems = (id: string, messageId: string, status: "open" | "accepted", title: string) =>
-      ({ ...prop(id, messageId, status), items: [{ title, anchor: { key: "SCR-001", version: 1 }, workerId: "w2", dependsOn: [] }] }) as unknown as Proposal;
+  test("REQ-126 r2: the newest reply's only open proposal has every item on the board → false; only some on the board → true; a copy beside another open plan → true", () => {
+    const planned = (id: string, onBoard: number[], items = 2) =>
+      ({ ...prop(id, "m1", "open"), items: Array.from({ length: items }, (_, i) => ({ title: `t${i}`, anchor: { key: `K-${i}`, version: 1 }, workerId: "w2", dependsOn: [] })), onBoard }) as unknown as Proposal;
     const chat = [msg(1, "operator"), reply()];
-    expect(proposalWaits(chain(), chat, [withItems("a", "m0", "accepted", "ทำหน้า"), withItems("o", "m1", "open", "ทำหน้า")])).toBe(false);
-    expect(proposalWaits(chain(), chat, [withItems("a", "m0", "accepted", "ทำหน้า"), withItems("o", "m1", "open", "ทำหน้าใหม่")])).toBe(true);
-    expect(proposalWaits(chain(), chat, [withItems("a", "m0", "accepted", "ทำหน้า"), withItems("o", "m1", "open", "ทำหน้า"), withItems("o2", "m1", "open", "อีกแผน")])).toBe(true);
+    expect(proposalWaits(chain(), chat, [planned("o", [0, 1])])).toBe(false);
+    expect(proposalWaits(chain(), chat, [planned("o", [1])])).toBe(true);
+    expect(proposalWaits(chain(), chat, [planned("o", [])])).toBe(true);
+    expect(proposalWaits(chain(), chat, [planned("o", [0, 1]), planned("o2", [0])])).toBe(true);
   });
 });
 

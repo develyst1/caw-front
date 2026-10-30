@@ -4040,6 +4040,8 @@ export interface components {
                 workerId: string;
             }[];
             messageId: string;
+            /** @description REQ-126 r2: indexes of the items whose spec part is already on a live work card of this project, computed on read; [] unless the proposal is open. All of them → accept answers 409 plan_already_accepted; some → accept makes cards for the others only */
+            onBoard: number[];
             projectId: string;
             /** @enum {string} */
             status: "open" | "accepted" | "superseded";

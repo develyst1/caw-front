@@ -48,6 +48,7 @@ function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor, unans
   const [error, setError] = useState<string | null>(null);
   const create = () => start(async () => { const r = await acceptProposal(projectId, p.id); setError(refusal(r)); router.refresh(); });
   const old = p.status === "superseded";
+  const fresh = p.items.length - p.onBoard.length; // the cards accepting will make (`onBoard` is [] unless open)
   return (
     <section className={`grid w-full max-w-[640px] gap-2.5 rounded-md border bg-sheet px-4 py-3.5 ${old ? "border-dashed border-hair2 text-ink2" : "border-hair"}`}
       data-proposal={p.status} aria-label={words.estimate(p.items.length, p.hopsTotal)}>
@@ -83,7 +84,9 @@ function ProposalCard({ projectId, p, byId, parts, primary, mode, waitFor, unans
       )}
       {p.status === "open" && !copy && (
         <div className="grid gap-2 border-t border-hair pt-3" data-agree>
-          {mode && <p className="m-0 text-sm text-ink2" data-agree-what>{mode === "dispatcher" ? agreeStart.dispatcher(p.items.length) : agreeStart.manual(p.items.length)}</p>}
+          {/* REQ-126 r2: part of the plan is already on the board — say so, and count only the cards that will be made */}
+          {fresh < p.items.length && <p className="m-0 text-sm text-ink2" data-agree-onboard>{agreeStart.partly(p.items.length - fresh, fresh)}</p>}
+          {mode && <p className="m-0 text-sm text-ink2" data-agree-what>{mode === "dispatcher" ? agreeStart.dispatcher(fresh) : agreeStart.manual(fresh)}</p>}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Button variant={primary && !waitFor && unanswered === 0 ? "default" : "outline"} className="min-h-11 px-5 font-semibold" onClick={create} disabled={pending || !!waitFor || unanswered > 0}
               aria-describedby={waitFor || unanswered > 0 ? reason : undefined} data-create>{agreeStart.agree}</Button>
@@ -125,7 +128,7 @@ export function Chat({ projectId, messages, proposals, workers, parts, entry, te
   const workerOf = (a: ChatMessage["author"]) => (a === "operator" ? undefined : byId.get(a.slice("worker:".length)));
   // one primary per screen (B7): only the newest open proposal's สร้างการ์ด is primary
   // REQ-126 D5: an open proposal that is the same plan as an accepted one is a copy — it has no button, so it is never the primary one
-  const isCopy = (p: Proposal) => isPlanCopy(p, proposals);
+  const isCopy = (p: Proposal) => isPlanCopy(p);
   const newestOpen = [...proposals].filter((p) => p.status === "open" && !isCopy(p)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.id;
   // the core sends no "this reply delivered a map" flag: the setup step saves the map, then replies — so the newest worker reply at or after the map's time
   // is the one that delivered it (interpreted in TASK-B-106)

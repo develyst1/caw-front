@@ -60,17 +60,8 @@ export function answeredWith(chat: ChatMessage[], asked: ChatMessage, i: number)
   return lines.size === 0 && !oldForm && asked.questions?.length === 1 ? next.text.trim() || null : null;
 }
 
-/** Are two proposals the same plan (REQ-126 D5, the back end's rule of D4)? Same number of items, and at each place the same title (trimmed), the same spec
- *  part and the same worker. */
-export function samePlan(a: Pick<Proposal, "items">, b: Pick<Proposal, "items">): boolean {
-  return a.items.length === b.items.length && a.items.every((x, i) => {
-    const y = b.items[i]!;
-    return x.title.trim() === y.title.trim() && x.anchor.key === y.anchor.key && x.workerId === y.workerId;
-  });
-}
-
-/** An OPEN proposal that is the same plan as an accepted one (REQ-126 D5): the screen says `แผนนี้ตกลงไปแล้ว` and gives it no button. */
-export const isPlanCopy = (p: Proposal, all: Proposal[]) => p.status === "open" && all.some((a) => a.status === "accepted" && samePlan(p, a));
+/** An OPEN proposal whose every item is already on the board (REQ-126 r2, caw-back `onBoard`): the screen says `แผนนี้ตกลงไปแล้ว` and gives it no button. */
+export const isPlanCopy = (p: Proposal) => p.status === "open" && p.items.length > 0 && p.onBoard.length === p.items.length;
 
 /** The board says the entry worker's proposal waits for his agreement (D-105 P2, TASK-B-120): the newest message is the entry worker's reply, no question is
  *  open on it, and an OPEN proposal answers the operator message it replies to (a proposal hangs on the operator message, `Proposal.messageId`). */
@@ -78,7 +69,7 @@ export function proposalWaits(chain: Chain, chat: ChatMessage[], proposals: Prop
   const last = chat.at(-1);
   if (!chain.entryWorkerId || !last || last.author !== `worker:${chain.entryWorkerId}` || last.questions?.length || !last.replyTo) return false;
   // REQ-126 (TASK-169 step 8): an open copy of a plan that was already accepted is not waiting for the agreement — the chat says `แผนนี้ตกลงไปแล้ว` and gives it no button
-  return proposals.some((p) => p.status === "open" && p.messageId === last.replyTo && !isPlanCopy(p, proposals));
+  return proposals.some((p) => p.status === "open" && p.messageId === last.replyTo && !isPlanCopy(p));
 }
 
 /** Can this card's step be started from the board (D-105, TASK-B-121, SPEC-B-005 Q-1)? Only in แบบสั่งทีละขั้น, on a card the core calls workable, with someone

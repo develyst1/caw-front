@@ -209,6 +209,7 @@ export interface Proposal {
   cardIds: string[] | null;        // set when accepted
   createdAt: string;
   hopsTotal: number;               // computed on read: the sum of the items' hops — never stored
+  onBoard: number[];               // REQ-126 r2, computed on read: indexes of the items whose spec part is already on a live work card; [] unless open
 }
 
 /** One line of the project's event log (SPEC-A-008 § Event types): every write is one event. `data` is the write's input — the screens only look at `seq`, `at`, `actor`
