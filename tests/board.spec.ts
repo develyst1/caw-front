@@ -2,7 +2,7 @@
 // narrows; plus the 390 sideways columns and the keyboard path.
 import { expect, test } from "./fixtures";
 import { MOCK_NEW_PROJECT_ID, MOCK_PROJECT_ID } from "../src/api/mock";
-import { acceptAnswer, agreeStart, cardMark, column, distill, oneAnswer, section, teamDown, uncovered } from "../src/words";
+import { acceptAnswer, agreeStart, cardMark, column, distill, oneAnswer, section, teamDown, uncovered, reviewHold } from "../src/words";
 
 const BOARD = `/p/${MOCK_PROJECT_ID}`;
 
@@ -305,4 +305,22 @@ test("REQ-112: the board says which spec part no card has taken up, in the PM's 
   await expect(line).toHaveText(uncovered.part("SCR-003 หน้าอนุมัติคำขอ"));
   expect(await line.getByRole("link").getAttribute("href")).toContain("part=SCR-003");
   await expect(page.locator("[data-column] [data-card]")).toHaveCount(11); // advisory: the board itself is unchanged
+});
+
+test("REQ-117: no review holds work up on the default board → no รอคุณตรวจ line", async ({ page }) => {
+  await page.goto(BOARD);
+  await expect(page.locator("[data-review-hold]")).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText("รอคุณตรวจ");
+});
+
+test.describe("a review holds work up (REQ-117 AC-2)", () => {
+  test.use({ seedState: "review-holds" });
+  test("the board says which review, and how many wait — the title as plain text", async ({ page }) => {
+    await page.goto(BOARD);
+    const title = "ออกแบบหน้าค้นหาห้อง"; // card 1, now in review
+    const line = page.locator("[data-review-hold]");
+    await expect(line).toHaveCount(1);
+    await expect(line).toHaveText(reviewHold.line(title, 2));
+    await expect(line).toHaveAttribute("role", "status");
+  });
 });

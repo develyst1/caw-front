@@ -221,7 +221,7 @@ const blank = (version: number, n: number): Proj => ({
 });
 
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
+export const MOCK_STATES = ["review-holds", "nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
@@ -359,6 +359,12 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
     const p = projects[0]!;
     p.version = 0; p.latestSeenVersion = 0; p.latestLabel = null;
     for (const c of p.cards) { c.anchor.version = 0; c.anchorLabel = null; }
+  }
+  // `review-holds` (REQ-117 AC-2, TASK-144): card 1 waits in `review` and cards 2 and 3 (todo) wait on it
+  if (opts.state === "review-holds") {
+    const cs = projects[0]!.cards, one = cs.find((x) => x.id === C(1))!;
+    one.status = "review"; one.stoppedMidway = null;
+    for (const n of [2, 3]) cs.find((x) => x.id === C(n))!.dependsOn = [C(1)];
   }
   if (opts.state === "anchor-removed") { const c = projects[0]!.cards.find((x) => x.id === C(9))!; c.anchor.key = "STEP-099"; c.anchorRemoved = true; }
   // C5 (TASK-B-073): the seed has one running card hop — ฝน's, started now (so she reads `working`, not quiet); `working-quiet` is the same hop started 12 minutes

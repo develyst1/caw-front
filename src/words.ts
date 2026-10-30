@@ -171,6 +171,11 @@ export const uncovered = {
   part: (part: string) => `${uncovered.lead} ${part}`,
 } as const;
 
+/** REQ-117 (PM, § Wording; SPEC-114 D3/D4): a review that holds other work up — one line on the board, the card's title as plain text. */
+export const reviewHold = {
+  line: (title: string, n: number) => `รอคุณตรวจ: ${title} — มีอีก ${n} งานรออยู่`,
+} as const;
+
 // ---- the projects list and the start page (TASK-B-040 Q1: the PM approved them 2026-10-13; the card's version line is hers) ----
 /** The projects list. `เสร็จ` and `ติดอยู่` are the table's column words. */
 export const projectCard = {

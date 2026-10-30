@@ -17,10 +17,11 @@ import { postMessageFor } from "@/app/p/[id]/chat/actions";
 import { acceptText, canCarryOn } from "@/lib/crew";
 import { CrewStrip, type SeatView } from "@/components/CrewStrip";
 import { Uncovered, type UncoveredItem } from "@/components/Uncovered";
+import { reviewHolds } from "@/lib/reviewHold";
 import { Avatar } from "@/components/Person";
 import { Button } from "@/components/ui/button";
 import { group, kindGroup } from "@/theme/tokens";
-import { acceptAnswer, agreeStart, answerOwn, cardMark, labelWords, live, chatWaits as waitsWords, distill, oneAnswer, teamDown as downWords, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
+import { acceptAnswer, agreeStart, answerOwn, cardMark, labelWords, reviewHold as reviewHoldWords, live, chatWaits as waitsWords, distill, oneAnswer, teamDown as downWords, cardRefused, column, columnOrder, partKind, proposedAnswer, redesign, section } from "@/words";
 
 export type PartRef = { kind: string; title: string };
 
@@ -136,6 +137,7 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const byId = new Map(workers.map((w) => [w.id, w]));
+  const holds = reviewHolds(cards); // REQ-117: a review waiting on the operator that other work waits on
   const openQuestions = new Set(cards.filter((c) => c.kind === "question" && c.answer === null).map((c) => c.id));
   const questions = cards.filter((c) => openQuestions.has(c.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.number - b.number);
   const work = cards.filter((c) => c.kind === "work" && (chosen.size === 0 || (c.assigneeId !== null && chosen.has(c.assigneeId))));
@@ -175,6 +177,10 @@ export function Board({ projectId, cards, workers, parts, seats = [], chatAsk = 
     <div className="grid min-w-0 gap-6" data-board>
       {teamDown !== null && <TeamDown startCommand={teamDown} />}
       {uncovered.length > 0 && <Uncovered items={uncovered} className="rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" />}
+      {/* REQ-117 (SPEC-114 D4): shown whenever it is true — the title is plain text, with real spaces between the pieces */}
+      {holds.map((h) => (
+        <p key={h.card.id} className="m-0 min-w-0 break-words rounded-[10px] border border-hair bg-sheet px-6 py-3 text-sm text-ink2 max-md:px-4" role="status" data-review-hold={h.card.id}>{reviewHoldWords.line(h.card.title, h.waiting)}</p>
+      ))}
       {chatWaits && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] border border-hair bg-sheet px-6 py-3 max-md:px-4" data-chat-waits>
           <Avatar name={chatWaits.name} avatar={chatWaits.avatar} size="md" />

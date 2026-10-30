@@ -1,6 +1,6 @@
 // REQ-011's wording table, row by row: each word is here, verbatim.
 import { describe, expect, test } from "bun:test";
-import { agreeStart, chatRefused, redesign, blueprintBuild, budget, card, cardMark, chatWaits, codeMapWords, distill, folderKind, labelWords, oneAnswer, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, screen, section, startRefused, stopReason, workspace } from "./words";
+import { agreeStart, chatRefused, redesign, blueprintBuild, budget, card, cardMark, chatWaits, codeMapWords, distill, folderKind, labelWords, reviewHold, oneAnswer, column, columnOrder, hopOutcome, mode, projectCard, refusedHandoff, runRunning, runWords, screen, section, startRefused, stopReason, workspace } from "./words";
 
 describe("REQ-011 wording table", () => {
   test("columns, in the order they are drawn", () => {
@@ -47,6 +47,9 @@ describe("REQ-011 wording table", () => {
       blueprint_project_not_found: "ไม่พบโปรเจกต์นี้ใน Blueprint",
       unreachable: "ต่อระบบไม่ได้ตอนนี้", incomplete: "ลิงก์นี้ไม่ครบ ต้องมีโปรเจกต์", other: "เริ่มโปรเจกต์ไม่สำเร็จ", // REQ-105 Q3: no version in the link, none refused
     });
+  });
+  test("REQ-117: the review-hold line, as the PM wrote it", () => {
+    expect(reviewHold.line("ทำหน้าอนุมัติคำขอ", 2)).toBe("รอคุณตรวจ: ทำหน้าอนุมัติคำขอ — มีอีก 2 งานรออยู่");
   });
   test("REQ-105: the label words (PM, REQ-105 § User-facing wording and Q4) — pinned", () => {
     expect([labelWords.tag("ฉบับร่างแรก"), labelWords.none, labelWords.cutAt("ฉบับร่างแรก"), labelWords.cutBefore]).toEqual(["ป้าย ฉบับร่างแรก", "ยังไม่มีป้าย", "ตัดงานที่ป้าย ฉบับร่างแรก", "ตัดงานก่อนมีป้าย"]);
