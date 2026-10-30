@@ -215,6 +215,8 @@ export interface Proposal {
  *  and `type` (what changed, when, by whom). */
 /** GET /v1/team-status (contract v1.16, SPEC-A-009 § 1b, Revision 1) — from caw-back's OpenAPI. `running` = the last check-in said `running` and is ≤ 45 s old. */
 export type TeamStatus = components["schemas"]["TeamStatus"];
+/** One open worker session of the runner (REQ-122): the worker's CLI is open in that project, `idle` (waiting for work) or `busy` (on a hop). */
+export type TeamSession = components["schemas"]["TeamSession"];
 
 export interface CawEvent { seq: number; at: string; actor: string; projectId: string | null; type: string; data?: unknown }
 
@@ -298,7 +300,8 @@ export interface CawApi {
    *  the part they are about. Advisory only: it never blocks anything. A refusal (404 `not_found`, 502 `blueprint_unreachable`) is a CawError; the screens draw nothing then. */
   coverage(projectId: string, proposalId?: string): Promise<Coverage>;
 
-  /** GET /v1/team-status — a read, no actor, not tied to a project: is the team (the runner) checking in right now? `running` = the last check-in was `running` and is ≤ 45 s old. */
+  /** GET /v1/team-status — a read, no actor, not tied to a project: is the team (the runner) checking in right now? `running` = the last check-in was `running` and is ≤ 45 s old.
+   *  `sessions` = the runner's open worker sessions (REQ-122); `[]` when the team is not running. */
   teamStatus(): Promise<TeamStatus>;
 
   // ---- the chat with the entry worker, and the cards it proposes (REQ-013) ----

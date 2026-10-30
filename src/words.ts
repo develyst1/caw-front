@@ -415,7 +415,8 @@ export const screen = {
   watch: "ดูหน้าจอ",                                                               // the open button on a worker (crew seat, team drawer)
   title: (name: string) => `หน้าจอของ ${name}`,                                    // the view's title
   empty: "ยังไม่ได้เริ่มทำงาน",                                                    // no hop yet
-  live: "สด",                                                                    // badge while the hop runs
+  idle: "ว่าง · เปิดรอรับงาน",                                                     // REQ-122: the worker's CLI is open and waiting (PM's table)
+  live: "สด",                                                                  // badge while the hop runs
   gap: (n: number) => `ขาดช่วง ${n} วินาที — ระหว่างนี้ไม่ได้รับข้อมูล`,              // a gap marker
   finished: (time: string) => `จบงานเมื่อ ${time}`,                                // a finished hop
   started: (time: string) => `เริ่มเมื่อ ${time}`,                                  // the hop's start time

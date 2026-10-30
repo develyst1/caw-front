@@ -216,12 +216,22 @@ describe("seed variants (POST /test-reset?state=…)", () => {
 describe("team status (REQ-015 R1, contract v1.16)", () => {
   test("the mock team is running by default; `team-down` is not, with a last-seen time ten minutes ago; the start command is the same", async () => {
     const up = await createMockApi().teamStatus();
-    expect(up).toEqual({ running: true, runnerName: "mock", lastSeenAt: expect.any(String), startCommand: "cd caw-back && bun run runner" });
+    expect(up).toEqual({ running: true, runnerName: "mock", lastSeenAt: expect.any(String), startCommand: "cd caw-back && bun run runner", sessions: [] });
     const down = await createMockApi({ state: "team-down" }).teamStatus();
     expect([down.running, down.runnerName, down.startCommand]).toEqual([false, null, "cd caw-back && bun run runner"]);
     const ago = Date.now() - Date.parse(down.lastSeenAt!);
     expect(ago).toBeGreaterThan(9.9 * 60_000);
     expect(ago).toBeLessThan(10.5 * 60_000);
+  });
+  test("sessions (REQ-122): none by default; `setSessions` answers them only while the team runs; `idle-session` has one open", async () => {
+    const api = createMockApi();
+    const s = { projectId: "p1", workerId: "w1", state: "idle" } as const;
+    api.setSessions([s]);
+    expect((await api.teamStatus()).sessions).toEqual([s]);
+    api.setTeamRunning(false);
+    expect((await api.teamStatus()).sessions).toEqual([]);
+    expect((await createMockApi({ state: "idle-session" }).teamStatus()).sessions).toHaveLength(1);
+    expect((await createMockApi({ state: "team-down" }).teamStatus()).sessions).toEqual([]);
   });
   test("the runner flips it without a reset: down then up, and nothing else in the project changes", async () => {
     const api = createMockApi();

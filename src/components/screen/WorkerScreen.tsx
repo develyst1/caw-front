@@ -15,7 +15,7 @@ export const SCREEN_POLL_MS = 2000;
 
 const when = (iso: string) => new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(iso));
 
-interface View { hop: ScreenAnswer["hop"]; entries: HopOutputEntry[] }
+interface View { hop: ScreenAnswer["hop"]; entries: HopOutputEntry[]; open: boolean }
 
 function Line({ e }: { e: HopOutputEntry }) {
   if (e.kind === "gap") return <li className="py-1 text-sm font-semibold text-stuck" data-kind="gap">{screen.gap(e.gapSeconds ?? 0)}</li>;
@@ -44,8 +44,8 @@ export function WorkerScreen({ projectId, workerId, workerName, onClose }: { pro
           if (fresh && last !== -1) { a = await screenOf(projectId, workerId, -1); if (stopped) return; }
           hopId = a.hop?.id ?? null;
           last = a.entries.length > 0 ? a.entries[a.entries.length - 1]!.seq : fresh ? -1 : last;
-          setView((prev) => (fresh || !prev ? { hop: a.hop, entries: a.entries } : { hop: a.hop, entries: [...prev.entries, ...a.entries] }));
-          again = !a.hop || a.hop.endedAt === null || a.more; // no hop yet: one may start; ended with nothing more waiting: stop
+          setView((prev) => (fresh || !prev ? { hop: a.hop, entries: a.entries, open: a.open } : { hop: a.hop, entries: [...prev.entries, ...a.entries], open: a.open }));
+          again = !a.hop || a.hop.endedAt === null || a.more || a.open; // no hop yet: one may start; the worker's CLI is open (REQ-122): the next hop may start; ended, nothing more waiting and not open: stop
         } catch { /* keep what is shown; the next poll tries again */ }
       }
       if (!stopped && again) timer = setTimeout(step, SCREEN_POLL_MS);
@@ -62,6 +62,7 @@ export function WorkerScreen({ projectId, workerId, workerName, onClose }: { pro
 
   const hop = view?.hop ?? null;
   const running = !!hop && hop.endedAt === null;
+  const idle = !!view?.open && !running; // REQ-122: the CLI is open and waiting
   return (
     <Sheet open modal={false} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" showCloseButton={false} onInteractOutside={(e) => e.preventDefault()}
@@ -72,9 +73,10 @@ export function WorkerScreen({ projectId, workerId, workerName, onClose }: { pro
             <SheetDescription asChild>
               <div className="m-0 grid gap-0.5 text-sm text-ink2">
                 {running && <span className="inline-flex min-h-[26px] w-fit items-center rounded-md bg-now-soft px-2 font-semibold text-now" data-live>{screen.live}</span>}
+                {idle && <span className="inline-flex min-h-[26px] w-fit items-center rounded-md border border-hair px-2 font-semibold text-ink2" data-idle>{screen.idle}</span>}
                 {hop && !running && <span data-ended>{screen.finished(when(hop.endedAt!))}</span>}
                 {hop && <span data-started>{screen.started(when(hop.startedAt))}</span>}
-                {view && !hop && <span data-none>{screen.empty}</span>}
+                {view && !hop && !idle && <span data-none>{screen.empty}</span>}
               </div>
             </SheetDescription>
           </div>

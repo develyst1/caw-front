@@ -8,7 +8,7 @@
 import { STARTING_FACES } from "@/lib/faces"; // the one list of faces: the seed's starting-team workers carry the approved ones (TASK-B-072)
 import {
   CawError, type Avatar, type Card, type CardContext, type CardStatus, type CawApi, type CodeMap, type Chain, type CawEvent, type ChatMessage, type Effort, type Hop, type HopOutcome, type HopOutputEntry, type Mode,
-  type ModelName, type Note, type PartContext, type Project, type ProjectSummary, type Proposal, type ProposalItem, type Run, type Worker, type WorkerRole,
+  type ModelName, type Note, type PartContext, type Project, type ProjectSummary, type Proposal, type ProposalItem, type Run, type TeamSession, type Worker, type WorkerRole,
 } from "./caw";
 
 const BLUEPRINT_VERSION = 3;        // the LABEL number the project was made at (REQ-105: a version is a label now)
@@ -221,7 +221,7 @@ const blank = (version: number, n: number): Proj => ({
 });
 
 /** Variants of the seed the e2e can ask for (POST /test-reset?state=…): states the screens reach only when the real runner acts by itself. */
-export const MOCK_STATES = ["review-holds", "nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle"] as const;
+export const MOCK_STATES = ["review-holds", "nameless-label", "no-label", "blueprint-down", "anchor-removed", "dispatcher-stopped", "manual-open-run", "chat-failed", "chat-running", "new-project", "working-now", "working-quiet", "entry-asked", "operator-like", "team-down", "code-map", "entry-asked-two", "manual-idle", "idle-session"] as const;
 export type MockState = (typeof MOCK_STATES)[number];
 
 /** `state` = `dispatcher-stopped`: the project is on อัตโนมัติ and its newest run ended `budget_spent` by itself (D-052) — the seeded run already
@@ -244,6 +244,8 @@ export interface MockRunner {
   replyChat(projectId: string, text: string): Promise<ChatMessage>;
   /** The team starts (`true`) or stops checking in (`false`), as `teamStatus()` reports it. Nothing else changes and no event is written. */
   setTeamRunning(running: boolean): void;
+  /** The runner's open worker sessions (REQ-122), as `teamStatus().sessions` reports them — only while the team is running; `[]` otherwise and by default. */
+  setSessions(list: TeamSession[]): void;
   /** A worker saves the project's code map, as the setup step does (SPEC-A-009 Revision 1 A3): `map` (default: the `code-map` state's sample) replaces any map, `updatedAt`
    *  is now, `updatedBy` is the entry worker, `confirmedAt` is cleared, and `project.code_map_saved` is written so `lastSeq` moves. 404 unknown project · 409 `no_entry_worker`. */
   saveCodeMap(projectId: string, map?: Partial<CodeMap> & Pick<CodeMap, "folders" | "stack" | "commands" | "rules" | "questions">): Promise<void>;
@@ -761,10 +763,12 @@ export function createMockApi(opts: { state?: MockState } = {}): CawApi & MockRu
   // REQ-015 R1: the mock team is running unless the `team-down` state (or the runner) says it stopped; a stopped team was last seen ten minutes ago
   let teamRunning = opts.state !== "team-down";
   const lastSeen = new Date(Date.now() - 10 * 60_000).toISOString();
+  let sessions: TeamSession[] = opts.state === "idle-session" ? [{ projectId: PROJECT_ID, workerId: W.mint, state: "idle" }] : []; // `idle-session`: มิ้นท์ (no hop) has her CLI open and waiting (REQ-122)
   (api as { teamStatus: CawApi["teamStatus"] }).teamStatus = async () =>
-    teamRunning ? { running: true, runnerName: "mock", lastSeenAt: new Date().toISOString(), startCommand: "cd caw-back && bun run runner" } : { running: false, runnerName: null, lastSeenAt: lastSeen, startCommand: "cd caw-back && bun run runner" };
+    teamRunning ? { running: true, runnerName: "mock", lastSeenAt: new Date().toISOString(), startCommand: "cd caw-back && bun run runner", sessions: structuredClone(sessions) } : { running: false, runnerName: null, lastSeenAt: lastSeen, startCommand: "cd caw-back && bun run runner", sessions: [] };
   const runner: MockRunner = {
     setTeamRunning: (running) => { teamRunning = running; },
+    setSessions: (list) => { sessions = structuredClone(list); },
     saveCodeMap: async (pid, map = SAMPLE_CODE_MAP) => {
       const p = need(pid);
       if (!p.entry) refuse(409, "no_entry_worker", "a code map is saved by the entry worker, and this project has none");

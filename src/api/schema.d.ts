@@ -3276,13 +3276,14 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        sessions?: components["schemas"]["TeamSession"][];
                         /** @enum {string} */
                         state: "running" | "stopping";
                     };
                 };
             };
             responses: {
-                /** @description noted — the name is the runner's actor, the time is the core's clock; only `state` is read from the body */
+                /** @description noted — the name is the runner's actor, the time is the core's clock; `state` and the optional `sessions` are read from the body */
                 204: {
                     headers: {
                         [name: string]: unknown;
@@ -4062,12 +4063,22 @@ export interface components {
             /** @enum {string|null} */
             stopReason: "budget_spent" | "nothing_workable" | "failed_review_twice" | "limit_reached" | "operator_stopped" | "error" | "no_progress" | null;
         };
+        TeamSession: {
+            /** Format: uuid */
+            projectId: string;
+            /** @enum {string} */
+            state: "idle" | "busy";
+            /** Format: uuid */
+            workerId: string;
+        };
         TeamStatus: {
             /** @description the last check-in, kept after the team goes quiet */
             lastSeenAt: string | null;
             runnerName: string | null;
             /** @description the last check-in said `running` and is at most 45 s old (a `stopping` check-in makes it false at once) */
             running: boolean;
+            /** @description the runner's open worker sessions (REQ-122); [] when running is false */
+            sessions: components["schemas"]["TeamSession"][];
             /**
              * @description what the screen tells the operator to run when running is false
              * @enum {string}
