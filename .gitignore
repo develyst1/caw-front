@@ -38,3 +38,4 @@ next-env.d.ts
 # builds of the people who share this checkout (one folder each) and Playwright output
 /.next-*/
 /test-results/
+*.zip
